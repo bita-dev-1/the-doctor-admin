@@ -1,0 +1,73 @@
+h1 { font-family: 'Rubik', sans-serif; letter-spacing: 0.5em; text-align: center; text-transform: uppercase; }
+ .title-platform h1 { background: #f59300 !important; border-radius: 0.25em; color: #FFF; margin: 0 0 1em; padding: 0.5em 0; }
+ #content address { float: left; font-size: 75%; font-style: normal; line-height: 1.25; margin: 0 1em 1em 0; }
+ #content address p { margin: 0 0 0.25em; }
+ #content span, header img { display: block; float: right; }
+ #content span { margin: 0 0 1em 1em; max-height: 25%; max-width: 60%; position: relative; }
+.one {margin-top: 80px ;}
+
+
+.title-pdf {
+    text-align: center;
+}
+
+
+
+       page {
+          background: white;
+          display: block;
+          margin: 0 auto;
+          margin-bottom: 0.5cm;
+          box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
+        }
+        page[size="A4"] {  
+          width: 21cm;
+          height: 29.7cm; 
+        }
+        @media print {
+          body, page {
+            margin: 5px;
+            box-shadow: 5px;
+          }
+          .title-pdf{
+            text-align: center;
+          }
+          
+          .label{
+    font-size: 10pt;
+    font-weight: bold;
+    font-family: Arial;
+        }
+        .contents
+        {
+            border: 1px dotted black;
+            padding: 5px;
+            width: 300px;
+        }
+        .name
+        {
+            color: #18B5F0;
+        }
+        .left
+        {
+            float: left;
+            width: 50px;
+            height: 50px;
+        }
+        .right
+        {
+            margin-left: 60px;
+            line-height:50px;
+        }
+        .clear
+        {
+            clear: both;
+        }
+        .text-primary{
+            display: flex;
+        }
+        .text-secondary{
+            display: flex;
+        }
+
+        }

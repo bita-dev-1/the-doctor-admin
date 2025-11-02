@@ -1,0 +1,175 @@
+.mediation-form .modal-header {
+    border: 0;
+    height: 90px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+}
+.mediation-form .modal-header h5 {
+    font-weight: 600;
+    font-size: 24px;
+}
+.mediation-form .reference {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.mediation-form input, .mediation-form select {
+    height: 55px;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--lighter-text);
+}
+.mediation-form label {
+    font-size: 18px;
+    font-weight: 500;
+}
+.form-btns {
+    width: max-content;
+}
+.form-btns > * {
+    font-size: 18px;
+    font-weight: 500;
+}
+.form-btns .export {
+    color: var(--main-color);
+}
+.form-btns .Add.btn {
+  /*  background-color: var(--main-color);
+    color: #fff;
+    border-radius: 6px;*/
+}
+.mediation-form .modal-footer {
+    border: 0;
+    justify-content: center;
+    padding: 25px;
+}
+.mediation-form .modal-footer button {
+    background-color: var(--main-color);
+    border: 0;
+    padding: 7px 25px;
+    font-size: 19px;
+    font-weight: 500;
+}
+.transaction-item {
+    border: 2px solid #ddd;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 19px;
+    line-height: 47px;
+    font-weight: 500;
+    color: #999;
+    width: 100%;
+    margin: 0 auto 15px;
+}
+.transaction-item .odd {
+    color: #555;
+    font-weight: 600;
+}
+.alt-add {
+    font-weight: 500;
+    background-color: var(--main-color);
+    color: #fff;
+    font-size: 19px;
+    display: block;
+    margin-left: auto;
+}
+.payment-variety {
+    border-top: 1px solid #ddd;
+}
+.calc-help, .calc-help:hover {
+    font-size: 19px;
+    color: var(--main-color);
+}
+.payment-source.with-choice span {
+    width: max-content;
+    white-space: nowrap;
+}
+.payment-source.with-choice select {
+    border: 0;
+    color: var(--main-color);
+    outline: 0 !important;
+    box-shadow: none;
+}
+.total-calc li {
+    color: var(--lighter-text);
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 15px;
+}
+.taxes-notice {
+    text-align: center;
+    font-size: 20px;
+    color: #999;
+    margin: 20px 0 30px;
+}
+.deal-buyer-help {
+    margin-right: 10px;
+    width: 25px;
+    height: 25px;
+    padding:0;
+    vertical-align: middle;
+    background-color: #999;
+}
+.deal-buyer-help svg {
+    height: 15px;
+    width: 15px;
+    fill: #fff;
+}
+.agree-terms-med{
+    width: fit-content;
+    margin: 0 auto;
+}
+.form-check-input[type=checkbox] {
+    height: 1em;
+    float:right;
+    margin-right: -1.5em;
+}
+.agree-terms-med label a {
+    color: var(--main-color);
+}
+.mediation-form .modal-header .link-gen-title {
+    text-align: center;
+    width: 100%;
+    font-size: 26px;
+    font-weight: 700;
+}
+.cpLb {
+    width: 100%;
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+.cpLb input {
+    width: 100%;
+    padding: 10px 20px;
+    outline: 0;
+    border: 0;
+}
+.cpLb label {
+    position: absolute;
+    right: 15px;
+}
+.cpLb label svg.line {
+    width: 25px;
+    height: 25px;
+    stroke: #999;
+}
+@keyframes fadein{50%{opacity:1}80%{opacity:1;height:60px;line-height: 60px;}100%{opacity:0;height:0;}}
+#cpNotif span {
+    display: block;
+    text-align: center;
+    background-color: #555;
+    color: #fff;
+    max-width: 250px;
+    margin: 15px auto 0;
+    font-weight: 600;
+    padding: 0 20px;
+    height: 60px;
+    line-height: 60px;
+    border-radius: 12px;
+    animation: fadein 2s ease forwards;
+    opacity: 0;
+}

@@ -1,0 +1,600 @@
+/* Content */
+aside {
+    border-left: 1px solid #ccc;
+}
+.earning_actions {
+    padding: 25px 0;
+    flex-direction: row-reverse;
+}
+.earning_actions button {
+    padding: 12px 15px;
+    background-color: var(--main-color) !important;
+    color: #fff;
+    font-weight: 600;
+    font-size: 20px;
+    border-radius: 8px;
+    transition: ease-in-out .2s;
+}
+.earning_actions button:hover{
+    background-color: #005d7e !important;
+}
+
+/* sidebar */
+.profile_statics {
+    box-shadow: 0px 3px 5px rgb(0 0 0 / 15%);
+    padding: 15px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 2px solid #ddd;
+    margin: 20px;
+}
+.profile_statics_img {
+    height: 100px;
+    position: relative;
+    width: 100px;
+}
+.profile_statics_img:hover button{
+    transform: translateY(-3px);
+}
+.profile_statics_img img {
+    height: 90px;
+    width: 90px;
+    border-radius: 50%;
+    margin: 0;
+}
+.profile_statics_img button {
+    right: 15px;
+    width: 25px;
+    height: 25px;
+    background-color: #fff !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 10px;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 0 20px rgb(0 0 0 / 20%);
+    transition: ease .2s;
+}
+.profile_statics_img button svg.line {
+    width: 20px;
+    height: 20px;
+}
+.profile_statics h5 {
+    font-size: 23px;
+    font-weight: 500;
+    color: #343434;
+}
+.seller_rating {
+    margin: 10px 0;
+}
+.seller_rating svg {
+    width: 25px;
+    height: 23px;
+}
+.seller_rating span {
+    color: #fabf35;
+    font-size: 21px;
+    font-weight: 500;
+}
+.preview_profil {
+    display: block;
+    margin: 5px 0 25px;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--main-color);
+}
+
+/* Statics */
+.statics {
+    width: 100%;
+}
+.statics ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    line-height: 50px;
+}
+.statics ul li span {
+    font-size: 19px;
+    font-weight: 500;
+    color: #363636;
+}
+.statics ul li span.earnings_state {
+    color: var(--lighter-text);
+    margin-left: auto;
+    font-size: 16px;
+    font-weight: 500;
+}
+.high{
+    color: var(--bs-green);
+    fill: var(--bs-green);
+}
+.low{
+    color: var(--bs-red);
+    fill: var(--bs-red);
+}
+.very_low {
+    color: var(--bs-warning);
+    fill: var(--bs-warning);
+}
+.my_prdct {
+    display: block;
+    background-color: var(--main-color) !important;
+    width: 96%;
+    padding: 10px;
+    margin-top: 25px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 22px;
+    border-radius: 8px;
+}
+
+/* Ups and Downs */
+aside {
+    border-bottom: 1px solid #ddd;
+    height: 100%;
+    padding-bottom: 21px !important;
+}
+aside > * {
+    padding-left: 25px;
+}
+.ups_dwns {
+    border-top: 1px solid #ccc;
+    padding-top: 30px;
+}
+.nbr_prdct h2 {
+    margin-bottom: 15px;
+    font-size: 30px;
+    color: #5f5f5f;
+    font-weight: 700;
+}
+.active_prdct h3 {
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--lighter-text);
+    margin-bottom: 15px;
+}
+.active_prdct ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.active_prdct ul li {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 0 20px;
+}
+.active_prdct ul li p {
+    margin-bottom: 0;
+}
+.active_prdct ul li >span h4 {
+    font-size: 34px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 15px;
+}
+.active_prdct ul li > p {
+    color: var(--lighter-text);
+}
+#chart_line .apexcharts-tooltip {
+    flex-direction: column-reverse;
+    background-color: #219dfb;
+}
+#chart_line .apexcharts-tooltip-title{
+    background-color: transparent;
+    border: 0;
+    color: #fff;
+    font-weight: 500;
+}
+#chart_line .apexcharts-tooltip-series-group{
+    color: #fff;
+}
+#chart_line .apexcharts-tooltip-marker{
+    display: none;
+}
+
+.ups_dwns .apexcharts-legend {
+    display: block;
+    margin: 0 auto;
+    width: fit-content;
+}
+.ups_dwns .apexcharts-legend .apexcharts-legend-text {
+    color: var(--lighter-text);
+    font-weight: 500;
+}
+
+/* Reviews */
+.reviews_alt {
+    background-color: #fff;
+    box-shadow: 0 0 10px rgb(0 0 0 / 15%);
+    border-radius: 8px;
+    padding: 15px 20px;
+    width: 100%;
+    margin: 30px auto 0;
+}
+.reviews_title {
+    text-align: center;
+    font-size: 19px;
+}
+.reviews_sum_alt {
+    font-size: 45px;
+    font-weight: 500;
+}
+.stars_filling svg {
+    width: 29px;
+    height: 29px;
+}
+.start_prgrs {
+    width: max-content;
+}
+.progress {
+    margin: 0 5px 10px;
+}
+.start_prgrs {
+    margin: -5px 0 7px;
+}
+.reviews_rate_count .row > div:nth-child(2) {
+    padding: 0;
+}
+
+/* Seller Level */
+.prgrs {
+    position: relative;
+    width: 85%;
+    margin: 50px auto;
+}
+.rank_progress span.d-flex a {
+    color: var(--main-color);
+}
+.deadline {
+    color: var(--lighter-text);
+}
+.prgrs img {
+    position: absolute;
+    top: -100%;
+    width: 80px;
+    height: auto;
+}
+.prgrs .seller_profile_img {
+    right: calc(100% - 10px);
+    height: 70px;
+    width: 70px;
+    border-radius: 50%;
+}
+.prgrs .rank_1 {
+    left: 25%;
+}
+.prgrs .rank_2 {
+    left: 50%;
+}
+.prgrs .rank_3 {
+    left: calc(100% - 20px);
+}
+.prgrs .progress {
+    height: 22px;
+}
+.progress-bar {
+    background-color: var(--main-color);
+    border-radius: 4px;
+}
+
+/* Goales to reach */
+.min_goales span a {
+    color: var(--main-color);
+}
+.goales ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    padding-right:40px;
+}
+.goales ul li {
+    margin-bottom: 45px;
+}
+.check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background-color: #ccc;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+.check.achived {
+    background-color: var(--main-color);
+}
+.check svg.line {
+    stroke: #fff;
+    stroke-width: 3;
+    width: 19px;
+    height: 19px;
+}
+.goal {
+    width: calc(100% - 260px);
+    color: #444444;
+}
+.goal h3 {
+    font-size: 20px;
+}
+.goal p {
+    margin-bottom: 0;
+    font-size: 15px;
+    line-height: 27px;
+}
+.goal_prgrs {
+    width: 210px;
+    display: flex;
+    align-items: center;
+}
+.goal_prgrs .progress {
+    width: 180px;
+}
+.numeric_progress {
+    width: 30px;
+}
+
+/* Charts */
+.chart svg {
+    width: auto;
+    height: auto;
+}
+
+/* Map */
+.map img {
+    width: 100%;
+    height: auto;
+}
+.map_states > div {
+    width: 30%;
+    text-align: center;
+}
+.map_states .country{
+    width: 40%;
+    text-align: left;
+}
+.map_states > div >h3 {
+    font-size: 17px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #464646;
+}
+.map_states > div ul {
+    list-style: none;
+    padding: 0;
+    line-height: 45px;
+    margin: 0;
+}
+.map_states > div ul li {
+    font-size: 14px;
+    color: var(--lighter-text);
+    font-weight: 500;
+}
+.map_states .country ul li span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+    background-color: #ccc;
+    display: inline-block;
+}
+.map_states .country ul li p {
+    margin-bottom: 0;
+    display: inline-block;
+    width: calc(100% - 15px);
+}
+.map_states > div ul li .algeria {
+    background-color: #58ceff;
+}
+.map_states > div ul li .united-states {
+    background-color: #ab53db;
+}
+.map_states > div ul li .india {
+    background-color: #00a28a;
+}
+.map_states > div ul li .russia {
+    background-color: #ffbc54;
+}
+.map_states > div ul li .germany {
+    background-color: #4a52ff;
+}
+
+/* My Products */
+.modal-header {
+    border: 0;
+    padding: 25px;
+}
+.modal-header .modal-title {
+    font-size: 25px;
+    font-weight: 700;
+}
+.modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+.item.col-xl-3 {
+    margin-bottom: 25px;
+}
+.card.product {
+    border-radius: 12px;
+    overflow: hidden;
+    height: 290px;
+}
+.card_img img {
+    height: 160px;
+    width: 100%;
+    object-fit: cover;
+}
+.card.product .card-body {
+    padding: 10px;
+}
+.product_body .card-text.description {
+    font-size: 15px;
+    font-weight: 500;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+.myProduct-footer {
+    position: absolute;
+    bottom: 10px;
+    padding: 12px;
+    width: 100%;
+    left: 0;
+    right: 0;
+}
+.myProduct-footer a.more svg {
+    width: 30px;
+    height: 30px;
+    stroke-width: 2px;
+    fill: var(--darker-text);
+    stroke: var(--darker-text);
+}
+.myProduct-footer .start-price {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--main-color);
+}
+.card.product.add-product .card-body svg {
+    width: 75px;
+    height: 75px;
+    transition: ease .2s;
+    margin-bottom: 20px;
+}
+.card-title{
+    color: var(--darker-text);
+    transition: ease .2s;
+}
+.card.product.add-product .card-body:hover .card-title{
+    color: var(--main-color);
+}
+.card.product.add-product .card-body:hover svg{
+    transform: translateY(-3px);
+}
+
+
+
+/* Responsive */
+@media (max-width: 1996px) {
+.container{
+    max-width: 1600px;
+}
+}
+@media (max-width: 1200px) {
+
+}
+@media (max-width: 1024px) {
+
+}
+@media (max-width: 991.99px) {
+.head_buttons{
+    width: auto;
+}
+ul.menu {
+    position: fixed;
+    bottom: 0;
+    line-height: 50px;
+    background-color: #fff;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 80px;
+    margin-left: 0 !important;
+    box-shadow:0 0 10px rgb(0 0 0 / 20%);
+    z-index: 99;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    justify-content: center;
+}
+.messages_list, .notification_list {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    top: auto !important;
+    right: 0;
+    z-index: 11;
+    min-width: auto;
+    width: 100%;
+    overflow-y: scroll;
+    height: calc(100vh - 220px);
+}
+.messages_list.toggled, .notification_list.toggled{
+    bottom: 70px;
+}
+.messages_list ul, .notification_list ul {
+    overflow-y: scroll;
+}
+.switch_to_buy {
+    padding: 0 25px;
+    position: fixed;
+    bottom: 80px;
+    height: 60px;
+    line-height: 60px;
+    background-color: #fff;
+    left: 0;
+    box-shadow: 0 0 10px rgb(0 0 0 / 15%);
+    z-index: 99;
+}
+.chat_button {
+    bottom: 90px;
+}
+aside {
+    border-left: 0;
+}
+aside > *{
+    padding-left: 0;
+}
+.prgrs .seller_profile_img{
+    right: calc(100% - 10px);
+}
+}
+@media (max-width: 768px) {
+    
+}
+@media (max-width: 576px) {
+ul.menu {
+    justify-content: initial;
+}
+.earning_actions {
+    flex-direction: column;
+}
+.earning_actions > div{
+    margin: 10px 0;
+    width: 100%;
+    justify-content: center;
+    display: flex;
+}
+.prgrs img{
+    top: -50%;
+    width: 50px;
+}
+.prgrs .seller_profile_img{
+    height: 45px;
+    width: 45px;
+}
+.goales ul li{
+    flex-wrap: wrap;
+}
+.goal_prgrs {
+    width: 100%;
+    justify-content: center;
+    margin-top: 25px;
+}
+.goal {
+    width: calc(100% - 55px);
+}
+.min_goales > span {
+    flex-direction: column;
+    line-height: 40px;
+}
+.min_goales > span a{
+    margin: 0 auto;
+}
+
+
+}

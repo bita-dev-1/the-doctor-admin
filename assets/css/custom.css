@@ -1,0 +1,407 @@
+/* vietnamese */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+* {
+  font-family: 'Quicksand';
+}
+body{
+    font-family: 'Quicksand' !important;
+}
+.navigation, .header-navbar{
+    font-family: 'Quicksand';
+}
+.view-record, .edit-record, .delete-record {
+    margin: 0 5px;
+}
+table.dataTable td {
+    direction: ltr;
+    text-align: left;
+}
+.avatar-upload {
+    position: relative;
+    max-width: 192px;
+    margin: auto;
+}
+.avatar-upload .avatar-edit {
+    position: absolute;
+    right: calc(50% - 19px);
+    z-index: 1;
+    bottom: -15px;
+}
+.avatar-upload .avatar-edit input {
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+.avatar-upload .avatar-edit label {
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 0;
+    border-radius: 100%;
+    background: #FFFFFF;
+    border: 1px solid transparent;
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    font-weight: normal;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+.avatar-upload .avatar-edit label:hover {
+    background: #f1f1f1;
+    border-color: #d6d6d6;
+}
+.avatar-upload .avatar-edit label svg{
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    top: calc(50% - 10px);
+    left: calc(50% - 10px);
+}
+.avatar-upload .avatar-preview {
+    width: 192px;
+    height: 192px;
+    position: relative;
+    border-radius: 100%;
+    border: 6px solid #F8F8F8;
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
+}
+.avatar-upload .avatar-preview > div {
+    width: 100%;
+    height: 100%;
+    border-radius: 100%;
+    background-image: url('../../assets/images/default_image.png');
+    background-size: auto;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #fff;
+}
+.avatar-upload .avatar-preview .drop-zoon__preview-image {
+  border-radius: 50%;
+  z-index: 0;
+}
+.upload-area__drop-zoon {
+  position: relative;
+  min-height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  border: 2px dashed #000;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: border-color 300ms ease-in-out;
+  background-color: #fff;
+  padding: 20px;
+}
+.drop-zoon__paragraph {
+  font-size: 14px;
+  color: #777;
+  margin: 10px 0;
+  transition: opacity 300ms ease-in-out;
+}
+.drop-zoon:hover .drop-zoon__icon, .drop-zoon:hover .drop-zoon__paragraph {
+  opacity: 0.7;
+}
+.drop-zoon__icon svg {
+  fill: none;
+  width: 60px;
+  height: 60px;
+}
+.drop-zoon__icon svg path {
+  stroke: #000;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.3;
+}
+.drop-zoon__loading-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  color: #000;
+  z-index: 10;
+}
+.drop-zoon__preview-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0.3125rem;
+  border-radius: 10px;
+  display: none;
+  z-index: 1000;
+  transition: opacity 300ms ease-in-out;
+  background-color: #fff;
+}
+.drop-zoon:hover .drop-zoon__preview-image {
+  opacity: 0.8;
+}
+.drop-zoon__file-input {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1001;
+}
+.upload-area .error {
+  display: flex;
+  justify-content: center;
+  margin: 5px auto;
+}
+.drop-zoon--over {
+  border-color: rgb(63, 134, 255);
+}
+.drop-zoon--over .drop-zoon__icon, .drop-zoon--over .drop-zoon__paragraph {
+  opacity: 0.7;
+}
+.drop-zoon--Uploaded .drop-zoon__icon, .drop-zoon--Uploaded .drop-zoon__paragraph {
+  display: none;
+}
+.upload-area__file-details {
+  height: 0;
+  visibility: hidden;
+  opacity: 0;
+  text-align: left;
+  transition: none 500ms ease-in-out;
+  transition-property: opacity, visibility;
+  transition-delay: 500ms;
+}
+.file-details--open {
+  height: auto;
+  visibility: visible;
+  opacity: 1;
+}
+.uploaded-file {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 0;
+  visibility: hidden;
+  opacity: 0;
+  transition: none 500ms ease-in-out;
+  transition-property: visibility, opacity;
+}
+.uploaded-file--open {
+  visibility: visible;
+  opacity: 1;
+}
+.uploaded-file__icon-container {
+  position: relative;
+  margin-right: 0.3125rem;
+}
+.uploaded-file__icon {
+  font-size: 3.4375rem;
+  color: rgb(63, 134, 255);
+}
+.uploaded-file__info {
+  position: relative;
+  top: -0.3125rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+.uploaded-file__name {
+  width: 100%;
+  max-width: 180px;
+  display: inline-block;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  direction: ltr;
+}
+.modal .modal-content{
+  padding: 10px;
+}
+.disabled .form-control, .disabled .select2{
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;     
+  pointer-events: none;
+}
+
+.card .card-header {
+  background-color: #f59300;
+  border-radius: 0.25rem;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.dashboard .col-lg-2 img {
+  width: 65% !important;
+}
+.card .card-header{
+  background-color: transparent;
+  color: white;
+}
+.card .card-header .card-title{
+  color: #777;
+  font-family:'Quicksand';
+}
+
+#chart {
+  max-width: 100%;
+  margin: 35px auto;
+  opacity: 0.9;
+  padding-bottom: 25px;
+}
+#chart1 {
+  max-width: 100%;
+  height: 398px;
+  margin: 35px auto;
+  opacity: 0.9;
+}
+
+#chart3 {
+  max-width: 100ù;
+  margin: 35px auto;
+}
+
+#chart3, .chart-box {
+  padding-bottom: 25px;
+  padding-top: 20px;
+  padding-left: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 22px 35px -16px rgb(0 0 0 / 10%);
+}
+.seller_rating span {
+  color: #fabf35;
+  font-size: 21px;
+  font-weight: 500;
+}
+.seller_rating svg {
+  width: 25px;
+  height: 23px;
+}
+
+#div-bill{
+  padding: 10px;
+}
+
+.title-pdf{
+  text-align: center;
+}
+.title-pdf h2{
+   padding-top: 40px;
+}
+
+
+
+
+.container-fluid{
+  background-color: white !important;
+}
+
