@@ -1,131 +1,159 @@
-<?php 
-
-    if(isset($_SESSION['user']['data'])){
-        header('location:'.SITE_URL.'/');
+<?php
+    if (isset($_SESSION['user']['data'])) { // Changed from $_SESSION['id'] to match project structure
+        header('Location: '.SITE_URL.'/');
         exit();
     }
-    include_once 'includes/lang.php';
-
+    
+    $page_name = "login";
 ?>
 <!DOCTYPE html>
-<html class="loading"  data-textdirection="ltr">
-<!-- BEGIN: Head-->
+<html class="loading" lang="en" data-textdirection="ltr">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=0,minimal-ui">
-    <meta name="description" content="Vuexy admin is super flexible, powerful, clean &amp; modern responsive bootstrap 4 admin template with unlimited possibilities.">
-    <meta name="keywords" content="admin template, Vuexy admin template, dashboard template, flat admin template, responsive admin template, web app">
-    <meta name="author" content="PIXINVENT">
-    <title><?= $GLOBALS['language']['Login']; ?></title>
-    <link rel="apple-touch-icon" href="app-assets/images/logo/favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="app-assets/images/logo/favicon.png">
+    <title>Login - The Doctor</title>
+    <link rel="shortcut icon" type="image/x-icon" href="<?= SITE_URI; ?>app-assets/images/ico/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600" rel="stylesheet">
 
     <!-- BEGIN: Vendor CSS-->
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/vendors/css/vendors<?= $rtl; ?>.min.css">
-    <link rel="stylesheet" type="text/css" href="app-assets/vendors/css/forms/select/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/vendors/css/vendors.min.css">
     <!-- END: Vendor CSS-->
 
     <!-- BEGIN: Theme CSS-->
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/bootstrap.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/bootstrap-extended.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/colors.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/components.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/themes/dark-layout.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/themes/bordered-layout.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/themes/semi-dark-layout.css">
-  
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/css/bootstrap-extended.css">
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/css/colors.css">
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/css/components.css">
+    <!-- END: Theme CSS-->
+
     <!-- BEGIN: Page CSS-->
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/core/menu/menu-types/vertical-menu.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/plugins/forms/form-validation.css">
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>app-assets/css/pages/authentication.css">
     <!-- END: Page CSS-->
-
-    <!-- BEGIN: Custom CSS-->
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css<?= $rtl; ?>/pages/authentication.css">
-    <link rel="stylesheet" type="text/css" href="<?= SITE_URL; ?>/app-assets/css-rtl/custom-rtl.css">
-    <link rel="stylesheet" type="text/css" href="assets/css/custom.css">
-    <!-- END: Custom CSS -->
-
+    
+    <!-- BEGIN: Custom CSS for Login-->
+    <link rel="stylesheet" type="text/css" href="<?= SITE_URI; ?>assets/css/style-login.css">
+    <!-- END: Custom CSS-->
 </head>
 
-<body class="vertical-layout vertical-menu-modern blank-page navbar-floating footer-static  " data-open="click" data-menu="vertical-menu-modern" data-col="blank-page">
-    <!-- BEGIN: Content-->
-    <input type="hidden" class="SITE_URL" value="<?= SITE_URL; ?>">
-    <input type="hidden" class="API_URL" value="<?= API_URL; ?>">
-    <div class="app-content content ">
-        <div class="content-overlay"></div>
-        <div class="header-navbar-shadow"></div>
-        <div class="content-wrapper">
-            <div class="content-header row">
-            </div>
-            <div class="content-body">
-                <div class="auth-wrapper auth-basic px-2">
-                    <div class="auth-inner my-2">
-                        <!-- Login basic -->
-                        <div class="card mb-0">
-                            <div class="card-body">
-                                <a href="" class="brand-logo">
-                                    <h2 class="brand-text text-primary">The Doctor</h2>
-                                </a>
-                                <h4 class="card-title mb-1"><?= $GLOBALS['language']['Welcome']; ?></h4>
-                                <p class="card-text mb-2"><?= $GLOBALS['language']['Please login to your account']; ?></p>
+<body class="vertical-layout vertical-menu-modern blank-page navbar-floating footer-static" data-open="click" data-menu="vertical-menu-modern" data-col="blank-page">
 
-                                <form class="auth-login-form mt-2" id="codexFormLogin">
-                                    <?php set_csrf() ?>
-                                    <div class="mb-1">
-                                        <label for="username" class="form-label"><?= $GLOBALS['language']['email']; ?></label>
-                                        <input type="text" class="form-control" id="username" name="username" placeholder="" aria-describedby="username" value="" autofocus />
-                                    </div>
+<!-- Add SITE_URL for JavaScript files -->
+<input type="hidden" class="SITE_URL" value="<?= SITE_URL; ?>">
 
-                                    <div class="mb-1">  
-                                        <div class="d-flex justify-content-between">
-                                            <label class="form-label" for="password"><?= $GLOBALS['language']['password']; ?></label>
-											<a href="<?= SITE_URL.'/forget_password'; ?>">
-                                                <small>Mot de passe oublié?</small>
-                                            </a>
-                                        </div>
-                                        <div class="input-group input-group-merge form-password-toggle">
-                                            <input type="password" class="form-control form-control-merge" id="password" name="password" value="" aria-describedby="password" />
-                                            <span class="input-group-text cursor-pointer"><i data-feather="eye"></i></span>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-primary w-100" type="submit" tabindex="1"><?= $GLOBALS['language']['Login']; ?></button>
-                                </form>
-                            </div>
+<div class="app-content content">
+    <div class="content-overlay"></div>
+    <div class="header-navbar-shadow"></div>
+    <div class="content-wrapper">
+        <div class="content-body">
+            <div class="auth-wrapper auth-cover d-flex justify-content-center align-items-center">
+                <div class="login-container">
+                    <!-- Left Panel (Green) -->
+                    <div class="left-panel d-none d-lg-flex">
+                        <div class="left-panel-nav">
+                            <a href="#">ACCUEIL</a>
+                            <a href="#" class="active">LOG IN</a>
                         </div>
-                        <!-- /Login basic -->
+                        <div class="left-panel-logo-container">
+                            <div class="left-panel-logo-text">
+                                <span class="logo-main">The-Doctor</span>
+                                <span class="logo-cloud">.cloud</span>
+                            </div>
+                            <img src="<?= SITE_URI; ?>assets/images/logo/logo-trans.png" class="left-panel-logo-secondary" alt="logo">
+                        </div>
+                        <h1 class="slogan">Digitalisez votre activité et développez rapidement!</h1>
+                        <p class="sub-slogan">Créez votre site web et profitez de toutes les fonctionnalités à vie</p>
+                    </div>
+
+                    <!-- Right Panel (Login Form) -->
+                    <div class="right-panel">
+                        <div class="col-12 mx-auto">
+                            
+                            <!-- Logo Section Updated to match design -->
+                            <div class="logo-block">
+                                <div class="brand-logo-wrapper">
+                                    <img src="<?= SITE_URI; ?>assets/images/logo/logo-trans.png" alt="The Doctor Logo">
+                          
+                                </div>
+                       
+                            </div>
+
+                            <h2 class="card-title fw-bolder mb-1">Connectez-vous<br>à votre compte</h2>
+                            
+                            <?php if (isset($_SESSION['error'])): ?>
+                                <div class="alert alert-danger" role="alert">
+                                    <div class="alert-body"><?= $_SESSION['error']; ?></div>
+                                </div>
+                                <?php unset($_SESSION['error']); ?>
+                            <?php endif; ?>
+
+                            <form id="codexFormLogin" class="auth-login-form mt-2" method="POST">
+                                <input type="hidden" name="method" value="login"/>
+                                <?php set_csrf(); ?>
+                                
+                                <div class="mb-1">
+                                    <label for="login-email" class="form-label">e-mail</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon"><i data-feather="user"></i></span>
+                                        <input type="email" class="form-control" id="login-email" name="email" placeholder="e-mail" aria-describedby="login-email" tabindex="1" autofocus required />
+                                    </div>
+                                </div>
+
+                                <div class="mb-1">
+                                    <div class="d-flex justify-content-between">
+                                        <label class="form-label" for="login-password">mot de passe</label>
+                                    </div>
+                                    <div class="input-wrapper form-password-toggle">
+                                         <span class="input-icon"><i data-feather="lock"></i></span>
+                                        <input type="password" class="form-control" id="login-password" name="password" tabindex="2" placeholder="mot de passe" aria-describedby="login-password" required />
+                                        <span class="form-control-icon cursor-pointer"><i data-feather="eye"></i></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="remember-me" tabindex="3" />
+                                        <label class="form-check-label" for="remember-me">Souvenir moi</label>
+                                    </div>
+                                    <a href="<?= SITE_URL ?>/forget_password"><small>Mot de passe oublié ?</small></a>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100" tabindex="4">Se Connecter</button>
+                            </form>
+
+                            <div class="divider my-2">
+                                <div class="divider-text or-divider">Ou</div>
+                            </div>
+
+                            <a href="#" class="btn btn-secondary w-100" tabindex="5">Créer un Nouveau compte</a>
+                        </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
-    </body>
-    <!-- END: Content-->
-  <!-- BEGIN: Vendor JS-->
-  <script src="<?= SITE_URL; ?>/app-assets/vendors/js/vendors.min.js"></script>
-    <!-- BEGIN Vendor JS-->
+</div>
 
-    <!-- BEGIN: Page Vendor JS-->
-    <script src="<?= SITE_URL; ?>/app-assets/vendors/js/forms/select/select2.full.min.js"></script>
-    <script src="<?= SITE_URL; ?>/app-assets/vendors/js/forms/validation/jquery.validate.min.js"></script>
-    <script src="<?= SITE_URL; ?>/app-assets/vendors/js/forms/cleave/cleave.min.js"></script>
-    <script src="<?= SITE_URL; ?>/app-assets/vendors/js/forms/cleave/addons/cleave-phone.us.js"></script>
-    <script src="<?= SITE_URL; ?>/app-assets/vendors/js/sweetalert2@11.js"></script>
-    <!-- END: Page Vendor JS-->
+<!-- Scripts -->
+<script src="<?= SITE_URI; ?>app-assets/vendors/js/vendors.min.js"></script>
+<script src="<?= SITE_URI; ?>app-assets/vendors/js/forms/validation/jquery.validate.min.js"></script>
+<script src="<?= SITE_URI; ?>app-assets/js/core/app-menu.js"></script>
+<script src="<?= SITE_URI; ?>app-assets/js/core/app.js"></script>
+<script src="<?= SITE_URI; ?>app-assets/js/scripts/pages/auth-login.js"></script>
 
-    <!-- END: Page Vendor JS-->
-    <!-- BEGIN: Theme JS-->
-    <script src="<?= SITE_URL; ?>/app-assets/js/core/app-menu.js"></script>
-    <script src="<?= SITE_URL; ?>/app-assets/js/core/app.js"></script>
-    <!-- END: Theme JS-->
-    <!-- BEGIN: Page JS
-    
-    <script src="app-assets/js/scripts/pages/app-user-list.js"></script>-->
-    <!-- END: Page JS-->
-    <script src="<?= SITE_URL; ?>/assets/js/load.js"></script>
-    <script src="<?= SITE_URL; ?>/assets/js/action.js"></script>
+<!-- START: Added Scripts -->
+<script src="<?= SITE_URL; ?>/app-assets/vendors/js/sweetalert2@11.js"></script>
+<script src="<?= SITE_URL; ?>/assets/js/load.js?ver=<?= time() ?>"></script>
+<script src="<?= SITE_URL; ?>/assets/js/action.js"></script>
+<!-- END: Added Scripts -->
 
-<!-- END: Body-->
+<script>
+    $(window).on('load', function() {
+        if (feather) {
+            feather.replace({ width: 16, height: 16 });
+        }
+    })
+</script>
 
+</body>
 </html>

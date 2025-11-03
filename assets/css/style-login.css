@@ -1,0 +1,501 @@
+/* ==========================================================================================
+   File Name: style-login.css
+   Description: Exact match to the design mockup
+   ==========================================================================================*/
+
+:root {
+  --primary-green: #03d794;
+  --dark-green: #02b87f; /* Darker shade for hover */
+  --light-gray-bg: #f8fafc;
+  --dark-gray-text: #000000;
+  --dark-blue-text: #242d4d;
+  --text-muted: #909090;
+  --input-bg: #e7e7e7;
+}
+
+/* Base Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+
+.app-content {
+  padding: 0 !important;
+}
+
+.content.app-content {
+  background: #f0f2f5; /* Light gray background like mockup */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-wrapper {
+  width: 100%;
+  padding: 2rem;
+}
+
+.login-container {
+  display: flex;
+  width: 100%;
+  max-width: 1080px;
+  min-height: 600px;
+  background-color: var(
+    --primary-green
+  ); /* White background for the container itself */
+  border-radius: 2.5rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1); /* Softer shadow */
+  overflow: hidden;
+  margin: auto;
+  animation: fadeIn 0.6s ease-out, slideInUp 0.6s ease-out;
+}
+
+.left-panel,
+.right-panel {
+  padding: 0;
+}
+
+.left-panel {
+  flex: 1;
+  background: var(--primary-green);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem 3rem;
+  position: relative;
+}
+
+/* Navigation at top */
+.left-panel-nav {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  animation: slideInUp 0.5s ease-out 0.2s backwards;
+}
+
+.left-panel-nav a {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  padding-bottom: 0.25rem;
+  border-bottom: 2px solid transparent;
+}
+
+.left-panel-nav a.active {
+  border-bottom-color: white;
+  font-weight: 700;
+}
+
+/* Logo Section */
+.left-panel-logo-container {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  margin-bottom: 0;
+  animation: slideInUp 0.5s ease-out 0.3s backwards;
+}
+
+.left-panel-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 0.9;
+  text-align: left; /* Aligned to left as per design */
+  max-width: max-content;
+}
+
+.left-panel-logo-text .logo-main {
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: -2px 6px 7px #00000082;
+}
+
+.left-panel-logo-text .logo-cloud {
+  font-size: 5rem;
+  font-weight: 800;
+  text-align: end;
+  color: var(--dark-blue-text);
+}
+
+.left-panel-logo-secondary {
+  height: 80px; /* Smaller logo as in design */
+  width: auto;
+  opacity: 0.95;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.1));
+}
+
+/* Slogan */
+.left-panel .slogan {
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 0;
+  margin-bottom: 0;
+  animation: slideInUp 0.5s ease-out 0.4s backwards;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  color: var(--dark-blue-text);
+}
+
+.left-panel .sub-slogan {
+  font-size: 1.5rem;
+  opacity: 0.95;
+  line-height: 1.5;
+  animation: slideInUp 0.5s ease-out 0.5s backwards;
+  text-align: center;
+  color: white;
+}
+
+/* Right Panel */
+.right-panel {
+  max-width: 500px;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 1rem;
+  padding: 3rem 3.5rem;
+  animation: fadeIn 0.6s ease-out 0.3s backwards;
+  border-radius: 2rem;
+}
+
+/* Logo at top right */
+.right-panel .logo-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* margin-bottom: 2.5rem; */
+  margin-top: -50px;
+}
+
+.right-panel .brand-logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.right-panel .brand-logo-wrapper img {
+  height: 150px;
+  width: auto;
+}
+
+.right-panel .logo-text-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.right-panel .logo-text-wrapper .logo-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--dark-gray-text);
+  margin: 0;
+}
+
+.right-panel .logo-text-wrapper .logo-subtitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #555;
+  margin: 0;
+}
+
+.right-panel .logo-separator {
+  width: 2px;
+  height: 40px;
+  background-color: #e0e0e0;
+}
+
+/* Title */
+.right-panel .card-title {
+  font-size: 2.8rem;
+  font-weight: 700 !important;
+  color: var(--dark-gray-text);
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* Form Elements */
+.right-panel .form-label {
+  display: none; /* Labels are not visible in the design */
+}
+
+.right-panel .form-control {
+  background-color: var(--input-bg);
+  border: 2px solid var(--input-bg);
+  border-radius: 50px; /* Pill shape */
+  padding: 0.9rem 1.2rem 0.9rem 3rem; /* Adjusted padding */
+  font-size: 0.95rem;
+  transition: all 0.2s ease-in-out;
+  color: var(--dark-gray-text);
+}
+
+.right-panel .form-control::placeholder {
+  color: var(--text-muted);
+  font-style: normal;
+  font-size: 0.9rem;
+}
+
+.right-panel .form-control:hover {
+  border-color: #dcdcdc;
+}
+
+.right-panel .form-control:focus {
+  background-color: white;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(3, 215, 148, 0.1);
+  outline: none;
+}
+
+/* Input wrapper with icons */
+.right-panel .input-wrapper {
+  position: relative;
+}
+
+.right-panel .input-wrapper .input-icon {
+  position: absolute;
+  left: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  transition: color 0.2s ease-in-out;
+  z-index: 1;
+}
+
+.right-panel .form-control:focus ~ .input-icon {
+  color: var(--primary-green);
+}
+
+/* Password toggle */
+.right-panel .form-password-toggle {
+  position: relative;
+}
+
+.right-panel .form-password-toggle .input-icon {
+  left: 1.2rem;
+}
+
+.right-panel .form-password-toggle .form-control {
+  padding-left: 3rem;
+  padding-right: 3rem;
+}
+
+.right-panel .form-password-toggle .form-control-icon {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.right-panel .form-password-toggle .form-control-icon:hover {
+  color: var(--primary-green);
+}
+
+/* Links */
+.right-panel .auth-login-form a {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: color 0.3s ease;
+  text-decoration: none;
+}
+
+.right-panel .auth-login-form a:hover {
+  color: var(--primary-green) !important;
+}
+
+/* Checkbox */
+.right-panel .form-check-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 0.25rem;
+  border: 2px solid #d1d5db;
+}
+
+.right-panel .form-check-input:checked {
+  background-color: var(--primary-green);
+  border-color: var(--primary-green);
+}
+
+.right-panel .form-check-label {
+  font-size: 0.9rem;
+  color: var(--text-muted); /* Match design */
+  margin-left: 0.3rem;
+  font-style: normal;
+}
+
+/* Buttons */
+.right-panel .btn {
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  border-radius: 50px; /* Pill shape */
+  padding: 0.9rem 1.5rem;
+  font-weight: 600;
+  border: none;
+}
+
+.right-panel .btn:hover {
+  transform: translateY(-2px);
+}
+
+.right-panel .btn-primary {
+  background-color: var(--primary-green) !important;
+  border-color: var(--primary-green) !important;
+  color: white;
+}
+
+.right-panel .btn-primary:hover {
+  background-color: var(--dark-green) !important;
+  box-shadow: 0 10px 25px rgba(3, 215, 148, 0.3);
+}
+
+.right-panel .btn-secondary {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-bg) !important;
+  color: var(--dark-gray-text) !important;
+}
+
+.right-panel .btn-secondary:hover {
+  background-color: #dcdcdc !important;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.divider-text.or-divider {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0 1rem;
+  position: relative;
+  text-transform: capitalize;
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.or-divider:not(:empty)::before {
+  margin-right: 0.75rem;
+}
+
+.or-divider:not(:empty)::after {
+  margin-left: 0.75rem;
+}
+
+/* Alert styling */
+.alert {
+  border-radius: 0.6rem;
+  border: none;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.alert-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Form spacing */
+.right-panel .mb-1 {
+  margin-bottom: 1.2rem !important;
+}
+
+.right-panel .mb-2 {
+  margin-bottom: 1.5rem !important;
+}
+
+.right-panel .mt-2 {
+  margin-top: 1rem !important;
+}
+
+.right-panel .my-2 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+  .login-container {
+    flex-direction: column;
+    min-height: auto;
+    max-width: 500px;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border-radius: 2rem;
+  }
+
+  .left-panel {
+    display: none !important;
+  }
+
+  .right-panel {
+    padding: 2.5rem 2rem;
+    margin: 0;
+    border-radius: 2rem;
+  }
+
+  .right-panel .card-title {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  .right-panel .logo-block {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .right-panel {
+    padding: 2rem 1.5rem;
+  }
+
+  .right-panel .card-title {
+    font-size: 1.6rem;
+  }
+}

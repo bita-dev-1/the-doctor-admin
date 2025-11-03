@@ -708,15 +708,16 @@
 		}
 	}
 
+
 	function login($DB){
 		$csrf_token = customDecrypt($_POST['csrf']);
 		if( ! is_csrf_valid($csrf_token) ){
 			echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
 			exit();
 		}
-		$username = $_POST['username'];
+		$username = $_POST['email'];
 		$password = sha1($_POST['password']);
-
+	
 		$sql="SELECT * FROM `doctor` WHERE doctor.deleted = 0 AND doctor.email = '".$username."' AND doctor.password = '".$password."'";
 		$user_data = $DB->select($sql);
 		

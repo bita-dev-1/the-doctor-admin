@@ -62,3 +62,9 @@
 /.user.ini
 /php.ini
 /the-doctor (database).sql
+
+# Environment variables file
+/.env
+
+# Composer dependencies
+/vendor/
