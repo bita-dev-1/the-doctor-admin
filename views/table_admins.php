@@ -1,6 +1,7 @@
 <?php 
    
-  	if(!isset($_SESSION['user']['data']) || $_SESSION['user']['data'][0]['type'] == 0){
+  	// MODIFIED: Corrected security check
+    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin'){
         header('location:'.SITE_URL.'/login');
         exit();
     }

@@ -1,6 +1,6 @@
 <?php
 
-session_start();
+// session_start();  <-- REMOVE THIS LINE
 
 include_once('config/encryption.core.php');
 

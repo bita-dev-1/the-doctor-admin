@@ -1,6 +1,8 @@
 <?php 
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
+        exit();
     }
 
     include_once 'header.php'; 
@@ -91,4 +93,3 @@
         });
     });
 </script>
-    

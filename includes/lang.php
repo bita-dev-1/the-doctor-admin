@@ -9,6 +9,7 @@
       "export"                                      =>  "exporter",
       "add"                                         =>  "Ajouter",
       "Successfully Deleted"                        =>  "Supprimé avec succès",
+      "Deactivated successfully"                    =>  "Désactivé avec succès",
       "Added successfully"                          =>  "Ajouté avec succès",
       "Edited successfully"                         =>  "Modifié avec succès",
       "Files not exist"                             =>  "Les fichiers n'existent pas",
@@ -27,7 +28,8 @@
       "sended successfully"                         =>  "Envoyé avec succès",
       "default"                                     =>  "Par défaut",
    "something went wrong reload page and try again" =>  "une erreur s'est produite recharger la page et réessayer",
-      "user"                                        =>  "utilisateur",
+      "user"                                        =>  "Utilisateur",
+      "users"                                       =>  "Utilisateurs",
       "action"                                      =>  "Action",
       "Details_of"                                  =>  "Détails de",
       "profile"                                     =>  "Profile",
@@ -65,10 +67,11 @@
 
     /********** [Begin]: project words **************/
       "id"                                          =>  "Réf",
+      "name"                                        =>  "Nom", // <-- ADDED
+      "address"                                     =>  "Adresse", // <-- ADDED
       "full_name"                                   =>  "Nom et prénom",
       "phone"                                       =>  "Téléphone",
       "Dashboard"                                   =>  "Tableau de bord",
-      "users"                                       =>  "Utilisateurs",
       "admins"                                      =>  "Administrateurs",
       "admin"                                       =>  "Administrateur",
       "specialty"                                   =>  "Spécialité",
@@ -76,6 +79,7 @@
       "willaya"                                     =>  "Willaya",
       "doctors"                                     =>  "Médecins",
       "doctor"                                      =>  "Médecin",
+      "nurse"                                       =>  "Infirmier/Infirmière",
       "patients"                                    =>  "Patients",
       "patient"                                     =>  "Patient",
       "specialities"                                =>  "Spécialités",
@@ -102,7 +106,8 @@
       "Complete"                                    =>  "Compléter",
       "Cancel"                                      =>  "Annuler",
       "waitingList"                                 =>  "Fil d'attente",
-      "Role"                                        =>  "Role",
+      "Role"                                        =>  "Rôle", // Backward compatibility
+      "role"                                        =>  "Rôle", // Fix for the warning
       "sunday"                                      =>  "Dimanche",
       "monday"                                      =>  "Lundi",
       "tuesday"                                     =>  "Mardi",

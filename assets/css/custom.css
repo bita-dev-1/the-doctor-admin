@@ -1,186 +1,217 @@
 /* vietnamese */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
 }
 /* latin-ext */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 /* latin */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 /* vietnamese */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
 }
 /* latin-ext */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 /* latin */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 /* vietnamese */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
 }
 /* latin-ext */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 /* latin */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 /* vietnamese */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
 }
 /* latin-ext */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2) format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
+    format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 /* latin */
 @font-face {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 * {
-  font-family: 'Quicksand';
+  font-family: "Quicksand";
 }
-body{
-    font-family: 'Quicksand' !important;
+body {
+  font-family: "Quicksand" !important;
 }
-.navigation, .header-navbar{
-    font-family: 'Quicksand';
+.navigation,
+.header-navbar {
+  font-family: "Quicksand";
 }
-.view-record, .edit-record, .delete-record {
-    margin: 0 5px;
+.view-record,
+.edit-record,
+.delete-record {
+  margin: 0 5px;
 }
 table.dataTable td {
-    direction: ltr;
-    text-align: left;
+  direction: ltr;
+  text-align: left;
 }
 .avatar-upload {
-    position: relative;
-    max-width: 192px;
-    margin: auto;
+  position: relative;
+  max-width: 192px;
+  margin: auto;
 }
 .avatar-upload .avatar-edit {
-    position: absolute;
-    right: calc(50% - 19px);
-    z-index: 1;
-    bottom: -15px;
+  position: absolute;
+  right: calc(50% - 19px);
+  z-index: 1;
+  bottom: -15px;
 }
 .avatar-upload .avatar-edit input {
-    opacity: 0;
-    position: absolute;
-    width: 100%;
-    height: 100%;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
 }
 .avatar-upload .avatar-edit label {
-    display: inline-block;
-    width: 34px;
-    height: 34px;
-    margin-bottom: 0;
-    border-radius: 100%;
-    background: #FFFFFF;
-    border: 1px solid transparent;
-    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
-    cursor: pointer;
-    font-weight: normal;
-    transition: all 0.2s ease-in-out;
-    position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0;
+  border-radius: 100%;
+  background: #ffffff;
+  border: 1px solid transparent;
+  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-weight: normal;
+  transition: all 0.2s ease-in-out;
+  position: relative;
 }
 .avatar-upload .avatar-edit label:hover {
-    background: #f1f1f1;
-    border-color: #d6d6d6;
+  background: #f1f1f1;
+  border-color: #d6d6d6;
 }
-.avatar-upload .avatar-edit label svg{
-    width: 20px;
-    height: 20px;
-    position: absolute;
-    top: calc(50% - 10px);
-    left: calc(50% - 10px);
+.avatar-upload .avatar-edit label svg {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: calc(50% - 10px);
+  left: calc(50% - 10px);
 }
 .avatar-upload .avatar-preview {
-    width: 192px;
-    height: 192px;
-    position: relative;
-    border-radius: 100%;
-    border: 6px solid #F8F8F8;
-    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
+  width: 192px;
+  height: 192px;
+  position: relative;
+  border-radius: 100%;
+  border: 6px solid #f8f8f8;
+  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
 }
 .avatar-upload .avatar-preview > div {
-    width: 100%;
-    height: 100%;
-    border-radius: 100%;
-    background-image: url('../../assets/images/default_image.png');
-    background-size: auto;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-color: #fff;
+  width: 100%;
+  height: 100%;
+  border-radius: 100%;
+  background-image: url("../../assets/images/default_image.png");
+  background-size: auto;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #fff;
 }
 .avatar-upload .avatar-preview .drop-zoon__preview-image {
   border-radius: 50%;
@@ -206,7 +237,8 @@ table.dataTable td {
   margin: 10px 0;
   transition: opacity 300ms ease-in-out;
 }
-.drop-zoon:hover .drop-zoon__icon, .drop-zoon:hover .drop-zoon__paragraph {
+.drop-zoon:hover .drop-zoon__icon,
+.drop-zoon:hover .drop-zoon__paragraph {
   opacity: 0.7;
 }
 .drop-zoon__icon svg {
@@ -261,10 +293,12 @@ table.dataTable td {
 .drop-zoon--over {
   border-color: rgb(63, 134, 255);
 }
-.drop-zoon--over .drop-zoon__icon, .drop-zoon--over .drop-zoon__paragraph {
+.drop-zoon--over .drop-zoon__icon,
+.drop-zoon--over .drop-zoon__paragraph {
   opacity: 0.7;
 }
-.drop-zoon--Uploaded .drop-zoon__icon, .drop-zoon--Uploaded .drop-zoon__paragraph {
+.drop-zoon--Uploaded .drop-zoon__icon,
+.drop-zoon--Uploaded .drop-zoon__paragraph {
   display: none;
 }
 .upload-area__file-details {
@@ -320,14 +354,15 @@ table.dataTable td {
   text-align: right;
   direction: ltr;
 }
-.modal .modal-content{
+.modal .modal-content {
   padding: 10px;
 }
-.disabled .form-control, .disabled .select2{
+.disabled .form-control,
+.disabled .select2 {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  user-select: none;     
+  user-select: none;
   pointer-events: none;
 }
 
@@ -342,13 +377,13 @@ table.dataTable td {
 .dashboard .col-lg-2 img {
   width: 65% !important;
 }
-.card .card-header{
+.card .card-header {
   background-color: transparent;
   color: white;
 }
-.card .card-header .card-title{
+.card .card-header .card-title {
   color: #777;
-  font-family:'Quicksand';
+  font-family: "Quicksand";
 }
 
 #chart {
@@ -369,7 +404,8 @@ table.dataTable td {
   margin: 35px auto;
 }
 
-#chart3, .chart-box {
+#chart3,
+.chart-box {
   padding-bottom: 25px;
   padding-top: 20px;
   padding-left: 10px;
@@ -387,21 +423,17 @@ table.dataTable td {
   height: 23px;
 }
 
-#div-bill{
+#div-bill {
   padding: 10px;
 }
 
-.title-pdf{
+.title-pdf {
   text-align: center;
 }
-.title-pdf h2{
-   padding-top: 40px;
+.title-pdf h2 {
+  padding-top: 40px;
 }
 
-
-
-
-.container-fluid{
+.container-fluid {
   background-color: white !important;
 }
-

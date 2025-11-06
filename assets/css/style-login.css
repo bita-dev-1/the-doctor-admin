@@ -149,10 +149,9 @@
 }
 
 .left-panel-logo-secondary {
-  height: 80px; /* Smaller logo as in design */
+  height: 150px; /* Smaller logo as in design */
   width: auto;
   opacity: 0.95;
-  animation: float 4s ease-in-out infinite;
   filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.1));
 }
 

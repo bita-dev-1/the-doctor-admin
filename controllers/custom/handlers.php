@@ -3,7 +3,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-require 'vendor/autoload.php';
+// Ensure PHPMailer is loaded
+if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+    require 'vendor/autoload.php';
+}
 
 if(isset($_POST['method']) && !empty($_POST['method'])){
 	include_once 'config/DB.php';
@@ -56,87 +59,164 @@ if(isset($_POST['method']) && !empty($_POST['method'])){
 		case 'forget_password':
 			forget_password();
 		break;
+        // --- NEW CASE for admin password reset ---
+        case 'adminResetPassword':
+            adminResetPassword();
+        break;
 	}
 }
 
-function sendMail($subject, $body, $email, $name){
+/**
+ * NEW: Generic and secure function to send emails using settings from .env
+ */
+function sendEmail($recipientEmail, $recipientName, $subject, $body) {
     $mail = new PHPMailer(true);
 
     try {
-       //Server settings
-        $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
-        $mail->isSMTP();                                            //Send using SMTP
-        $mail->Host       = "";                     //Set the SMTP server to send through
-        $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-        $mail->Username   = '';                  //SMTP username
-        $mail->Password   = '';                     //SMTP password
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
-        $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+        //Server settings
+        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Uncomment for debugging
+        $mail->isSMTP();
+        $mail->Host       = MAIL_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = MAIL_USERNAME;
+        $mail->Password   = MAIL_PASSWORD;
+        $mail->SMTPSecure = MAIL_ENCRYPTION; // PHPMailer::ENCRYPTION_SMTPS or 'tls'
+        $mail->Port       = MAIL_PORT;
+        $mail->CharSet    = 'UTF-8';
 
         //Recipients
-		$mail->setFrom('', 'Admin');
-        $mail->addAddress($email, $name);     //Add a recipient
-        $mail->addReplyTo('', 'Admin');
+        $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
+        $mail->addAddress($recipientEmail, $recipientName);
     
+        // Content
         $mail->isHTML(true);                                  
         $mail->Subject = $subject;
         $mail->Body    = $body;
 
         $mail->send();
-        
         return true;
-
     } catch (Exception $e) {
-        return false;
+        // In a real app, you'd log this error instead of echoing it
+        // error_log("Mailer Error: {$mail->ErrorInfo}");
+        return "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
     }
 }
 
+/**
+ * MODIFIED: This function now handles password recovery for any user type from the login page
+ */
 function forget_password() {
-        $email = $_POST['email'];
-        $sql = "SELECT * FROM `doctor` WHERE doctor.deleted = 0 AND doctor.email = '".$email."'";
-        $user_data = $GLOBALS['db']->select($sql);
-        if (count($user_data)) {
-			// Example usage
-			$newPassword = generateRandomPassword();
-			$firstLastName = $user_data[0]['first_name'].' '.$user_data[0]['last_name'];
-			$recipient = 'recipient@example.com';
-			$subject = 'Test Subject';
-			$message = 'This is a test message.';
-			$password_hash = sha1($newPassword);
-				
-			
-			 $body = "
-        ------------------------------------------------------------------<br/>
-        nouveau mot de passe<br/>
-        ------------------------------------------------------------------<br/>
-        Cher $firstLastName,<br/>
-        <br/>
-        <br/>
-        nouveau mot de passe : $newPassword
-        <br/>
-        Merci d'avoir lu.";
-			$subject = 'App The Doctor';
-			$result =	 sendMail($subject, $body, $email, $firstLastName);
-			if($result){
-				$GLOBALS['db']->table =  "doctor";
-				$GLOBALS['db']->data = array("password" => "$password_hash");
-                $GLOBALS['db']->where = 'id = '.$user_data[0]['id'];
-                $changePassword = $GLOBALS['db']->update();
-			}
-			
-			echo json_encode(["state" => "true", "message" => "Modified succefuly"]);
-			
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    // Search in the 'users' table instead of 'doctor'
+    $sql = "SELECT * FROM `users` WHERE `deleted` = 0 AND `email` = ?";
+    $stmt = $GLOBALS['db']->prepare($sql);
+    $stmt->execute([$email]);
+    $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user_data) {
+        $newPassword = generateRandomPassword();
+        $password_hash = sha1($newPassword);
+        
+        $fullName = $user_data['first_name'].' '.$user_data['last_name'];
+        $subject = 'Réinitialisation de votre mot de passe - The Doctor App';
+        $body = "
+            <h3>Réinitialisation de Mot de Passe</h3>
+            <p>Bonjour {$fullName},</p>
+            <p>Votre mot de passe a été réinitialisé. Voici vos nouvelles informations de connexion :</p>
+            <p><strong>Nouveau mot de passe :</strong> {$newPassword}</p>
+            <p>Nous vous recommandons de changer ce mot de passe après votre première connexion.</p>
+            <p>Merci,<br>L'équipe The Doctor</p>
+        ";
+        
+        $emailSent = sendEmail($email, $fullName, $subject, $body);
+
+        if ($emailSent === true) {
+            $GLOBALS['db']->table = "users";
+            $GLOBALS['db']->data = array("password" => $password_hash);
+            $GLOBALS['db']->where = 'id = ' . $user_data['id'];
+            if ($GLOBALS['db']->update()) {
+                echo json_encode(["state" => "true", "message" => "Un nouveau mot de passe a été envoyé à votre adresse e-mail."]);
+            } else {
+                echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour du mot de passe."]);
+            }
         } else {
-            echo json_encode(["state" => "false", "message" => "Il n'y a aucun compte avec cette adresse e-mail. Vérifiez l'adresse e-mail"]);
+            echo json_encode(["state" => "false", "message" => "Impossible d'envoyer l'e-mail. Veuillez contacter le support."]);
         }
+    } else {
+        echo json_encode(["state" => "false", "message" => "Aucun compte trouvé avec cette adresse e-mail."]);
+    }
 }
 
-// Function to generate a random password (you can replace this with your own logic)
-function generateRandomPassword($length = 8) {
-    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+/**
+ * NEW: Handles password reset initiated by an admin
+ */
+function adminResetPassword() {
+    if (!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin') {
+        echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
+        return;
+    }
+
+    $target_user_id = filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT);
+    $admin_id = $_SESSION['user']['id'];
+    $admin_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+    $is_super_admin = empty($admin_cabinet_id);
+
+    // Fetch target user's info
+    $sql = "SELECT * FROM `users` WHERE `id` = ?";
+    $stmt = $GLOBALS['db']->prepare($sql);
+    $stmt->execute([$target_user_id]);
+    $target_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$target_user) {
+        echo json_encode(["state" => "false", "message" => "Utilisateur non trouvé."]);
+        return;
+    }
+
+    // Security check: Cabinet Admin can only reset passwords for users in their own cabinet
+    if (!$is_super_admin && $target_user['cabinet_id'] != $admin_cabinet_id) {
+        echo json_encode(["state" => "false", "message" => "Vous n'avez pas la permission de réinitialiser le mot de passe de cet utilisateur."]);
+        return;
+    }
+
+    // Proceed with reset
+    $newPassword = generateRandomPassword();
+    $password_hash = sha1($newPassword);
+        
+    $fullName = $target_user['first_name'].' '.$target_user['last_name'];
+    $subject = 'Votre mot de passe a été réinitialisé par un administrateur';
+    $body = "
+        <h3>Réinitialisation de Mot de Passe</h3>
+        <p>Bonjour {$fullName},</p>
+        <p>Votre mot de passe a été réinitialisé par un administrateur. Voici vos nouvelles informations de connexion :</p>
+        <p><strong>Nouveau mot de passe :</strong> {$newPassword}</p>
+        <p>Nous vous recommandons de changer ce mot de passe après votre prochaine connexion.</p>
+        <p>Merci,<br>L'équipe The Doctor</p>
+    ";
+
+    $emailSent = sendEmail($target_user['email'], $fullName, $subject, $body);
+
+    if ($emailSent === true) {
+        $GLOBALS['db']->table = "users";
+        $GLOBALS['db']->data = array("password" => $password_hash, "modified_by" => $admin_id, "modified_at" => date('Y-m-d H:i:s'));
+        $GLOBALS['db']->where = 'id = ' . $target_user_id;
+        if ($GLOBALS['db']->update()) {
+            echo json_encode(["state" => "true", "message" => "Le mot de passe de l'utilisateur a été réinitialisé et envoyé par e-mail."]);
+        } else {
+            echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour du mot de passe dans la base de données."]);
+        }
+    } else {
+        echo json_encode(["state" => "false", "message" => "Impossible d'envoyer l'e-mail de réinitialisation."]);
+    }
+}
+
+
+// Function to generate a random password
+function generateRandomPassword($length = 10) {
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
     $password = '';
+    $char_length = strlen($characters);
     for ($i = 0; $i < $length; $i++) {
-        $password .= $characters[rand(0, strlen($characters) - 1)];
+        $password .= $characters[random_int(0, $char_length - 1)];
     }
     return $password;
 }
@@ -163,33 +243,38 @@ function time_ago($iTime0, $iTime1 = 0){
     return $iNum . " " . $sUnit . (($iNum != 1 && $iNum != "") ? " " : "");
 }
 
-    function acountState(){
+function acountState(){
 
-    	if(isset($_SESSION['user']) && !empty($_SESSION['user'])):
-    
-    		$conversationId = NULL;
-    		if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
-    			$conversationId = ((int) str_replace('conversationId-', '', ($_POST['conversation'])));
-    			$conversationId = is_numeric( $conversationId ) ? $conversationId : NULL;
-    		}
-    
-    		$results = conversationsRoom($_SESSION['user']['data'][0]['id']);
-    		$global_data['chat_list'] = $results;
-    		$global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId, ( isset($_POST['last']) ? ($_POST['last']) : NULL ) ) : array());
-    		$global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
-    
-    		echo json_encode($global_data);
-    		
-    	else:
-    		echo json_encode(array());
-    	endif;
-    }
+    // MODIFIED: Use new session structure
+    if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):
+
+        $conversationId = NULL;
+        if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
+            $conversationId = ((int) str_replace('conversationId-', '', ($_POST['conversation'])));
+            $conversationId = is_numeric( $conversationId ) ? $conversationId : NULL;
+        }
+
+        // MODIFIED: Pass the correct user ID
+        $results = conversationsRoom($_SESSION['user']['id']);
+        $global_data['chat_list'] = $results;
+        $global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId, ( isset($_POST['last']) ? ($_POST['last']) : NULL ) ) : array());
+        $global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
+
+        echo json_encode($global_data);
+        
+    else:
+        echo json_encode(array());
+    endif;
+}
+
 
 function chat_list($conversationId = NULL){
-	if(isset($_SESSION['user']) && !empty($_SESSION['user'])):	
+    // MODIFIED: Use new session structure
+	if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):	
 		$conversationId = is_numeric(str_replace('conversationId-', '', ($conversationId))) ? str_replace('conversationId-', '', ($conversationId)) : NULL;
 	
-		$results = conversationsRoom($_SESSION['user']['data'][0]['id']);
+        // MODIFIED: Pass the correct user ID
+		$results = conversationsRoom($_SESSION['user']['id']);
 		$global_data['chat_list'] = $results;
 		$global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId) : array());
 		$global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
@@ -198,30 +283,62 @@ function chat_list($conversationId = NULL){
 	endif;
 		
 	return array();
-
 }
+
+
 
 function conversationsRoom($user_id, $limit = 20, $offset = 0){
     
-    $query = "SELECT DISTINCT conversation.*, 
-(SELECT 
- CONCAT('[' , GROUP_CONCAT(
-   JSON_OBJECT('userId', patient.id, 'user', CONCAT(patient.first_name, ' ', patient.last_name), 'photo', patient.image )
-) , ']') 
- FROM participant p LEFT JOIN patient ON p.id_particib = patient.id WHERE p.deleted = 0 AND p.id_conversation = conversation.id  ) AS participants,
-                                    
-(SELECT messages.date_send FROM (messages INNER JOIN participant p ON (messages.id_sender = p.id_particib OR messages.id_sender = p.my_particib) AND p.deleted = 0 AND messages.id_conversation = p.id_conversation AND p.id_conversation = conversation.id AND messages.deleted = 0) ORDER BY messages.date_send DESC LIMIT 1) AS date_sendLast_msg,
-                                    
-(SELECT 
- CASE WHEN doctor.id IS NOT NULL OR doctor.id != '' THEN
- 	JSON_OBJECT('id', messages.id ,'message', messages.message,'type',messages.type, 'date_send', messages.date_send , 'userId', doctor.id, 'user', CONCAT(doctor.first_name, ' ', doctor.last_name), 'photo', doctor.image1 ) 
- ELSE
- 	JSON_OBJECT('id', messages.id ,'message', messages.message,'type',messages.type, 'date_send', messages.date_send , 'userId', patient.id, 'user', CONCAT(patient.first_name, ' ', patient.last_name), 'photo', patient.image ) 
- END
- 
- FROM messages INNER JOIN participant p ON (messages.id_sender = p.id_particib OR messages.id_sender = p.my_particib) LEFT JOIN doctor ON p.my_particib = doctor.id LEFT JOIN patient ON p.id_particib = patient.id WHERE p.deleted = 0 AND messages.id_conversation = p.id_conversation AND p.id_conversation = conversation.id AND messages.deleted = 0 ORDER BY messages.date_send DESC LIMIT 1) AS last_msg
-
-FROM conversation INNER JOIN participant ON conversation.id = participant.id_conversation AND conversation.deleted = 0 AND participant.deleted = 0 AND participant.my_particib = $user_id ORDER BY date_sendLast_msg DESC LIMIT $limit OFFSET $offset";
+    // MODIFIED: The query is now more flexible. It finds conversations where the user is either the creator/doctor side (my_particib) or the patient side (id_particib).
+    // It correctly identifies the "other" participant in both scenarios.
+    $query = "
+    SELECT DISTINCT 
+        conversation.*, 
+        (
+            -- This subquery now correctly fetches the OTHER participant's details
+            SELECT CONCAT('[', GROUP_CONCAT(
+                JSON_OBJECT(
+                    'userId', CASE WHEN p.my_particib = {$user_id} THEN p.id_particib ELSE p.my_particib END,
+                    'user', CASE WHEN p.my_particib = {$user_id} THEN CONCAT(patient.first_name, ' ', patient.last_name) ELSE CONCAT(users.first_name, ' ', users.last_name) END,
+                    'photo', CASE WHEN p.my_particib = {$user_id} THEN patient.image ELSE users.image1 END
+                )
+            ), ']')
+            FROM participant p
+            LEFT JOIN users ON users.id = p.my_particib
+            LEFT JOIN patient ON patient.id = p.id_particib
+            WHERE p.id_conversation = conversation.id AND (p.my_particib = {$user_id} OR p.id_particib = {$user_id})
+        ) AS participants,
+        (
+            SELECT m.date_send 
+            FROM messages m 
+            WHERE m.id_conversation = conversation.id 
+            ORDER BY m.date_send DESC 
+            LIMIT 1
+        ) AS date_sendLast_msg,
+        (
+            SELECT JSON_OBJECT(
+                'id', m.id,
+                'message', m.message,
+                'type', m.type,
+                'date_send', m.date_send,
+                'userId', sender.id,
+                'user', CONCAT(sender.first_name, ' ', sender.last_name),
+                'photo', sender.image1
+            )
+            FROM messages m
+            LEFT JOIN users AS sender ON m.id_sender = sender.id
+            WHERE m.id_conversation = conversation.id
+            ORDER BY m.date_send DESC
+            LIMIT 1
+        ) AS last_msg
+    FROM conversation
+    INNER JOIN participant ON conversation.id = participant.id_conversation
+    WHERE 
+        conversation.deleted = 0 
+        AND participant.deleted = 0 
+        AND (participant.my_particib = {$user_id} OR participant.id_particib = {$user_id})
+    ORDER BY date_sendLast_msg DESC 
+    LIMIT {$limit} OFFSET {$offset}";
 
 	
 		$results = $GLOBALS['db']->select($query);
@@ -319,47 +436,53 @@ function is_fileExt($path){
 }
 
 function send_msg(){
-    	if(isset($_SESSION['user']) && !empty($_SESSION['user'])){
-    	
-    		if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
-    			$conversationId = str_replace('conversationId-', '', ($_POST['conversation']));
-    		}else{
-    			$GLOBALS['db']->table = 'conversation';
-    			$GLOBALS['db']->data = array( "id_creator" => 	$_SESSION['user']['data'][0]['id'] );
-    			$conversationId = $GLOBALS['db']->insert();
-    			if($conversationId){
-    			}
-    		}	
-    		if($conversationId && is_numeric($conversationId)){
-    			$data = array(
-    				"id_conversation" => $conversationId, 
-    				"id_sender" => 	$_SESSION['user']['data'][0]['id'], 
-    				"message" 	=> 	($_POST['message']),
-    				"type"		=>	(isset($_POST['file']) ? ( is_image($_POST['message']) ? 1 : ( ( is_fileExt($_POST['message']) ? 2 : 0 ) ) ) : 0)
-    			);
+    // MODIFIED: Use new session structure
+    if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])){
     
-    			$GLOBALS['db']->table = 'messages';
-    			$GLOBALS['db']->data = $data;
-    
-    			$inserted = $GLOBALS['db']->insert();
-    			
-    			if($inserted){
-    				$results = messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : 0) );
-    
-    				echo json_encode(array("state" => "true", "data" => $results));
-    				// (push_notification($conversationId, $inserted));
-    			}
-    			else
-    				echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-    		}else
-    			echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-    	}else
-    		echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-    }
+        if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
+            $conversationId = str_replace('conversationId-', '', ($_POST['conversation']));
+        }else{
+            $GLOBALS['db']->table = 'conversation';
+            // MODIFIED: Use new session structure
+            $GLOBALS['db']->data = array( "id_creator" => 	$_SESSION['user']['id'] );
+            $conversationId = $GLOBALS['db']->insert();
+            if($conversationId){
+            }
+        }	
+        if($conversationId && is_numeric($conversationId)){
+            $data = array(
+                "id_conversation" => $conversationId, 
+                // MODIFIED: Use new session structure
+                "id_sender" => 	$_SESSION['user']['id'], 
+                "message" 	=> 	($_POST['message']),
+                "type"		=>	(isset($_POST['file']) ? ( is_image($_POST['message']) ? 1 : ( ( is_fileExt($_POST['message']) ? 2 : 0 ) ) ) : 0)
+            );
 
-   function post_conversation(){
-	
-	$data = array("id_creator" => $_SESSION['user']['data'][0]['id']);
+            $GLOBALS['db']->table = 'messages';
+            $GLOBALS['db']->data = $data;
+
+            $inserted = $GLOBALS['db']->insert();
+            
+            if($inserted){
+                $results = messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : 0) );
+
+                echo json_encode(array("state" => "true", "data" => $results));
+                // (push_notification($conversationId, $inserted));
+            }
+            else
+                echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
+        }else
+            echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
+    }else
+        echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
+}
+
+
+ 
+function post_conversation(){
+	// MODIFIED: Use new session structure
+    $user_id = $_SESSION['user']['id'] ?? 0;
+	$data = array("id_creator" => $user_id);
 
 	if(isset($_POST['name']) && !empty($_POST['name']))
 		$data = array_merge($data, ["name" => $_POST['name']]);
@@ -379,23 +502,30 @@ function send_msg(){
 	$GLOBALS['db']->table = 'conversation';
 	$GLOBALS['db']->data = $data;
 
-	$inserted = $GLOBALS['db']->insert();
+	$inserted_conversation_id = $GLOBALS['db']->insert();
 	
-	if($inserted){
+	if($inserted_conversation_id){
 		if(isset($_POST['participants']) && !empty($_POST['participants']) ){
 			
-			foreach ($_POST['participants'] as $key => $value){
-				$object = new stdClass();
-				$object->id_particib = $value;
-				$object->id_conversation = $inserted;
-                $object->my_particib = $_SESSION['user']['data'][0]['id'];
-				$subData[] = $object;
+            // --- START: MODIFIED LOGIC ---
+            // Create two-way participation records so the chat appears for both users.
+            $subData = [];
+            foreach ($_POST['participants'] as $participant_id){
+                // Record for the creator seeing the participant
+				$subData[] = [
+                    'id_conversation' => $inserted_conversation_id,
+                    'my_particib' => $user_id, // The creator (doctor/admin)
+                    'id_particib' => $participant_id // The other person (patient)
+                ];
+
+                // Record for the participant seeing the creator
+                $subData[] = [
+                    'id_conversation' => $inserted_conversation_id,
+                    'my_particib' => $participant_id, // The other person (patient)
+                    'id_particib' => $user_id // The creator (doctor/admin)
+                ];
 			}
-/*
-			$object = new stdClass();
-			$object->id_particib = $_SESSION['user']['data'][0]['id'];
-			$object->id_conversation = $inserted;
-			$subData[] = $object;*/
+            // --- END: MODIFIED LOGIC ---
 
 			$GLOBALS['db']->table = 'participant';
 			$GLOBALS['db']->data = $subData;
@@ -404,21 +534,16 @@ function send_msg(){
 			$secondinsert = $GLOBALS['db']->insert();
 			
 			if($secondinsert){
-			/*	$tokens = $GLOBALS['db']->select("SELECT client.token FROM `client` WHERE client.token IS NOT NULL AND client.id IN (".$_SESSION['user']['data'][0]['id'].', '.implode(', ', $_POST['participants']).")");
-				if(!empty($tokens))
-					subscribeToTopic($tokens, "chat_$inserted");*/
-				
 				echo  json_encode(["state" => "true", "message" => 'Added successfully']); 
 			}else
-				echo json_encode(["state" => "false", "message" => "something went wrong"]);
+				echo json_encode(["state" => "false", "message" => "something went wrong while adding participants"]);
 
 		}else
 			echo  json_encode(["state" => "true", "message" => 'Added successfully']); 
 	}else{
-		echo json_encode(["state" => "false", "message" => "something went wrong"]);
+		echo json_encode(["state" => "false", "message" => "something went wrong while creating conversation"]);
 	}
 }
-
 function subscribeToTopic($tokens, $topic){
 	
 	foreach($tokens as $token){
@@ -646,111 +771,138 @@ function postEvent($DB){
         $DB = null;
     }
 
-function get_RDV($id = NULL, $return=false){
-        $id = ($id != NULL ? " AND rdv.id = $id" : "");
-        $doctor_id = (isset($_POST['doctor_id']) && !empty($_POST['doctor_id']) ? " AND rdv.doctor_id = ".$_POST['doctor_id'] : "");
+
+    function get_RDV($id = NULL, $return=false){
+        $user_role = $_SESSION['user']['role'] ?? null;
+        $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+        $user_id = $_SESSION['user']['id'] ?? 0;
+    
+        $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
         
-    	$filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (".implode(', ', $_POST['filters']).")" : " AND rdv.state IN (".implode(', ', ['-999']).")" );
-    	
-        $sql = "SELECT rdv.*, CONCAT_WS(' ', patient.first_name, patient.last_name ) AS patient_name, rdv.date as Date_RDV, state FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id WHERE rdv.deleted = 0 $doctor_id $id $filters";
+        // Build WHERE clause based on user role and cabinet
+        $where_clause = "";
+        if ($user_role === 'admin' && !empty($user_cabinet_id)) {
+            // Cabinet Admin sees all RDVs in their cabinet
+            $where_clause = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
+        } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
+            // Doctor/Nurse sees only their own RDVs
+            $where_clause = " AND rdv.doctor_id = " . intval($user_id);
+        }
+        // Super Admin (admin with null cabinet_id) has no cabinet filter, so they see all RDVs
+    
+        $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (".implode(', ', array_map('intval', $_POST['filters'])).")" : " AND rdv.state >= -1" ); // Default to show all states
+        
+        $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
+                COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name
+                FROM rdv 
+                LEFT JOIN patient ON patient.id = rdv.patient_id 
+                WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
+                
         $res =  $GLOBALS['db']->select($sql);
-    	
-        foreach ($res as $items) {
-            $arrayData = [
-                'id' => $items['id'],
-                'title' => $items['patient_name'],
-                'allDay' => true,
-                'start' => $items['Date_RDV'],
-                'end' => $items['Date_RDV'],
-                'extendedProps' => [
-                    'calendar' => ($items['state'] ?? ''),
-					'phone' => ($items['phone'] ?? ''),
-					'num_rdv' => ($items['rdv_num'] ?? ''),
-                    'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
-                ]
-            ];
         
-            // Add the converted data to the array
-            $convertedData[] = $arrayData;
+        $convertedData = []; // Initialize as empty array
+        if (!empty($res)) {
+            foreach ($res as $items) {
+                $arrayData = [
+                    'id' => $items['id'],
+                    'title' => $items['patient_name'],
+                    'allDay' => true,
+                    'start' => $items['Date_RDV'],
+                    'end' => $items['Date_RDV'],
+                    'extendedProps' => [
+                        'calendar' => match((int)$items['state']) {
+                            0 => 'warning', // Créé
+                            1 => 'info',    // Accepté
+                            2 => 'success', // Complété
+                            3 => 'danger',  // Annulé
+                            default => 'secondary'
+                        },
+                        'phone' => ($items['phone'] ?? ''),
+                        'num_rdv' => ($items['rdv_num'] ?? ''),
+                        'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
+                    ]
+                ];
+                $convertedData[] = $arrayData;
+            }
         }
     
-    	if(empty($res)){
-    		$arrayData = [
+        if(empty($convertedData)){
+            $arrayData = [
                 'id' => '0',
                 'title' => 'start calendar',
                 'allDay' => false,
                 'start' => '1970-01-01',
                 'end' => '1970-01-01',
                 'extendedProps' => [
-                    'calendar' => 0,
+                    'calendar' => 'secondary',
                     'Client_id' => 0
                 ]
             ];
-    		$convertedData[] = $arrayData;
-    	}
+            $convertedData[] = $arrayData;
+        }
     
         if($return) { return $convertedData; }
     
-    	echo json_encode($convertedData);
+        echo json_encode($convertedData);
     }
 
-function postRdv(){
 
-    $doctor = filter_var(( $_POST['doctor'] ?? 0 ), FILTER_SANITIZE_NUMBER_INT);
-    $dateString = filter_var(( $_POST['date'] ?? date("Y-m-d") ), FILTER_SANITIZE_STRING);
+    function postRdv(){
 
-    // $date = new DateTime($dateString);
-    // setlocale(LC_TIME, 'fr_FR');
-    // $dayName = ucwords(strftime('%A', $date->getTimestamp()));
-    // $datetime = date('Y-m-d H:i:s');
-	
-    // $response = $GLOBALS['db']->select("SELECT * FROM doctor WHERE doctor.id = $doctor")[0] ?? [];
-    // $tickets_rest = json_decode($response['tickets_rest'], true);
-    // $ticketThisDay = $tickets_rest[$dayName];
+        $doctor = filter_var(( $_POST['doctor'] ?? 0 ), FILTER_SANITIZE_NUMBER_INT);
+        $dateString = filter_var(( $_POST['date'] ?? date("Y-m-d") ), FILTER_SANITIZE_STRING);
     
-    // if( !empty($response) )
-    //     if( $ticketThisDay > 0 ){
-
-            $data = [
-                "doctor_id"     =>  $doctor,
-                "patient_id"    =>  filter_var(($_POST['patient'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
-                "date"          =>  $dateString,
+        // This logic is commented out as it relies on an old structure. 
+        // The current logic correctly calculates available tickets on the fly.
+        // $date = new DateTime($dateString);
+        // setlocale(LC_TIME, 'fr_FR');
+        // $dayName = ucwords(strftime('%A', $date->getTimestamp()));
+        // $datetime = date('Y-m-d H:i:s');
+        
+        // $response = $GLOBALS['db']->select("SELECT * FROM doctor WHERE doctor.id = $doctor")[0] ?? [];
+        // $tickets_rest = json_decode($response['tickets_rest'], true);
+        // $ticketThisDay = $tickets_rest[$dayName];
+        
+        // if( !empty($response) )
+        //     if( $ticketThisDay > 0 ){
+    
+                $data = [
+                    "doctor_id"     =>  $doctor,
+                    "patient_id"    =>  filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT), // Allow null for new patients
+                    "date"          =>  $dateString,
+                    
+                    "first_name"    =>  filter_var(( $_POST['first_name'] ?? "" ), FILTER_SANITIZE_STRING),
+                    "last_name"     =>  filter_var(( $_POST['last_name'] ?? "" ), FILTER_SANITIZE_STRING),
+                    "phone"         =>  filter_var(( $_POST['phone'] ?? "" ), FILTER_SANITIZE_STRING),
+                    
+                    "rdv_num"       =>  filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+                    // --- MODIFIED: Use new session structure ---
+                    "created_by"    =>  $_SESSION['user']['id'],
+                    "cabinet_id"    =>  $_SESSION['user']['cabinet_id'] ?? null // Also log the cabinet_id
+                ];
+    
+                // --- Remove null patient_id if it's not provided ---
+                if (empty($data['patient_id'])) {
+                    unset($data['patient_id']);
+                }
                 
-                "first_name"    =>  filter_var(( $_POST['first_name'] ?? "" ), FILTER_SANITIZE_STRING),
-                "last_name"     =>  filter_var(( $_POST['last_name'] ?? "" ), FILTER_SANITIZE_STRING),
-                "phone"         =>  filter_var(( $_POST['phone'] ?? "" ), FILTER_SANITIZE_STRING),
+                $GLOBALS['db']->table = 'rdv';
+                $GLOBALS['db']->data = $data;
+    
+                $res = $GLOBALS['db']->insert();
+    
+                $GLOBALS['db'] = null;
                 
-                "rdv_num"       =>  filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT), //(json_decode($response['tickets_day'], true)[$dayName] - ($ticketThisDay-1)),
-                "created_by"    =>  $_SESSION['user']['data'][0]['id']
-            ];
-
-            // $tickets_rest[$dayName] = $tickets_rest[$dayName] - 1;
-            
-            // $GLOBALS['db']->table = 'doctor';
-            // $GLOBALS['db']->data = array("tickets_rest" => json_encode($tickets_rest), "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['data'][0]['id']);
-            // $GLOBALS['db']->where = "id = $doctor";
-
-            // $updated = $GLOBALS['db']->update();
-
-            
-            $GLOBALS['db']->table = 'rdv';
-            $GLOBALS['db']->data = $data;
-
-            $res = $GLOBALS['db']->insert();
-
-            $GLOBALS['db'] = null;
-            
-            if($res)
-                echo json_encode( ["state" => "true", "message" => $GLOBALS['language']['Added successfully']] );
-            else
-                echo json_encode( ["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']] );
-
-        // }else{
-        //     echo json_encode( ["state" => "false", "message" => "Il n\'y a pas de billet pour aujourd\'hui"] );
-        // }    
-
-}
-
+                if($res)
+                    echo json_encode( ["state" => "true", "message" => $GLOBALS['language']['Added successfully']] );
+                else
+                    echo json_encode( ["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']] );
+    
+            // }else{
+            //     echo json_encode( ["state" => "false", "message" => "Il n\'y a pas de billet pour aujourd\'hui"] );
+            // }    
+    
+    }
 function getPatients($id, $return = false){
 
 	$id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
@@ -777,12 +929,15 @@ function getUsers($id){
 
 }
 
+
 function updateState(){
 	
-	if( isset($_SESSION['user']['data'][0]['id']) && !empty($_SESSION['user']['data'][0]['id']) ){
+	// MODIFIED: Use new, correct session structure for the security check
+	if( isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id']) ){
 		$id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
 		$state = abs(filter_var($_POST['state'], FILTER_SANITIZE_NUMBER_INT));
         
+        // This logic can be uncommented if you need to manage ticket counts upon cancellation
         // if($state == 3){
 
         //     $doctor = getRdvDoctor($id);
@@ -800,7 +955,7 @@ function updateState(){
         //         $tickets_rest[$dayName] = $tickets_rest[$dayName] + 1;
                 
         //         $GLOBALS['db']->table = 'doctor';
-        //         $GLOBALS['db']->data = array("tickets_rest" => json_encode($tickets_rest), "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['data'][0]['id']);
+        //         $GLOBALS['db']->data = array("tickets_rest" => json_encode($tickets_rest), "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
         //         $GLOBALS['db']->where = "id = $doctor[id]";
 
         //         $updated = $GLOBALS['db']->update();
@@ -811,7 +966,8 @@ function updateState(){
 		$datetime = date('Y-m-d H:i:s');
 
 		$GLOBALS['db']->table = 'rdv';
-		$GLOBALS['db']->data = array("state" => "$state", "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['data'][0]['id']);
+		// MODIFIED: Use new, correct session structure for modified_by
+		$GLOBALS['db']->data = array("state" => "$state", "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
 		$GLOBALS['db']->where = "id = $id";
 
 		$updated = $GLOBALS['db']->update();
@@ -824,7 +980,6 @@ function updateState(){
 		echo json_encode( ["state" => "false", "message" => "missing id"] );
 
 }
-
 function getRdvPatient(){
 
 	$id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
@@ -847,77 +1002,60 @@ function getRdvDoctor($id){
     return $response[0] ?? [];
 }
 
+
+
 function handleRdv_nbr(){
-    
     try {
-    
         $response = [];
         if(isset($_POST['doctor']) && !empty($_POST['doctor']) ){
-            $doctor = filter_var(($_POST['doctor']), FILTER_SANITIZE_NUMBER_INT);
+            $doctor_id = filter_var(($_POST['doctor']), FILTER_SANITIZE_NUMBER_INT);
             $dateString = filter_var( ($_POST['date'] ?? date('Y-m-d')), FILTER_SANITIZE_STRING) ;
     
             $date = new DateTime($dateString);
-            setlocale(LC_TIME, 'fr_FR');
+            // Use French locale to get French day names which match the database JSON keys
+            setlocale(LC_TIME, 'fr_FR.UTF-8', 'fra'); 
             $dayName = ucwords(strftime('%A', $date->getTimestamp()));
             
-            $response = $GLOBALS['db']->select("SELECT * FROM doctor WHERE doctor.id = $doctor")[0] ?? [];
-            $nbrTickets = json_decode(($response['tickets_day'] ?? '[]'), true)[$dayName] ?? 0;
-            
-            $restTickets = [];
-            if($nbrTickets > 0){
-                $tickets = range(1, $nbrTickets);
-                $reservedTickets = $GLOBALS['db']->select("SELECT rdv_num FROM `rdv` WHERE rdv.doctor_id = $doctor AND rdv.state != 3 AND rdv.date = '$dateString'");
-                $reservedTickets = array_values(array_column($reservedTickets, 'rdv_num'));
+            // MODIFIED: Fetch from 'users' table instead of 'doctor'
+            $doctor_info_sql = "SELECT tickets_day FROM users WHERE id = ?";
+            $stmt = $GLOBALS['db']->prepare($doctor_info_sql);
+            $stmt->execute([$doctor_id]);
+            $doctor_response = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($doctor_response) {
+                $tickets_day_json = $doctor_response['tickets_day'] ?? '[]';
+                $tickets_day_array = json_decode($tickets_day_json, true);
+
+                // Ensure the day name exists in the array
+                $nbrTickets = isset($tickets_day_array[$dayName]) ? intval($tickets_day_array[$dayName]) : 0;
                 
-                $restTickets = array_diff($tickets, $reservedTickets);
+                $restTickets = [];
+                if($nbrTickets > 0){
+                    $all_possible_tickets = range(1, $nbrTickets);
+
+                    // Fetch reserved ticket numbers for the given doctor and date
+                    $reserved_sql = "SELECT rdv_num FROM `rdv` WHERE doctor_id = ? AND state != 3 AND date = ?";
+                    $stmt_reserved = $GLOBALS['db']->prepare($reserved_sql);
+                    $stmt_reserved->execute([$doctor_id, $dateString]);
+                    $reservedTickets = $stmt_reserved->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    // Find the tickets that are not yet reserved
+                    $restTickets = array_diff($all_possible_tickets, $reservedTickets);
+                }
+                
+                // Format the response for Select2
+                foreach($restTickets as $ticket_num){
+                    $response[] = array(
+                        "id" => $ticket_num,
+                        "text" => $ticket_num
+                    );
+                }
             }
-            
-            $response = array();
-            foreach($restTickets as $res){
-                $response[] = array(
-                    "id" => $res,
-                    "text" => $res
-                );
-            }
-            
         }
         echo json_encode($response);
         
     } catch (Throwable $th) {
+        // Return an empty array in case of any error
         echo json_encode([]);
-    }
-}
-
-function sendEmail($recipient, $subject, $message) {
-    $mail = new PHPMailer(true);
-
-    try {
-        // Server settings
-        $mail->SMTPDebug = 2; // Enable verbose debug output
-        $mail->isSMTP(); // Set mailer to use SMTP
-        $mail->Host = 'smtp.example.com'; // Specify main and backup SMTP servers
-        $mail->SMTPAuth = true; // Enable SMTP authentication
-        $mail->Username = 'your_username@example.com'; // SMTP username
-        $mail->Password = 'your_password'; // SMTP password
-        $mail->SMTPSecure = 'tls'; // Enable TLS encryption, 'ssl' also accepted
-        $mail->Port = 587; // TCP port to connect to
-
-        // Sender info
-        $mail->setFrom('your_email@example.com', 'Your Name');
-
-        // Recipient
-        $mail->addAddress($recipient);
-
-        // Content
-        $mail->isHTML(true); // Set email format to HTML
-        $mail->Subject = $subject;
-        $mail->Body = $message;
-
-        // Send the email
-        $mail->send();
-
-        return true; // Email sent successfully
-    } catch (Exception $e) {
-        return "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
     }
 }

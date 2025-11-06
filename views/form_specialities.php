@@ -1,7 +1,7 @@
-
 <?php  
-    if(!isset($_SESSION['user']['data'])){
-        header('location:'.SITE_URL.'/login');
+    // MODIFIED: Super Admin check
+    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin' || !empty($_SESSION['user']['cabinet_id'])){
+        header('location:'.SITE_URL.'/'); // Redirect non-super-admins to dashboard
         exit();
     }
     include_once 'header.php'; 

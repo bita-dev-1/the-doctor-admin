@@ -1,5 +1,6 @@
 <?php 
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check to allow all logged-in users
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
         exit();
     }
@@ -28,7 +29,10 @@
     var request = {
         "query": "qr_rdv_table",
         "method": "data_table",
-        <?= $_SESSION['user']['data'][0]['type'] == 0 ? "condition: 'doctor_id = {$_SESSION['user']['data'][0]['id']}'," : "" ?>
+        // MODIFIED: Simplified the condition check, as it's now handled server-side in queries.data.php
+        <?php if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+            echo "\"condition\": \"doctor_id = {$_SESSION['user']['id']}\",";
+        } ?>
         "button":[
             {
                 "text": "<?= $GLOBALS['language']['add'].' '.$GLOBALS['language']['rdv']; ?>",
@@ -37,7 +41,7 @@
             },
             {
                 "text": "<?= $GLOBALS['language']['export']; ?>",
-                "class": "btn btn btn-outline-secondary dropdown-toggle ms-50",
+                "class": "btn btn-outline-secondary dropdown-toggle ms-50",
                 "collection" : [
                     {
                         "text": "Print",

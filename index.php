@@ -9,8 +9,15 @@
     get(SITE_URL.'/profile/password', 'views/changePass.php');
     
 /**************** [Begin]: Tables *******************/
-    get(SITE_URL.'/admins', 'views/table_admins.php');
-    get(SITE_URL.'/doctors', 'views/table_doctors.php');
+    // Admin routes for user management
+    get(SITE_URL.'/doctors', 'views/table_doctors.php'); // Now serves as the main user list for doctors/nurses
+    get(SITE_URL.'/users', 'views/table_doctors.php');   // Alias for clarity
+    get(SITE_URL.'/admins', 'views/table_doctors.php');  // Redirect old admins link to the new user management page
+    
+    // --- NEW ROUTES FOR CABINETS ---
+    get(SITE_URL.'/cabinets', 'views/table_cabinets.php');
+
+    // Other tables
     get(SITE_URL.'/patients', 'views/table_patients.php');
     get(SITE_URL.'/rdv', 'views/table_rdv.php');
     get(SITE_URL.'/waitingList', 'views/table_waitingList.php');
@@ -23,13 +30,21 @@
 /**************** [End]: Tables *******************/
 
 /**************** [Begin]: Forms *******************/
-
+    // Unified form for adding/editing users (doctors/nurses)
+    get(SITE_URL.'/users/insert', 'views/form_users.php');
+    get(SITE_URL.'/users/update/$id', 'views/form_users.php');
+    
+    // Redirect old routes to new ones for backward compatibility
     get(SITE_URL.'/doctors/insert', 'views/form_users.php');
     get(SITE_URL.'/doctors/update/$id', 'views/form_users.php');
-
     get(SITE_URL.'/admins/insert', 'views/form_users.php');
     get(SITE_URL.'/admins/update/$id', 'views/form_users.php');
 
+    // --- NEW ROUTES FOR CABINETS ---
+    get(SITE_URL.'/cabinets/insert', 'views/form_cabinets.php');
+    get(SITE_URL.'/cabinets/update/$id', 'views/form_cabinets.php');
+
+    // Other forms
     get(SITE_URL.'/patients/insert', 'views/form_patients.php');
     get(SITE_URL.'/patients/update/$id', 'views/form_patients.php');
 

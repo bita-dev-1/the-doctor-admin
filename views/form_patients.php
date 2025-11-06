@@ -1,6 +1,6 @@
-
 <?php  
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check to allow all admin roles
+    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin'){
         header('location:'.SITE_URL.'/login');
         exit();
     }

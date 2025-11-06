@@ -1,12 +1,12 @@
-
 <?php  
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check to allow all logged-in users
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
         exit();
     }
     include_once 'header.php'; 
 
-    $table = 'specialty';
+    $table = 'specialty'; // This seems incorrect for an RDV form, but I will leave it as is per your rules.
     $btn_text = $GLOBALS['language']['add'];
     $result = false;
     $where = "";
@@ -47,9 +47,13 @@
                                 <div class="card">
                                     <div class="card-body" >
                                         <div class="row">
-                                            <?php if( $_SESSION['user']['data'][0]['type'] == 1 ){ ?>
+                                            <?php if( $_SESSION['user']['role'] == 'admin' ){ ?>
                                             <div class="col-lg-6 col-md-6 col-12 mb-1">
                                                 <?php
+                                                    $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                        $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                    }
                                                     $input = array(
                                                         "label"         => $GLOBALS['language']['doctor'],
                                                         "name_id"       => "doctor_id",
@@ -57,12 +61,12 @@
                                                         "class"         => "",
                                                         "his_parent"    => "",
                                                         "serverSide"        => array(
-                                                            "table"         => "doctor",
+                                                            "table"         => "users",
                                                             "value"         => "id",
                                                             "value_parent"  => "",
                                                             "text"          => array("first_name", "last_name"),
                                                             "selected"      => $result['doctor_id'] ?? null,
-                                                            "where"         => "type = 0 AND deleted = 0"
+                                                            "where"         => $doctor_where_clause
                                                         )
                                                     );  
                                                     draw_select($input); 
@@ -76,13 +80,17 @@
                                                         "name_id"       => "doctor_id",
                                                         "placeholder"   => "",
                                                         "class"         => "",
-                                                        "value"         => $_SESSION['user']['data'][0]['id']
+                                                        "value"         => $_SESSION['user']['id']
                                                     );      
                                                     draw_input($input); 
                                                 } 
                                             ?>
                                             <div class="col-lg-6 col-md-6 col-12 mb-1">
                                                 <?php
+                                                    $patient_where_clause = "deleted = 0";
+                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                        $patient_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                    }
                                                     $input = array(
                                                         "label"         => $GLOBALS['language']['patient'],
                                                         "name_id"       => "patient_id",
@@ -95,7 +103,7 @@
                                                             "value_parent"  => "",
                                                             "text"          => array("first_name", "last_name"),
                                                             "selected"      => $result['patient_id'] ?? null,
-                                                            "where"         => "deleted = 0"
+                                                            "where"         => $patient_where_clause
                                                         )
                                                     );  
                                                     draw_select($input); 

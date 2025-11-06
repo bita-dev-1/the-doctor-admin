@@ -1,4 +1,9 @@
 <?php
+    // --- Start Session ---
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
     // --- Autoload Composer dependencies and load environment variables ---
     require_once __DIR__ . '/vendor/autoload.php';
     
@@ -31,4 +36,13 @@
     // These can be moved to a .env file later for better security
     define('API_URL', ''); 
     define('API_KEY', '');
+    
+    // --- NEW: Define Mail Constants from .env ---
+    define('MAIL_HOST', $_ENV['MAIL_HOST'] ?? 'smtp.mailtrap.io');
+    define('MAIL_PORT', $_ENV['MAIL_PORT'] ?? 587);
+    define('MAIL_USERNAME', $_ENV['MAIL_USERNAME'] ?? '');
+    define('MAIL_PASSWORD', $_ENV['MAIL_PASSWORD'] ?? '');
+    define('MAIL_ENCRYPTION', $_ENV['MAIL_ENCRYPTION'] ?? 'tls');
+    define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? 'from@example.com');
+    define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'Example');
 ?>

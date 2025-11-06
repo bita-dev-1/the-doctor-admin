@@ -1,5 +1,6 @@
 <?php 
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check to allow all admin roles
+    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin'){
         header('location:'.SITE_URL.'/login');
         exit();
     }
@@ -7,7 +8,7 @@
 ?>
 
 <div class="app-content content ">
-    <div class="content-wrapper container-xxl p-0">
+    <div class="content-wrapper p-0">
         <section id="ajax-datatable">
             <div class="row">
                 <div class="col-12">
@@ -26,7 +27,7 @@
 
 <script>
     var request = {
-        "query": "qr_doctors_table",
+        "query": "qr_patients_table",
         "method": "data_table",
         "actions": [
             {
@@ -40,13 +41,13 @@
         ],
         "button":[
             {
-                "text": "<?= $GLOBALS['language']['add'].' '.$GLOBALS['language']['doctor']; ?>",
+                "text": "<?= $GLOBALS['language']['add'].' '.$GLOBALS['language']['patient']; ?>",
                 "class": "btn btn-primary",
                 "url" : "<?= SITE_URL; ?>/patients/insert"
             },
             {
                 "text": "<?= $GLOBALS['language']['export']; ?>",
-                "class": "btn btn btn-outline-secondary dropdown-toggle ms-50",
+                "class": "btn btn-outline-secondary dropdown-toggle ms-50",
                 "collection" : [
                     {
                         "text": "Print",

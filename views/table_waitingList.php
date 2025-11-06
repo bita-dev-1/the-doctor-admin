@@ -1,5 +1,6 @@
 <?php 
-    if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check to allow all logged-in users
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
         exit();
     }
@@ -60,7 +61,10 @@
     let request = {
         "query": "qr_waitingList_table",
         "method": "data_table",
-        <?= $_SESSION['user']['data'][0]['type'] == 0 ? "condition: 'doctor_id = {$_SESSION['user']['data'][0]['id']}'" : "" ?>
+        // MODIFIED: Simplified the condition check
+        <?php if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+            echo "\"condition\": \"doctor_id = {$_SESSION['user']['id']}\",";
+        } ?>
     };
     
     call_data_table(request);

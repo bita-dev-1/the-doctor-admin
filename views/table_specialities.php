@@ -1,6 +1,7 @@
 <?php 
-    if(!isset($_SESSION['user']['data']) || $_SESSION['user']['data'][0]['type'] == 0){
-        header('location:'.SITE_URL.'/login');
+    // MODIFIED: Super Admin check
+    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin' || !empty($_SESSION['user']['cabinet_id'])){
+        header('location:'.SITE_URL.'/'); // Redirect non-super-admins to dashboard
         exit();
     }
     include_once 'header.php'; 
@@ -46,27 +47,27 @@
             },
             {
                 "text": "<?= $GLOBALS['language']['export']; ?>",
-                "class": "btn btn btn-outline-secondary dropdown-toggle ms-50",
+                "class": "btn btn-outline-secondary dropdown-toggle ms-50",
                 "collection" : [
                     {
                         "text": "Print",
                         "role": "print",
-                        "exportOptions": { "columns": [0, 1, 2, 3, 4] }
+                        "exportOptions": { "columns": [0, 1, 2, 3] }
                     },
                     {
                         "text": "Csv",
                         "role": "csv",
-                        "exportOptions": { "columns": [0, 1, 2, 3, 4] }
+                        "exportOptions": { "columns": [0, 1, 2, 3] }
                     },
                     {
                         "text": "Excel",
                         "role": "excel",
-                        "exportOptions": { "columns": [0, 1, 2, 3, 4] }
+                        "exportOptions": { "columns": [0, 1, 2, 3] }
                     },
                     {
                         "text": "Pdf",
                         "role": "pdf",
-                        "exportOptions": { "columns": [0, 1, 2, 3, 4] }
+                        "exportOptions": { "columns": [0, 1, 2, 3] }
                     }
                 ]
             }  

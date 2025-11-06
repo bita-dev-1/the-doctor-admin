@@ -1,5 +1,6 @@
 <?php
-    if (isset($_SESSION['user']['data'])) { // Changed from $_SESSION['id'] to match project structure
+    // Corrected session check
+    if (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
         header('Location: '.SITE_URL.'/');
         exit();
     }
@@ -59,7 +60,7 @@
                                 <span class="logo-main">The-Doctor</span>
                                 <span class="logo-cloud">.cloud</span>
                             </div>
-                            <img src="<?= SITE_URI; ?>assets/images/logo/logo-trans.png" class="left-panel-logo-secondary" alt="logo">
+                            <img src="<?= SITE_URI; ?>assets/images/logo/logo_white_thedoctor.png" class="left-panel-logo-secondary" alt="logo">
                         </div>
                         <h1 class="slogan">Digitalisez votre activité et développez rapidement!</h1>
                         <p class="sub-slogan">Créez votre site web et profitez de toutes les fonctionnalités à vie</p>
@@ -73,9 +74,9 @@
                             <div class="logo-block">
                                 <div class="brand-logo-wrapper">
                                     <img src="<?= SITE_URI; ?>assets/images/logo/logo-trans.png" alt="The Doctor Logo">
-                          
+                             
                                 </div>
-                       
+                          
                             </div>
 
                             <h2 class="card-title fw-bolder mb-1">Connectez-vous<br>à votre compte</h2>

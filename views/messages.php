@@ -1,5 +1,6 @@
 <?php 
-       if(!isset($_SESSION['user']['data'])){
+    // MODIFIED: Corrected security check
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
         exit();
     }
@@ -99,9 +100,9 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                         <!-- Sidebar header start -->
                         <div class="chat-fixed-search">
                             <div class="d-flex align-items-center w-100">
-                                <div class="sidebar-profile-toggle" data-profile="<?php echo $_SESSION['user']['data'][0]['id']; ?>" data-image="<?php echo $_SESSION['user']['data'][0]['image1']; ?>">
+                                <div class="sidebar-profile-toggle" data-profile="<?php echo $_SESSION['user']['id']; ?>" data-image="<?php echo $_SESSION['user']['image1']; ?>">
                                     <div class="avatar avatar-border">
-                                        <img src="<?php echo (!empty($_SESSION['user']['data'][0]['photo']) ? $_SESSION['user']['data'][0]['photo'] : '/assets/images/default_User.png'); ?>" alt="user_avatar" height="42" width="42" />
+                                        <img src="<?php echo (!empty($_SESSION['user']['image1']) ? $_SESSION['user']['image1'] : '/assets/images/default_User.png'); ?>" alt="user_avatar" height="42" width="42" />
                                         <span class="avatar-status-online"></span>
                                     </div>
                                 </div>
@@ -113,35 +114,36 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                         </div>
                         <!-- Sidebar header end -->
 
-                        <!-- Sidebar Users start -->
-                        <div id="users-list" class="chat-user-list-wrapper list-group">
+                       <!-- Sidebar Users start -->
+                       <div id="users-list" class="chat-user-list-wrapper list-group">
                             <div class="d-flex align-items-center justify-content-between chat-list-title mb-1">
                                 <h4 class="chat-list-title m-0"><?php echo 'chats'; ?></h4>
-                              <!-- <i data-feather="edit" data-bs-toggle="offcanvas" href="#createConversation" role="button" aria-controls="createConversation"></i>-->
+                                <!-- MODIFIED: Re-enabled the button and changed the icon -->
+                                <i data-feather="plus-circle" class="cursor-pointer" style="width: 20px; height: 20px;" data-bs-toggle="offcanvas" href="#createConversation" role="button" aria-controls="createConversation"></i>
                             </div>
                             
                             <ul class="chat-users-list chat-list media-list">
                                 <?php 
-
-                                    foreach($chat_list['chat_list'] as $user){
-                                        echo '
-                                        <li data-express="'.($user['id']).'" '.(isset($conversationId) && $conversationId == $user['id'] ? 'class="active"' : '').'>
-                                            <span class="avatar">
-                                                <img src="/assets/images/default_User.png" height="42" width="42" alt="" />
-                                            </span>
-                                            <div class="chat-info flex-grow-1">
-                                                <h5 class="mb-0">'.$user['participants'][0]['user'].'</h5>
-                                                <p class="card-text text-truncate">
-                                                    '.(isset($user['last_msg']['message']) ? ( $user['last_msg']['type'] == 1 ? 'vous a envoyé une photo' : ( $user['last_msg']['message'] == 2 ? 'vous a envoyé une fichier' : ($user['last_msg']['message']))  ) : '').'
-                                                </p>
-                                            </div>
-                                            <div class="chat-meta text-nowrap">
-                                                <small class="float-end mb-25 chat-time"></small>
-                                            </div>
-                                        </li>
-                                        ';
+                                    if (isset($chat_list['chat_list']) && is_array($chat_list['chat_list'])) {
+                                        foreach($chat_list['chat_list'] as $user){
+                                            echo '
+                                            <li data-express="'.($user['id']).'" '.(isset($conversationId) && $conversationId == $user['id'] ? 'class="active"' : '').'>
+                                                <span class="avatar">
+                                                    <img src="/assets/images/default_User.png" height="42" width="42" alt="" />
+                                                </span>
+                                                <div class="chat-info flex-grow-1">
+                                                    <h5 class="mb-0">'.($user['participants'][0]['user'] ?? 'Unknown User').'</h5>
+                                                    <p class="card-text text-truncate">
+                                                        '.(isset($user['last_msg']['message']) ? ( $user['last_msg']['type'] == 1 ? 'vous a envoyé une photo' : ( $user['last_msg']['message'] == 2 ? 'vous a envoyé une fichier' : ($user['last_msg']['message']))  ) : '').'
+                                                    </p>
+                                                </div>
+                                                <div class="chat-meta text-nowrap">
+                                                    <small class="float-end mb-25 chat-time"></small>
+                                                </div>
+                                            </li>
+                                            ';
+                                        }
                                     }
-
                                 ?>
                                 <li class="no-results">
                                     <h6 class="mb-0"><?php echo 'No conversations found'; ?></h6>
@@ -163,7 +165,7 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                         <!-- Main chat area -->
                         <section class="chat-app-window">
                             <!-- To load Conversation -->
-                            <div class="start-chat-area <?php echo !empty($chat_list['data']['messages']) || (empty($chat_list['data']['messages']) && isset($conversationId) && in_array($conversationId, array_column($chat_list['chat_list'], 'id'))) ? 'd-none' : ''; ?>">
+                            <div class="start-chat-area <?php echo !empty($chat_list['data']['messages']) || (empty($chat_list['data']['messages']) && isset($conversationId) && is_array($chat_list['chat_list']) && in_array($conversationId, array_column($chat_list['chat_list'], 'id'))) ? 'd-none' : ''; ?>">
                                 <div class="mb-1 start-chat-icon">
                                     <i data-feather="message-square"></i>
                                 </div>
@@ -172,7 +174,7 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                             <!--/ To load Conversation -->
 
                             <!-- Active Chat -->
-                            <div class="active-chat <?php echo empty($chat_list['data']['messages']) || (!empty($chat_list['data']['messages']) && isset($conversationId) && in_array($conversationId, array_column($chat_list['chat_list'], 'id'))) ? '' : 'd-none'; ?>">
+                            <div class="active-chat <?php echo empty($chat_list['data']['messages']) || (!empty($chat_list['data']['messages']) && isset($conversationId) && is_array($chat_list['chat_list']) && in_array($conversationId, array_column($chat_list['chat_list'], 'id'))) ? '' : 'd-none'; ?>">
 
                                 <!-- Chat Header -->
                                 <div class="chat-navbar">
@@ -196,47 +198,44 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                                 <div class="user-chats">
                                     <div class="chats">
                                     <?php 
-
-                                        foreach($chat_list['data']['messages'] as $message){
-                                            
-                                         /*   if ($message['message'].stripos("admin") !== false )
-                                                $mainUrl = 'https://mazadi.oneapp.technology/admin/';
-                                            else
-                                                $mainUrl = 'https://mazadi.oneapp.technology/';*/
+                                        if (isset($chat_list['data']['messages']) && is_array($chat_list['data']['messages'])) {
+                                            foreach($chat_list['data']['messages'] as $message){
                                                 
-                                            echo '
-                                            <div class="chat '.(($message['id_sender'] == $_SESSION['user']['data'][0]['id'] && ($message['my_particib'] == $_SESSION['user']['data'][0]['id'] ||  $message['id_particib'] == $_SESSION['user']['data'][0]['id']) ) ? '' : 'chat-left').'" data-express="'.$message['id'].'">
-                                                <div class="chat-avatar">
-                                                    <span class="avatar box-shadow-1 cursor-pointer">
-                                                        <img src="'.(($message['id_sender'] == $_SESSION['user']['data'][0]['id'] && ($message['my_particib'] == $_SESSION['user']['data'][0]['id'] ||  $message['id_particib'] == $_SESSION['user']['data'][0]['id'])) ? $_SESSION['user']['data'][0]['image'] : '/assets/images/default_User.png').'" alt="avatar" height="36" width="36" />
-                                                    </span>
-                                                </div>
-                                                <div class="chat-body">
-                                                    <div class="chat-content">
-                                                        '.
-                                                        (
-                                                        $message['type'] == 1 ? 
-                                                        '<div class="attachement_item downloadable d-flex w-auto" data-file="'.$message['message'].'">
-                                                            <img class="img-fluid" src="'.$message['message'].'" />
-                                                        </div>'
-                                                            :(
-                                                                $message['type'] == 2 ?
+                                                $isSender = ($message['id_sender'] == $_SESSION['user']['id'] && ($message['my_particib'] == $_SESSION['user']['id'] || $message['id_particib'] == $_SESSION['user']['id']));
+                                                
+                                                echo '
+                                                <div class="chat '.($isSender ? '' : 'chat-left').'" data-express="'.$message['id'].'">
+                                                    <div class="chat-avatar">
+                                                        <span class="avatar box-shadow-1 cursor-pointer">
+                                                            <img src="'.($isSender ? $_SESSION['user']['image1'] : '/assets/images/default_User.png').'" alt="avatar" height="36" width="36" />
+                                                        </span>
+                                                    </div>
+                                                    <div class="chat-body">
+                                                        <div class="chat-content">
+                                                            '.
+                                                            (
+                                                            $message['type'] == 1 ? 
+                                                            '<div class="attachement_item downloadable d-flex w-auto" data-file="'.$message['message'].'">
+                                                                <img class="img-fluid" src="'.$message['message'].'" />
+                                                            </div>'
+                                                                :(
+                                                                    $message['type'] == 2 ?
 
-                                                                '<div class="attachement_item downloadable d-flex pe-3 mt-1 w-auto" data-file="'.$message['message'].'">
-                                                                    <span class="attachement_type">'.pathinfo($message['message'], PATHINFO_EXTENSION).'</span>
-                                                                    <p class="m-0">'.str_replace($mainUrl.'uploads/', "", $message['message']).'</p>
-                                                                </div>' : 
-                                                                
-                                                                "<p>$message[message]</p>"
-                                                            )                                                            
-                                                        )
-                                                        .'
+                                                                    '<div class="attachement_item downloadable d-flex pe-3 mt-1 w-auto" data-file="'.$message['message'].'">
+                                                                        <span class="attachement_type">'.pathinfo($message['message'], PATHINFO_EXTENSION).'</span>
+                                                                        <p class="m-0">'.basename($message['message']).'</p>
+                                                                    </div>' : 
+                                                                    
+                                                                    "<p>$message[message]</p>"
+                                                                )                                                            
+                                                            )
+                                                            .'
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            ';
+                                                ';
+                                            }
                                         }
-
                                     ?>
                                     </div>
                                 </div>
@@ -294,5 +293,3 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
 <?php include_once 'foot.php'; ?>
 
 <script src="<?= SITE_URL; ?>/app-assets/js/scripts/pages/app-chat.js"></script>
-
-
