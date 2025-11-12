@@ -26,7 +26,7 @@
                             </div>
                             <div class="card-body pt-1">
                                 <!-- form -->
-                                <form class="validate-form change-pass">
+                                <form id="changePassForm" class="validate-form">
                                     <div class="row">
                                         <div class="col-12 col-sm-6 mb-1">
                                             <label class="form-label" for="account-old-password">Mot de passe actuel</label>
@@ -77,19 +77,52 @@
 
 <script>
     $(document).ready(function(){
-        $('.change-pass').validate({
+        var form = $('#changePassForm');
+        form.validate({
           rules: {
-            'password': {
-              required: true
-            },
-            'new-password': {
-              required: true
-            },
-            'confirm-new-password': {
-                required: true,
-                equalTo: '#account-new-password'
-            },
+            'password': { required: true },
+            'new-password': { required: true },
+            'confirm-new-password': { required: true, equalTo: '#account-new-password' },
           }
+        });
+
+        form.on('submit', function (e) {
+            e.preventDefault();
+            if (!form.valid()) return;
+
+            var formData = new FormData(this);
+            formData.append('method', 'changePassword');
+
+            $.ajax({
+                type: 'POST',
+                url: SITE_URL + '/data',
+                data: formData,
+                dataType: 'json',
+                cache: false,
+                processData: false,
+                contentType: false,
+                success: function (data) {
+                    if (data.state === "true") {
+                        Swal.fire({
+                            title: data.message,
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            timerProgressBar: true
+                        }).then(() => {
+                            history.back(-1);
+                        });
+                    } else {
+                        Swal.fire({
+                            title: data.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            customClass: { confirmButton: 'btn btn-primary' },
+                            buttonsStyling: false
+                        });
+                    }
+                }
+            });
         });
     });
 </script>

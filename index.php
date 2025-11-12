@@ -4,6 +4,9 @@
 
     get(SITE_URL.'/', 'views/dashboard.php');
     get(SITE_URL.'/login', 'views/login.php');
+    
+    // --- NEW ROUTE ---
+    get(SITE_URL.'/force_change_password', 'views/force_change_password.php');
 
     get(SITE_URL.'/profile', 'views/form_users.php');
     get(SITE_URL.'/profile/password', 'views/changePass.php');

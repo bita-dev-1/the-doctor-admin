@@ -185,9 +185,9 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
                                                 <i data-feather="menu" class="font-medium-5"></i>
                                             </div>
                                             <div class="avatar avatar-border user-profile-toggle m-0 me-1">
-                                                <img src="<?php echo ( is_array($chat_list['data']['users']) && count($chat_list['data']['users']) == 1 && $chat_list['data']['users'][0]['image'] != null ? ($chat_list['data']['users'][0]['image']) : '/assets/images/default_User.png' ); ?>" alt="avatar" height="36" width="36" />
+                                                <img src="<?php echo ( is_array($chat_list['data']['users']) && count($chat_list['data']['users']) > 0 && isset($chat_list['data']['users'][0]['image']) && $chat_list['data']['users'][0]['image'] != null ? ($chat_list['data']['users'][0]['image']) : '/assets/images/default_User.png' ); ?>" alt="avatar" height="36" width="36" />
                                             </div>
-                                            <h6 class="mb-0 current-conversation"><?php echo (is_array($chat_list['data']['users']) ? implode(', ' ,array_column($chat_list['data']['users'], 'Lname')) : ''); ?></h6>
+                                            <h6 class="mb-0 current-conversation"><?php echo (is_array($chat_list['data']['users']) && count($chat_list['data']['users']) > 0 && isset($chat_list['data']['users'][0]['full_name']) ? $chat_list['data']['users'][0]['full_name'] : ''); ?></h6>
                                         </div>
                                         
                                     </header>
@@ -243,6 +243,9 @@ html .navbar-floating.footer-static .app-content .kanban-wrapper {
 
                                 <!-- Submit Chat form -->
                                 <form class="chat-app-form position-relative" action="javascript:void(0);">
+                                    <!-- START: ADDED HIDDEN INPUT -->
+                                    <input type="hidden" id="file-path-input" value="" />
+                                    <!-- END: ADDED HIDDEN INPUT -->
                                     <div class="chat-app-form-inputs">
                                         <div class="input-group input-group-merge me-1 form-send-message">
 

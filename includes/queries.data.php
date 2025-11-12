@@ -52,9 +52,9 @@ if(isset($_SESSION['user'])){
                                       LEFT JOIN specialty ON specialty.id = users.specialty_id 
                                       LEFT JOIN communes ON communes.id = users.commune_id 
                                       LEFT JOIN willaya ON willaya.id = communes.id_willaya 
-                                      WHERE users.deleted = 0 AND users.role != 'admin' $users_cabinet_condition",
+                                      WHERE users.deleted = 0 AND users.status = 'active'  $users_cabinet_condition",
         
-        "qr_doctors_table"         => "SELECT users.id, users.image1 as _photo, CONCAT( users.first_name,' ',users.last_name) as full_name, users.phone, users.email, specialty.namefr as specialty, users.id as _stateId, users.rdv as __enableRdv , communes.name as commune, willaya.willaya , users.recomondation, users.views, users.status as _state , users.id as __action FROM users LEFT JOIN specialty ON specialty.id = users.specialty_id LEFT JOIN communes ON communes.id = users.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE users.deleted = 0 AND users.role = 'doctor' $users_cabinet_condition",
+        "qr_doctors_table"         => "SELECT users.id, users.image1 as _photo, CONCAT( users.first_name,' ',users.last_name) as full_name, users.phone, users.email, specialty.namefr as specialty, users.id as _stateId, users.rdv as __enableRdv , communes.name as commune, willaya.willaya , users.recomondation, users.views, users.status as _state , users.id as __action FROM users LEFT JOIN specialty ON specialty.id = users.specialty_id LEFT JOIN communes ON communes.id = users.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE users.deleted = 0 AND users.status = 'active' AND users.role = 'doctor' $users_cabinet_condition",
         
         "qr_patients_table"        => "SELECT patient.id, patient.image as _photo, patient.username, CONCAT( patient.first_name,' ',patient.last_name) as full_name, patient.phone, patient.email, communes.name as commune, willaya.willaya , patient.id as __action FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0 $patients_cabinet_condition",
         

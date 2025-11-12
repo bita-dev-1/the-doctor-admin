@@ -4,11 +4,14 @@
         session_start();
     }
 
+    // --- Define Project Root ---
+    define('PROJECT_ROOT', __DIR__);
+
     // --- Autoload Composer dependencies and load environment variables ---
-    require_once __DIR__ . '/vendor/autoload.php';
+    require_once PROJECT_ROOT . '/vendor/autoload.php';
     
     try {
-        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+        $dotenv = Dotenv\Dotenv::createImmutable(PROJECT_ROOT);
         $dotenv->load();
     } catch (\Dotenv\Exception\InvalidPathException $e) {
         die("Could not find .env file. Please create one in the root directory.");

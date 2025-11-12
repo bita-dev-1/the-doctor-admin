@@ -36,7 +36,7 @@
                             <span class="user-name fw-bolder"><?= $_SESSION['user']['first_name'].' '.$_SESSION['user']['last_name']; ?></span>
                             <span class="user-status"><?= $user_display_role ?></span>
                         </div>
-                        <span class="avatar"><img class="round" src="<?= $_SESSION['user']['image1'] ?? (SITE_URI . 'assets/images/default_User.png'); ?>" alt="avatar" height="40" width="40"><span class="avatar-status-online"></span></span>
+                        <span class="avatar"><img id="header-profile-image" class="round" src="<?= $_SESSION['user']['image1'] ?? (SITE_URI . 'assets/images/default_User.png'); ?>" alt="avatar" height="40" width="40"><span class="avatar-status-online"></span></span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-user">
                         <a class="dropdown-item" href="<?= SITE_URL; ?>/profile"><i class="me-50" data-feather="user"></i><?= $GLOBALS['language']['My account']; ?></a>

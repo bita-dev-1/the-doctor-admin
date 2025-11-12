@@ -562,6 +562,8 @@ if ($(".codexFileUp").length) {
   }
 }
 
+// This is inside assets/js/load.js
+
 function moveUploadedFile(self, formData) {
   formData.append("method", "moveUploadedFile");
   $.ajax({
@@ -575,6 +577,31 @@ function moveUploadedFile(self, formData) {
     success: function (data) {
       data = JSON.parse(data);
       if (data.state == "true") {
+        // --- START: MODIFIED LOGIC FOR CHAT ---
+        if (self.closest(".chat-app-form-files").length) {
+          // This is the chat uploader
+          var filePath = data.path[0].new;
+          $("#file-path-input").val(filePath);
+
+          // Show a preview inside the collapse area
+          var previewHtml = `<div class="attachement_item d-flex align-items-center p-1 border rounded">
+                                 <span class="attachement_type">${filePath
+                                   .split(".")
+                                   .pop()}</span>
+                                 <p class="m-0 ms-1 text-truncate">${
+                                   data.path[0].old
+                                 }</p>
+                               </div>`;
+          $(".chat-app-form-files")
+            .find(".codexMultiPreviewImage")
+            .html(previewHtml);
+
+          // Enable send button
+          $(".btn.send").prop("disabled", false);
+          return; // Stop further execution for chat
+        }
+        // --- END: MODIFIED LOGIC FOR CHAT ---
+
         if (
           typeof self
             .parents(".codexFileUp")
@@ -889,6 +916,7 @@ $(document).ready(function () {
       },
     });
   }
+
   $("#codexFormLogin").on("submit", function (e) {
     e.preventDefault();
     var form = $("#codexFormLogin")[0];
@@ -904,7 +932,12 @@ $(document).ready(function () {
       processData: false,
       contentType: false,
       success: function (data) {
-        if (data.state != "false") {
+        // --- START: MODIFIED LOGIC ---
+        if (data.state === "redirect") {
+          // New case: Handle redirection for forced password change
+          window.location.href = data.url;
+        } else if (data.state === "true") {
+          // Original success case
           let timerInterval;
           Swal.fire({
             title: data.message,
@@ -916,6 +949,7 @@ $(document).ready(function () {
             location.reload();
           });
         } else {
+          // Failure case
           Swal.fire({
             title: data.message,
             icon: "error",
@@ -926,6 +960,7 @@ $(document).ready(function () {
             buttonsStyling: false,
           });
         }
+        // --- END: MODIFIED LOGIC ---
       },
     });
   });

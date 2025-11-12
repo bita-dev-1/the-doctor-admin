@@ -3,14 +3,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Ensure PHPMailer is loaded
-if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-    require 'vendor/autoload.php';
-}
-
 if(isset($_POST['method']) && !empty($_POST['method'])){
 	include_once 'config/DB.php';
 	include_once 'includes/lang.php';
+	include_once 'controllers/custom/functions.core.php';
 	global $db;
 	$db = new DB();
 	switch($_POST['method']){
@@ -64,42 +60,6 @@ if(isset($_POST['method']) && !empty($_POST['method'])){
             adminResetPassword();
         break;
 	}
-}
-
-/**
- * NEW: Generic and secure function to send emails using settings from .env
- */
-function sendEmail($recipientEmail, $recipientName, $subject, $body) {
-    $mail = new PHPMailer(true);
-
-    try {
-        //Server settings
-        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Uncomment for debugging
-        $mail->isSMTP();
-        $mail->Host       = MAIL_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = MAIL_USERNAME;
-        $mail->Password   = MAIL_PASSWORD;
-        $mail->SMTPSecure = MAIL_ENCRYPTION; // PHPMailer::ENCRYPTION_SMTPS or 'tls'
-        $mail->Port       = MAIL_PORT;
-        $mail->CharSet    = 'UTF-8';
-
-        //Recipients
-        $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
-        $mail->addAddress($recipientEmail, $recipientName);
-    
-        // Content
-        $mail->isHTML(true);                                  
-        $mail->Subject = $subject;
-        $mail->Body    = $body;
-
-        $mail->send();
-        return true;
-    } catch (Exception $e) {
-        // In a real app, you'd log this error instead of echoing it
-        // error_log("Mailer Error: {$mail->ErrorInfo}");
-        return "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
-    }
 }
 
 /**
@@ -210,24 +170,15 @@ function adminResetPassword() {
 }
 
 
-// Function to generate a random password
-function generateRandomPassword($length = 10) {
-    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
-    $password = '';
-    $char_length = strlen($characters);
-    for ($i = 0; $i < $length; $i++) {
-        $password .= $characters[random_int(0, $char_length - 1)];
-    }
-    return $password;
-}
-
 function time_ago($iTime0, $iTime1 = 0){
 
     if ($iTime1 == 0) { $iTime1 = time(); }
     $iTimeElapsed = $iTime1 - strtotime($iTime0);
 	
+    // --- START: MODIFIED LOGIC ---
     if ($iTimeElapsed < (60)) {
-        $iNum = ''; $sUnit = $GLOBALS['language']['about a minute'];
+        // Use a simple key for translation
+        return $GLOBALS['language']['just_now'] ?? 'Just now';
     } else if ($iTimeElapsed < (60*60)) {
         $iNum = intval($iTimeElapsed / 60); $sUnit = $GLOBALS['language']['minute'];
     } else if ($iTimeElapsed < (24*60*60)) {
@@ -240,7 +191,8 @@ function time_ago($iTime0, $iTime1 = 0){
         $iNum = intval($iTimeElapsed / (365*24*60*60)); $sUnit = $GLOBALS['language']['year'];
     }
 
-    return $iNum . " " . $sUnit . (($iNum != 1 && $iNum != "") ? " " : "");
+    return $iNum . " " . $sUnit . (($iNum > 1) ? "s" : ""); // Simplified pluralization
+    // --- END: MODIFIED LOGIC ---
 }
 
 function acountState(){
@@ -379,9 +331,49 @@ function conversationsRoom($user_id, $limit = 20, $offset = 0){
         }
 
    function getConversationParticipants($conversationId){
-	$query ="SELECT patient.username FROM conversation INNER JOIN participant ON conversation.id = participant.id_conversation AND conversation.deleted = 1 AND participant.deleted = 1 INNER JOIN patient ON participant.id_particib = patient.id WHERE patient.id != ".$_SESSION['user']['data'][0]['id']." AND conversation.id = '$conversationId' ORDER BY participant.id";
-	return $GLOBALS['db']->select($query);
-}
+        // --- START: MODIFIED FUNCTION ---
+        $current_user_id = $_SESSION['user']['id'] ?? 0;
+        if ($current_user_id === 0) {
+            return [];
+        }
+
+        $query = "SELECT 
+                    CASE 
+                        WHEN p.my_particib = ? THEN p.id_particib 
+                        ELSE p.my_particib 
+                    END as participant_id,
+                    CASE 
+                        WHEN p.my_particib = ? THEN 'patient' 
+                        ELSE 'user' 
+                    END as participant_type
+                FROM participant p
+                WHERE p.id_conversation = ? 
+                AND (p.my_particib = ? OR p.id_particib = ?)";
+        
+        $stmt = $GLOBALS['db']->prepare($query);
+        $stmt->execute([$current_user_id, $current_user_id, $conversationId, $current_user_id, $current_user_id]);
+        $participants_info = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $participants_details = [];
+        foreach ($participants_info as $info) {
+            if ($info['participant_id'] != $current_user_id) {
+                if ($info['participant_type'] === 'patient') {
+                    $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image FROM patient WHERE id = ?";
+                } else {
+                    $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image1 as image FROM users WHERE id = ?";
+                }
+                $stmt_details = $GLOBALS['db']->prepare($sql_details);
+                $stmt_details->execute([$info['participant_id']]);
+                $details = $stmt_details->fetch(PDO::FETCH_ASSOC);
+                if ($details) {
+                    $participants_details[] = $details;
+                }
+            }
+        }
+        
+        return $participants_details;
+        // --- END: MODIFIED FUNCTION ---
+    }
 
 function is_image($path){
 
@@ -435,6 +427,8 @@ function is_fileExt($path){
     return false;
 }
 
+
+
 function send_msg(){
     // MODIFIED: Use new session structure
     if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])){
@@ -450,13 +444,29 @@ function send_msg(){
             }
         }	
         if($conversationId && is_numeric($conversationId)){
+            
+            // --- START: MODIFIED LOGIC ---
+            $message_content = '';
+            $message_type = 0;
+
+            if(isset($_POST['file']) && $_POST['file'] === 'true' && isset($_POST['file_path'])) {
+                $message_content = $_POST['file_path'];
+                $message_type = is_image($message_content) ? 1 : (is_fileExt($message_content) ? 2 : 0);
+            } elseif (isset($_POST['message'])) {
+                $message_content = $_POST['message'];
+                $message_type = 0;
+            } else {
+                echo json_encode(array("state" => "false", "message" => "Message content is missing"));
+                return;
+            }
+
             $data = array(
                 "id_conversation" => $conversationId, 
-                // MODIFIED: Use new session structure
                 "id_sender" => 	$_SESSION['user']['id'], 
-                "message" 	=> 	($_POST['message']),
-                "type"		=>	(isset($_POST['file']) ? ( is_image($_POST['message']) ? 1 : ( ( is_fileExt($_POST['message']) ? 2 : 0 ) ) ) : 0)
+                "message" 	=> 	$message_content,
+                "type"		=>	$message_type
             );
+            // --- END: MODIFIED LOGIC ---
 
             $GLOBALS['db']->table = 'messages';
             $GLOBALS['db']->data = $data;
