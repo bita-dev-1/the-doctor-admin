@@ -1,6 +1,6 @@
 <?php  
-    // MODIFIED: Corrected security check to allow all admin roles
-    if(!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin'){
+    // MODIFIED: Corrected security check to allow all admin roles and doctors/nurses
+    if(!isset($_SESSION['user']['id'])){
         header('location:'.SITE_URL.'/login');
         exit();
     }
@@ -42,6 +42,11 @@
                 
                     <form class="codexForm" method="post" role="form" data-express="<?= customEncryption($table); ?>" data-update="<?= customEncryption(json_encode($where)); ?>">                            
                         <?php set_csrf() ?>
+                        
+                        <!-- START: MODIFIED - Added hidden input for cabinet_id -->
+                        <input type="hidden" name="<?= $table; ?>__cabinet_id" value="<?= $_SESSION['user']['cabinet_id'] ?? ''; ?>">
+                        <!-- END: MODIFIED -->
+
                         <div class="row">
                             <div class="col-md-3 col-12">
                                 <div class="card">

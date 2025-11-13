@@ -87,26 +87,24 @@
                                             ?>
                                             <div class="col-lg-6 col-md-6 col-12 mb-1">
                                                 <?php
-                                                    $patient_where_clause = "deleted = 0";
-                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
-                                                        $patient_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
-                                                    }
+                                                    // START: MODIFIED - The 'where' clause is now empty, making the patient list global.
                                                     $input = array(
                                                         "label"         => $GLOBALS['language']['patient'],
                                                         "name_id"       => "patient_id",
-                                                        "placeholder"   => $GLOBALS['language']['patient'],
+                                                        "placeholder"   => 'Rechercher par nom, téléphone, ID...',
                                                         "class"         => "",
                                                         "his_parent"    => "",
                                                         "serverSide"        => array(
                                                             "table"         => "patient",
                                                             "value"         => "id",
                                                             "value_parent"  => "",
-                                                            "text"          => array("first_name", "last_name"),
+                                                            "text"          => array("first_name", "last_name", "phone", "id"),
                                                             "selected"      => $result['patient_id'] ?? null,
-                                                            "where"         => $patient_where_clause
+                                                            "where"         => "deleted = 0" 
                                                         )
                                                     );  
                                                     draw_select($input); 
+                                                    // END: MODIFIED
                                                 ?>
                                             </div>
                                             <div class="col-lg-4 col-md-6 col-12 mb-1">
@@ -266,30 +264,46 @@
             $('.rdv_num.select2').valid();
         });
         
-        $(document).on('change', '#patient_id', function(e){
+        // START: MODIFIED - Patient auto-fill logic
+        function togglePatientFields(readonly) {
+            $('#first_name').prop('readonly', readonly);
+            $('#last_name').prop('readonly', readonly);
+            $('#phone').prop('readonly', readonly);
+        }
+
+        $(document).on('select2:select', '#patient_id', function(e){
             e.preventDefault();
             e.stopPropagation();
 
-            let self = $(this),
-            data = { id: self.val(), method: "getPatients" };
+            let self = $(this);
+            let patientId = self.val();
             
-            $.ajax({
-                type: "POST",
-                url: "<?= SITE_URL ?>/handlers",
-                data: data,
-                dataType: "json",
-                success: function(data) {
-
-                    if ( data[0].hasOwnProperty('id') ) {
-                        $('#first_name').val(data[0].first_name);
-                        $('#last_name').val(data[0].last_name);
-                        $('#phone').val(data[0].phone);
+            if (patientId) {
+                $.ajax({
+                    type: "POST",
+                    url: "<?= SITE_URL ?>/handlers",
+                    data: { id: patientId, method: "getPatients" },
+                    dataType: "json",
+                    success: function(data) {
+                        if (data[0] && data[0].hasOwnProperty('id')) {
+                            $('#first_name').val(data[0].first_name);
+                            $('#last_name').val(data[0].last_name);
+                            $('#phone').val(data[0].phone);
+                            togglePatientFields(true); // Make fields readonly
+                        }
                     }
-                    
-                }
-            });
+                });
+            }
         });
-        
+
+        $(document).on('select2:unselect', '#patient_id', function(e) {
+            $('#first_name').val('');
+            $('#last_name').val('');
+            $('#phone').val('');
+            togglePatientFields(false); // Make fields editable
+        });
+        // END: MODIFIED
+
         $(document).on('submit', '.rdvForm', function(e){
             e.preventDefault();
             e.stopPropagation();
@@ -313,28 +327,28 @@
                 dataType: "json",
                 beforeSend: function(){
                     let svg = '<svg class="seloader ps-25" height="14" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="currentColor"><g fill="none" fill-rule="evenodd"><g transform="translate(1 1)" stroke-width="2"><circle stroke-opacity=".5" cx="18" cy="18" r="18"/><path d="M36 18c0-9.94-8.06-18-18-18"><animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/></path></g></g></svg>';
-                        self.attr("disabled","disabled");
-                        self.append(svg);
+                        self.find('button[type=submit]').attr("disabled","disabled").append(svg);
                 },
                 success: function(data) {
                     if (data.state != "false") {
-
                         Swal.fire({
                             title: data.message,
                             icon: 'success',
-                            confirmButtonText: 'back',
+                            confirmButtonText: 'OK',
                             customClass: {
                                 confirmButton: 'btn btn-primary'
                             },
                             buttonsStyling: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                history.back(-1);
+                            }
                         });
-                        history.back(-1);
-
                     }else{
                         Swal.fire({
                             title: data.message,
                             icon: 'error',
-                            confirmButtonText: 'back',
+                            confirmButtonText: 'OK',
                             customClass: {
                                 confirmButton: 'btn btn-primary'
                             },
@@ -343,7 +357,7 @@
                     }
                 },
                 complete: function(){
-                    self.removeAttr("disabled");
+                    self.find('button[type=submit]').removeAttr("disabled");
                     $('.seloader').remove();
                 }
             });

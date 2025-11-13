@@ -651,7 +651,7 @@ function push_notification($conversationId, $messageId){
     
             $table = 'rdv';
     
-            $data= array("deleted"  =>  1, "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['d']);
+            $data= array("deleted"  =>  1, "modified_at" => date('Y-m-d H:i:s'), "modified_by"  =>  $_SESSION['user']['id']);
                     
             $DB->table = $table;
             $DB->data = $data;
@@ -746,7 +746,7 @@ function postEvent($DB){
     
         $restData = array_diff_key($array_data, $filteredData);
         $restData = array_values($restData)[0];
-        $restData = array_merge( $restData, array("Garage_id"  =>  $_SESSION['user']['data'][0]['id'], "created_by"  =>  $_SESSION['user']['data'][0]['id']) );
+        $restData = array_merge( $restData, array("Garage_id"  =>  $_SESSION['user']['id'], "created_by"  =>  $_SESSION['user']['id']) );
         $DB->table 	= $table;
         $DB->data 	= $restData;
         $last_id 	= $DB->insert();
@@ -857,62 +857,60 @@ function postEvent($DB){
     }
 
 
+    // START: MODIFIED
     function postRdv(){
-
-        $doctor = filter_var(( $_POST['doctor'] ?? 0 ), FILTER_SANITIZE_NUMBER_INT);
-        $dateString = filter_var(( $_POST['date'] ?? date("Y-m-d") ), FILTER_SANITIZE_STRING);
-    
-        // This logic is commented out as it relies on an old structure. 
-        // The current logic correctly calculates available tickets on the fly.
-        // $date = new DateTime($dateString);
-        // setlocale(LC_TIME, 'fr_FR');
-        // $dayName = ucwords(strftime('%A', $date->getTimestamp()));
-        // $datetime = date('Y-m-d H:i:s');
+        $patient_id = filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT);
+        $first_name = filter_var(($_POST['first_name'] ?? ""), FILTER_SANITIZE_STRING);
+        $last_name = filter_var(($_POST['last_name'] ?? ""), FILTER_SANITIZE_STRING);
+        $phone = filter_var(($_POST['phone'] ?? ""), FILTER_SANITIZE_STRING);
         
-        // $response = $GLOBALS['db']->select("SELECT * FROM doctor WHERE doctor.id = $doctor")[0] ?? [];
-        // $tickets_rest = json_decode($response['tickets_rest'], true);
-        // $ticketThisDay = $tickets_rest[$dayName];
-        
-        // if( !empty($response) )
-        //     if( $ticketThisDay > 0 ){
-    
-                $data = [
-                    "doctor_id"     =>  $doctor,
-                    "patient_id"    =>  filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT), // Allow null for new patients
-                    "date"          =>  $dateString,
-                    
-                    "first_name"    =>  filter_var(( $_POST['first_name'] ?? "" ), FILTER_SANITIZE_STRING),
-                    "last_name"     =>  filter_var(( $_POST['last_name'] ?? "" ), FILTER_SANITIZE_STRING),
-                    "phone"         =>  filter_var(( $_POST['phone'] ?? "" ), FILTER_SANITIZE_STRING),
-                    
-                    "rdv_num"       =>  filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
-                    // --- MODIFIED: Use new session structure ---
-                    "created_by"    =>  $_SESSION['user']['id'],
-                    "cabinet_id"    =>  $_SESSION['user']['cabinet_id'] ?? null // Also log the cabinet_id
+        // If no existing patient is selected, create a new one
+        if (empty($patient_id)) {
+            if (!empty($first_name) && !empty($last_name)) {
+                $patient_data = [
+                    "first_name" => $first_name,
+                    "last_name" => $last_name,
+                    "phone" => $phone,
+                    "created_by" => $_SESSION['user']['id'],
+                    "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
                 ];
-    
-                // --- Remove null patient_id if it's not provided ---
-                if (empty($data['patient_id'])) {
-                    unset($data['patient_id']);
+                $GLOBALS['db']->table = 'patient';
+                $GLOBALS['db']->data = $patient_data;
+                $patient_id = $GLOBALS['db']->insert();
+                
+                if (!$patient_id) {
+                    echo json_encode(["state" => "false", "message" => "Erreur lors de la création du nouveau patient."]);
+                    return;
                 }
-                
-                $GLOBALS['db']->table = 'rdv';
-                $GLOBALS['db']->data = $data;
+            } else {
+                 echo json_encode(["state" => "false", "message" => "Les informations du patient sont requises."]);
+                 return;
+            }
+        }
     
-                $res = $GLOBALS['db']->insert();
+        $data = [
+            "doctor_id"     =>  filter_var(($_POST['doctor'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+            "patient_id"    =>  $patient_id,
+            "date"          =>  filter_var(($_POST['date'] ?? date("Y-m-d")), FILTER_SANITIZE_STRING),
+            "first_name"    =>  $first_name,
+            "last_name"     =>  $last_name,
+            "phone"         =>  $phone,
+            "rdv_num"       =>  filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+            "created_by"    =>  $_SESSION['user']['id'],
+            "cabinet_id"    =>  $_SESSION['user']['cabinet_id'] ?? null
+        ];
     
-                $GLOBALS['db'] = null;
-                
-                if($res)
-                    echo json_encode( ["state" => "true", "message" => $GLOBALS['language']['Added successfully']] );
-                else
-                    echo json_encode( ["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']] );
-    
-            // }else{
-            //     echo json_encode( ["state" => "false", "message" => "Il n\'y a pas de billet pour aujourd\'hui"] );
-            // }    
-    
+        $GLOBALS['db']->table = 'rdv';
+        $GLOBALS['db']->data = $data;
+        $res = $GLOBALS['db']->insert();
+        
+        if($res)
+            echo json_encode( ["state" => "true", "message" => $GLOBALS['language']['Added successfully']] );
+        else
+            echo json_encode( ["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']] );
     }
+    // END: MODIFIED
+
 function getPatients($id, $return = false){
 
 	$id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));

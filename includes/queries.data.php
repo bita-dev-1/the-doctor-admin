@@ -7,23 +7,31 @@ if(isset($_SESSION['user'])){
 
     // --- START: Dynamic Cabinet Conditions ---
     $users_cabinet_condition = ""; // For the 'users' table
-    $patients_cabinet_condition = ""; // For the 'patient' table
+    // START: MODIFIED - The patient condition is now removed to make the patient table global.
+    // $patients_cabinet_condition = ""; // For the 'patient' table
+    // END: MODIFIED
     $rdv_cabinet_condition = ""; // For the 'rdv' table
 
     // Apply filter only if the user is an admin tied to a specific cabinet
     if ($user_role === 'admin' && !empty($user_cabinet_id)) {
         $users_cabinet_condition = " AND users.cabinet_id = " . intval($user_cabinet_id);
-        $patients_cabinet_condition = " AND patient.cabinet_id = " . intval($user_cabinet_id);
+        // START: MODIFIED - The patient condition is now removed to make the patient table global.
+        // $patients_cabinet_condition = " AND patient.cabinet_id = " . intval($user_cabinet_id);
+        // END: MODIFIED
         $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
     } 
     // For doctors/nurses, they should only see data related to their own cabinet
     elseif ($user_role === 'doctor' || $user_role === 'nurse') {
         if (!empty($user_cabinet_id)) {
-            $patients_cabinet_condition = " AND patient.cabinet_id = " . intval($user_cabinet_id);
+            // START: MODIFIED - The patient condition is now removed to make the patient table global.
+            // $patients_cabinet_condition = " AND patient.cabinet_id = " . intval($user_cabinet_id);
+            // END: MODIFIED
             $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
         } else {
             // Fallback for a doctor without a cabinet, should not see any patient/rdv data from other cabinets
-            $patients_cabinet_condition = " AND patient.cabinet_id IS NULL"; 
+            // START: MODIFIED - The patient condition is now removed to make the patient table global.
+            // $patients_cabinet_condition = " AND patient.cabinet_id IS NULL"; 
+            // END: MODIFIED
             $rdv_cabinet_condition = " AND rdv.cabinet_id IS NULL";
         }
     }
@@ -56,7 +64,9 @@ if(isset($_SESSION['user'])){
         
         "qr_doctors_table"         => "SELECT users.id, users.image1 as _photo, CONCAT( users.first_name,' ',users.last_name) as full_name, users.phone, users.email, specialty.namefr as specialty, users.id as _stateId, users.rdv as __enableRdv , communes.name as commune, willaya.willaya , users.recomondation, users.views, users.status as _state , users.id as __action FROM users LEFT JOIN specialty ON specialty.id = users.specialty_id LEFT JOIN communes ON communes.id = users.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE users.deleted = 0 AND users.status = 'active' AND users.role = 'doctor' $users_cabinet_condition",
         
-        "qr_patients_table"        => "SELECT patient.id, patient.image as _photo, patient.username, CONCAT( patient.first_name,' ',patient.last_name) as full_name, patient.phone, patient.email, communes.name as commune, willaya.willaya , patient.id as __action FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0 $patients_cabinet_condition",
+        // START: MODIFIED - Removed $patients_cabinet_condition to make the table global
+        "qr_patients_table"        => "SELECT patient.id, patient.image as _photo, patient.username, CONCAT( patient.first_name,' ',patient.last_name) as full_name, patient.phone, patient.email, communes.name as commune, willaya.willaya , patient.id as __action FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0",
+        // END: MODIFIED
         
         "qr_specialities_table"    => "SELECT specialty.id, specialty.image as _photo, specialty.namefr, specialty.namear, specialty.id as __action FROM `specialty` WHERE specialty.deleted = 0 ",
 

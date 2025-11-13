@@ -177,8 +177,15 @@
 							if($action['action'] == 'message'){
 								$action_id = isset($result['username']) ? 'href="'.$action['url'].''.$result['username'].'"': '';
 							}
-							// --- MODIFIED: Use custom icon if provided, otherwise use default icon ---
-							$icon_to_use = isset($action['icon']) ? $action['icon'] : ($icons[$action['action'].'-icon'] ?? '');
+                            // --- START: MODIFIED - Added reset_password icon ---
+                            $default_icons = [
+                                "edit-icon" => $icons['edit-icon'],
+                                "delete-icon" => $icons['delete-icon'],
+                                "view-icon" => $icons['view-icon'],
+                                "reset_password-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'
+                            ];
+							$icon_to_use = isset($action['icon']) ? $action['icon'] : ($default_icons[$action['action'].'-icon'] ?? '');
+							// --- END: MODIFIED ---
 							$actions_btn .= '<a '.$action_id.' data-id="'.$value.'" class="'.$action['action'].'-record '.$action_cls.'">'.$icon_to_use.'</a>';
 						}
 						$single_data[] = $actions_btn;
@@ -242,7 +249,7 @@
 		// If the table is 'users', deactivate the user instead of deleting
 		if ($table === 'users') {
 			$DB->table = 'users';
-			$DB->data = array("status" => "inactive", "updated_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
+			$DB->data = array("status" => "inactive", "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
 			$DB->where = 'id='.$_POST['id'];
 			$action_result = $DB->update();
 			$message = $GLOBALS['language']['Deactivated successfully'] ?? 'Deactivated successfully';
@@ -435,56 +442,80 @@
 		$DB = null;
 	}
 
+    // START: MODIFIED - Centralized security logic for patient data.
 	function select2Data($DB){
 		try {
-			$data			= json_decode(customDecrypt($_POST['token']));
-			// Check if decryption or decoding failed
-			if ($data === null) {
-				throw new Exception("Invalid or corrupted token.");
-			}
+			$data = json_decode(customDecrypt($_POST['token']));
+			if ($data === null) throw new Exception("Invalid token.");
 	
 			$table 			= $data->table;
 			$select_val 	= $data->value;
 			$select_txt 	= implode(",' ',",$data->text);
-			$where 			= isset($data->where) && !empty($data->where) ? " AND ".$data->where : "";
+			$where_from_token = isset($data->where) && !empty($data->where) ? " AND (".$data->where.")" : "";
 			$select_Parent 	= isset($data->value_parent) && !empty($data->value_parent) && isset($_POST['parent']) ?
 			 " AND ".$data->value_parent.(is_array($_POST['parent']) ? " IN (".implode(",",$_POST['parent']).")" : " = ".$_POST['parent'] ) : "";
 			
+			// --- SERVER-SIDE SECURITY LAYER ---
+			$security_where = "";
+			if (isset($_SESSION['user'])) {
+				$user_role = $_SESSION['user']['role'] ?? null;
+				$user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+				$is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
+
+				// Security for tables with cabinet_id, EXCEPT for the 'patient' table to make it global
+				if ($table !== 'patient' && ($table === 'users' || $table === 'rdv')) {
+					if (!$is_super_admin) { // This applies to Cabinet Admins, Doctors, and Nurses
+						if (!empty($user_cabinet_id)) {
+							$security_where = " AND {$table}.cabinet_id = " . intval($user_cabinet_id);
+						} else {
+							// Block access if a non-super-admin user has no cabinet
+							$security_where = " AND {$table}.cabinet_id IS NULL"; 
+						}
+					}
+					// Super admin has no security_where, so they see all.
+				}
+			} else {
+                // Block unauthenticated access to sensitive tables
+                if ($table === 'patient' || $table === 'users' || $table === 'rdv') {
+                    throw new Exception("Authentication required.");
+                }
+            }
+			// --- END OF SECURITY LAYER ---
+
 			$join_query = '';
 			if (isset($data->join) && is_array($data->join) && !empty($data->join)) {
 				$join_query = implode(' ', array_map(function($j) {
-					// Ensure $j is treated as an object, which json_decode produces by default
 					return $j->type.' '.$j->table.' ON '.$j->condition;
 				}, $data->join));
 			}
 	
-			$sql = "SELECT $select_val AS select_value, CONCAT_WS(' ',$select_txt) AS select_txt FROM $table $join_query WHERE ";
+			$sql = "SELECT $select_val AS select_value, CONCAT_WS(' ',$select_txt) AS select_txt FROM $table $join_query WHERE 1=1 ";
 			
-			// Handle searchTerm correctly, even if it's an empty string
 			$searchTerm = $_POST['searchTerm'] ?? null;
+			$search_condition = "";
 			if ($searchTerm !== null && $searchTerm !== '') {
 				$sanitizedSearchTerm = str_replace(" ", "%", filter_var($searchTerm, FILTER_SANITIZE_ADD_SLASHES));
-				$sql .= " CONCAT_WS(' ',$select_txt) LIKE '%" . $sanitizedSearchTerm . "%' $where $select_Parent";
-			} else {
-				$sql .= " 1 $where $select_Parent";
+				$search_condition = " AND CONCAT_WS(' ',$select_txt) LIKE '%" . $sanitizedSearchTerm . "%'";
 			}
+            
+            // Combine all conditions
+			$sql .= $search_condition . $where_from_token . $select_Parent . $security_where;
 	
 			$responseResult = $DB->select($sql);
-			$DB = null;
 			$response = array();
 			foreach($responseResult as $res){
-				$response[] = array(
-					"id" => $res['select_value'],
-					"text" => $res['select_txt']
-				);
+				$response[] = array( "id" => $res['select_value'], "text" => $res['select_txt'] );
 			}
 			echo json_encode($response);
 	
 		} catch (Throwable $th) {
-			// Return the actual error message for debugging
-			echo json_encode(["error" => $th->getMessage(), "trace" => $th->getTraceAsString()]);
+			http_response_code(500);
+			echo json_encode(["error" => $th->getMessage()]);
+		} finally {
+			$DB = null;
 		}
 	}
+    // END: MODIFIED
 	   
 
 	function moveUploadedFile($maxFileSize, $valid_extensions){
