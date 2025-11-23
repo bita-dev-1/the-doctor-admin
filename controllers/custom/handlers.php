@@ -3,71 +3,563 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-if(isset($_POST['method']) && !empty($_POST['method'])){
-	include_once 'config/DB.php';
-	include_once 'includes/lang.php';
-	include_once 'controllers/custom/functions.core.php';
-	global $db;
-	$db = new DB();
-	switch($_POST['method']){
-		case 'acountState':
-			acountState();
-		break;
-		case 'chat':
-			chat();
-		break;
-		case 'send_msg':
-			send_msg();
-		break;
-		case 'post_conversation':
-			post_conversation();
-		break;
-		case 'updateState':
-			updateState();
-		break;
+if (isset($_POST['method']) && !empty($_POST['method'])) {
+    include_once 'config/DB.php';
+    include_once 'includes/lang.php';
+    include_once 'controllers/custom/functions.core.php';
+    global $db;
+    $db = new DB();
+    switch ($_POST['method']) {
+        case 'acountState':
+            acountState();
+            break;
+        case 'chat':
+            chat();
+            break;
+        case 'send_msg':
+            send_msg();
+            break;
+        case 'post_conversation':
+            post_conversation();
+            break;
+        case 'updateState':
+            updateState();
+            break;
         case 'getPatients':
-			getPatients(($_POST['id'] ?? null));
-		break;
+            getPatients(($_POST['id'] ?? null));
+            break;
         case 'getRdvPatient':
-			getRdvPatient();
-		break;
+            getRdvPatient();
+            break;
         case 'postRdv':
-			postRdv();
-		break;
-		case 'handleRdv_nbr':
-			handleRdv_nbr();
-		break;
-		case 'get_RDV':
-			get_RDV();
-		break;
+            postRdv();
+            break;
+        case 'handleRdv_nbr':
+            handleRdv_nbr();
+            break;
+        case 'get_RDV':
+            get_RDV();
+            break;
         case 'postEvent':
-			postEvent($db);
-		break;
+            postEvent($db);
+            break;
         case 'updateEvent':
-			updateEvent($db);
-		break;
-		case 'moveEvent':
-			moveEvent($db);
-		break;
-		case 'removeEvent':
-			removeEvent($db);
-		break;
-		case 'forget_password':
-			forget_password();
-		break;
-        // --- NEW CASE for admin password reset ---
+            updateEvent($db);
+            break;
+        case 'moveEvent':
+            moveEvent($db);
+            break;
+        case 'removeEvent':
+            removeEvent($db);
+            break;
+        case 'forget_password':
+            forget_password();
+            break;
         case 'adminResetPassword':
             adminResetPassword();
-        break;
-	}
+            break;
+        case 'generate_sessions_auto':
+            generate_sessions_auto($db);
+            break;
+        case 'validate_session':
+            validate_session($db);
+            break;
+        case 'get_dossier_payment_info':
+            get_dossier_payment_info($db);
+            break;
+        case 'record_payment':
+            record_payment($db);
+            break;
+        case 'reschedule_session':
+            reschedule_session($db);
+            break;
+        // --- NEW HANDLERS ---
+        case 'quick_add_patient':
+            quick_add_patient($db);
+            break;
+        case 'get_service_pricing_details':
+            get_service_pricing_details($db);
+            break;
+    }
 }
 
-/**
- * MODIFIED: This function now handles password recovery for any user type from the login page
- */
-function forget_password() {
+// --- NEW FUNCTION: Quick Add Patient ---
+function quick_add_patient($DB)
+{
+    if (!isset($_SESSION['user']['id'])) {
+        echo json_encode(["state" => "false", "message" => "Auth required"]);
+        return;
+    }
+
+    $first_name = filter_var($_POST['first_name'] ?? '', FILTER_SANITIZE_STRING);
+    $last_name = filter_var($_POST['last_name'] ?? '', FILTER_SANITIZE_STRING);
+    $phone = filter_var($_POST['phone'] ?? '', FILTER_SANITIZE_STRING);
+
+    if (empty($first_name) || empty($last_name) || empty($phone)) {
+        echo json_encode(["state" => "false", "message" => "Champs obligatoires manquants"]);
+        return;
+    }
+
+    try {
+        $DB->table = 'patient';
+        $DB->data = [
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'phone' => $phone,
+            'cabinet_id' => $_SESSION['user']['cabinet_id'] ?? null,
+            'created_by' => $_SESSION['user']['id']
+        ];
+
+        $id = $DB->insert();
+
+        if ($id) {
+            echo json_encode([
+                "state" => "true",
+                "data" => [
+                    "id" => $id,
+                    "text" => "$first_name $last_name ($phone)"
+                ]
+            ]);
+        } else {
+            echo json_encode(["state" => "false", "message" => "Erreur BDD"]);
+        }
+    } catch (Exception $e) {
+        echo json_encode(["state" => "false", "message" => $e->getMessage()]);
+    }
+}
+
+
+function get_service_pricing_details($DB)
+{
+    if (!isset($_SESSION['user']['cabinet_id'])) {
+        echo json_encode(["state" => "false", "message" => "Cabinet non identifié"]);
+        return;
+    }
+
+    $reeducation_type_id = filter_var($_POST['reeducation_type_id'], FILTER_SANITIZE_NUMBER_INT);
+    $sessions_count = filter_var($_POST['sessions_count'], FILTER_SANITIZE_NUMBER_INT);
+    $cabinet_id = $_SESSION['user']['cabinet_id'];
+
+    $sql = "SELECT * FROM cabinet_services 
+            WHERE cabinet_id = $cabinet_id 
+            AND reeducation_type_id = $reeducation_type_id 
+            AND deleted = 0";
+
+    $config = $DB->select($sql)[0] ?? null;
+
+    if (!$config) {
+        echo json_encode(["state" => "false", "message" => "Service non configuré pour ce cabinet"]);
+        return;
+    }
+
+    $effective_sessions = $sessions_count;
+
+    $total_price = 0;
+    $rules = json_decode($config['pricing_rules'], true);
+    usort($rules, function ($a, $b) {
+        return $a['limit'] - $b['limit']; });
+
+    $remaining_sessions = $effective_sessions;
+    $previous_limit = 0;
+
+    foreach ($rules as $rule) {
+        if ($remaining_sessions <= 0)
+            break;
+
+        $tier_capacity = $rule['limit'] - $previous_limit;
+        $sessions_in_tier = min($remaining_sessions, $tier_capacity);
+
+        $total_price += $sessions_in_tier * floatval($rule['price']);
+
+        $remaining_sessions -= $sessions_in_tier;
+        $previous_limit = $rule['limit'];
+    }
+
+    $commission_total = 0;
+    if ($config['commission_type'] === 'fixed') {
+        $commission_total = $effective_sessions * floatval($config['commission_value']);
+    } else {
+        $commission_total = ($total_price * floatval($config['commission_value'])) / 100;
+    }
+
+    echo json_encode([
+        "state" => "true",
+        "data" => [
+            "total_price" => $total_price,
+            "commission_total" => $commission_total,
+            "payment_model" => $config['pricing_model'],
+            "duration" => $config['session_duration'],
+            "package_capacity" => $config['package_capacity']
+        ]
+    ]);
+}
+function reschedule_session($DB)
+{
+    if (!isset($_SESSION['user']['id'])) {
+        echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
+        return;
+    }
+
+    if (!isset($_POST['rdv_id']) || !isset($_POST['new_date']) || empty($_POST['new_date'])) {
+        echo json_encode(["state" => "false", "message" => "Données manquantes."]);
+        return;
+    }
+
+    $rdv_id = filter_var($_POST['rdv_id'], FILTER_SANITIZE_NUMBER_INT);
+    $new_date = filter_var($_POST['new_date'], FILTER_SANITIZE_STRING);
+    $new_time = isset($_POST['new_time']) ? filter_var($_POST['new_time'], FILTER_SANITIZE_STRING) : null;
+
+    try {
+        $data = [
+            'date' => $new_date,
+            'modified_at' => date('Y-m-d H:i:s'),
+            'modified_by' => $_SESSION['user']['id']
+        ];
+
+        if ($new_time) {
+            $data['hours'] = $new_time;
+        }
+
+        $DB->table = 'rdv';
+        $DB->data = $data;
+        $DB->where = 'id = ' . $rdv_id;
+        $updated = $DB->update();
+
+        if ($updated) {
+            echo json_encode(["state" => "true", "message" => "Séance reprogrammée avec succès."]);
+        } else {
+            echo json_encode(["state" => "false", "message" => "Échec de la mise à jour."]);
+        }
+
+    } catch (Exception $e) {
+        echo json_encode(["state" => "false", "message" => $e->getMessage()]);
+    }
+}
+
+function validate_session($DB)
+{
+    if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['doctor', 'nurse', 'admin'])) {
+        echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
+        return;
+    }
+    if (!isset($_POST['session_id'])) {
+        echo json_encode(["state" => "false", "message" => "ID manquant."]);
+        return;
+    }
+
+    $session_id = filter_var($_POST['session_id'], FILTER_SANITIZE_NUMBER_INT);
+    $session_status = $_POST['session_status'] ?? 'completed';
+    $completed_at = date('Y-m-d H:i:s');
+
+    $session_info = $DB->select("SELECT rs.dossier_id FROM reeducation_sessions rs WHERE rs.id = $session_id")[0] ?? null;
+
+    if (!$session_info) {
+        echo json_encode(["state" => "false", "message" => "Session introuvable."]);
+        return;
+    }
+    $dossier_id = $session_info['dossier_id'];
+
+    $DB->beginTransaction();
+    try {
+        $session_data = [
+            'status' => $session_status,
+            'completed_at' => $completed_at,
+            'completed_by' => $_SESSION['user']['id'],
+            'exercises_performed' => $_POST['exercises_performed'] ?? null,
+            'pain_scale' => $_POST['pain_scale'] ?? null,
+            'observations' => $_POST['observations'] ?? null,
+            'duration' => $_POST['duration'] ?? null
+        ];
+
+        $DB->table = 'reeducation_sessions';
+        $DB->data = $session_data;
+        $DB->where = 'id = ' . $session_id;
+        $DB->update();
+
+        if ($session_status === 'completed') {
+            $DB->update('reeducation_dossiers', [], "id=$dossier_id", "sessions_completed = sessions_completed + 1");
+
+            $dossier = $DB->select("SELECT price, payment_mode, discount_amount, sessions_prescribed FROM reeducation_dossiers WHERE id = $dossier_id")[0];
+            $total_paid = $DB->select("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = $dossier_id")[0]['total'] ?? 0;
+
+            $price_per_session = ($dossier['payment_mode'] == 'package' && $dossier['sessions_prescribed'] > 0)
+                ? ($dossier['price'] - $dossier['discount_amount']) / $dossier['sessions_prescribed']
+                : $dossier['price'];
+
+            $sessions_covered = ($price_per_session > 0) ? floor(($total_paid + 0.001) / $price_per_session) : 999;
+
+            $DB->update('reeducation_sessions', ['payment_status' => 'unpaid'], "dossier_id = $dossier_id");
+
+            if ($sessions_covered > 0) {
+                $sql_pay = "UPDATE reeducation_sessions SET payment_status = 'paid' WHERE dossier_id = $dossier_id ORDER BY id ASC LIMIT " . intval($sessions_covered);
+                $stmt = $DB->prepare($sql_pay);
+                $stmt->execute();
+            }
+        }
+
+        $DB->commit();
+        echo json_encode(["state" => "true", "message" => "Séance validée."]);
+
+    } catch (Exception $e) {
+        $DB->rollBack();
+        echo json_encode(["state" => "false", "message" => $e->getMessage()]);
+    }
+}
+
+
+function generate_sessions_auto($DB)
+{
+    if (!isset($_POST['dossier_id'])) {
+        echo json_encode(["state" => "false", "message" => "ID du dossier manquant."]);
+        return;
+    }
+
+    $dossier_id = filter_var($_POST['dossier_id'], FILTER_SANITIZE_NUMBER_INT);
+    $preferred_days = isset($_POST['preferred_days']) && is_array($_POST['preferred_days']) ? array_map('intval', $_POST['preferred_days']) : [];
+
+    if (!empty($preferred_days)) {
+        $DB->table = 'reeducation_dossiers';
+        $DB->data = ['preferred_days' => json_encode($preferred_days)];
+        $DB->where = 'id = ' . $dossier_id;
+        $DB->update();
+    }
+
+    // MODIFIED: Added user.cabinet_id to the select to ensure we get the correct cabinet
+    $sql = "SELECT rd.*, u.travel_hours, u.cabinet_id as technician_cabinet_id
+            FROM reeducation_dossiers rd 
+            JOIN users u ON rd.technician_id = u.id 
+            WHERE rd.id = :dossier_id";
+    $stmt = $DB->prepare($sql);
+    $stmt->execute([':dossier_id' => $dossier_id]);
+    $dossier = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$dossier) {
+        echo json_encode(["state" => "false", "message" => "Dossier non trouvé."]);
+        return;
+    }
+
+    // ... (Lock check remains unchanged) ...
+    $sql_check_locked = "SELECT COUNT(*) FROM reeducation_sessions 
+                         WHERE dossier_id = :dossier_id 
+                         AND (status = 'completed' OR payment_status = 'paid')";
+    $stmt_locked = $DB->prepare($sql_check_locked);
+    $stmt_locked->execute([':dossier_id' => $dossier_id]);
+
+    if ($stmt_locked->fetchColumn() > 0) {
+        echo json_encode(["state" => "false", "message" => "Impossible de régénérer : Des séances ont déjà été validées ou payées."]);
+        return;
+    }
+
+    $DB->beginTransaction();
+    try {
+        // ... (Delete old sessions remains unchanged) ...
+        $sql_delete_rdv = "DELETE FROM rdv WHERE reeducation_session_id IN (SELECT id FROM reeducation_sessions WHERE dossier_id = :dossier_id)";
+        $stmt_del_rdv = $DB->prepare($sql_delete_rdv);
+        $stmt_del_rdv->execute([':dossier_id' => $dossier_id]);
+
+        $sql_delete_sessions = "DELETE FROM reeducation_sessions WHERE dossier_id = :dossier_id";
+        $stmt_del_sess = $DB->prepare($sql_delete_sessions);
+        $stmt_del_sess->execute([':dossier_id' => $dossier_id]);
+
+        $DB->table = 'reeducation_dossiers';
+        $DB->data = ['sessions_completed' => 0];
+        $DB->where = 'id = ' . $dossier_id;
+        $DB->update();
+
+        // ... (Logic remains unchanged) ...
+        $sessions_to_create = (int) $dossier['sessions_prescribed'];
+        $work_days_json = json_decode($dossier['travel_hours'], true);
+        $technician_working_days = [];
+        $day_map = ["Dimanche" => 0, "Lundi" => 1, "Mardi" => 2, "Mercredi" => 3, "Jeudi" => 4, "Vendredi" => 5, "Samedi" => 6];
+
+        foreach ($work_days_json as $day_name => $hours) {
+            if (!empty($hours['from']) && !empty($hours['to'])) {
+                $technician_working_days[] = $day_map[$day_name];
+            }
+        }
+
+        if (empty($technician_working_days))
+            throw new Exception("Aucun jour de travail configuré pour ce technicien.");
+
+        $target_days = $technician_working_days;
+        if (!empty($preferred_days)) {
+            $target_days = array_intersect($technician_working_days, $preferred_days);
+            if (empty($target_days)) {
+                throw new Exception("Aucun jour commun entre les préférences du patient et l'emploi du temps du technicien.");
+            }
+        }
+
+        $current_date = new DateTime();
+        $sessions_created_count = 0;
+
+        // Determine the correct cabinet ID to use
+        // Prioritize the cabinet from the technician's profile if available
+        $cabinet_to_assign = $dossier['technician_cabinet_id'] ?? ($dossier['cabinet_id'] ?? null);
+
+        while ($sessions_created_count < $sessions_to_create) {
+            $day_of_week = (int) $current_date->format('w');
+
+            if (in_array($day_of_week, $target_days)) {
+
+                $rdv_data = [
+                    'patient_id' => $dossier['patient_id'],
+                    'doctor_id' => $dossier['technician_id'],
+                    'cabinet_id' => $cabinet_to_assign, // FIX: Ensure this is set correctly
+                    'date' => $current_date->format('Y-m-d'),
+                    'state' => 0,
+                    'created_by' => $_SESSION['user']['id'],
+                ];
+                $DB->table = 'rdv';
+                $DB->data = $rdv_data;
+                $rdv_id = $DB->insert();
+
+                $session_data = [
+                    'dossier_id' => $dossier_id,
+                    'rdv_id' => $rdv_id,
+                    'status' => 'planned',
+                ];
+                $DB->table = 'reeducation_sessions';
+                $DB->data = $session_data;
+                $session_id = $DB->insert();
+
+                $DB->table = 'rdv';
+                $DB->data = ['reeducation_session_id' => $session_id];
+                $DB->where = 'id = ' . $rdv_id;
+                $DB->update();
+
+                $sessions_created_count++;
+            }
+
+            $current_date->modify('+1 day');
+
+            if ($current_date > (new DateTime())->modify('+2 years')) {
+                throw new Exception("Délai trop long.");
+            }
+        }
+
+        $DB->commit();
+        echo json_encode(["state" => "true", "message" => "$sessions_created_count séances ont été générées avec succès."]);
+
+    } catch (Exception $e) {
+        $DB->rollBack();
+        echo json_encode(["state" => "false", "message" => "Erreur: " . $e->getMessage()]);
+    }
+}
+
+
+function get_dossier_payment_info($DB)
+{
+    if (!isset($_POST['dossier_id'])) {
+        echo json_encode(["state" => "false"]);
+        return;
+    }
+    $dossier_id = filter_var($_POST['dossier_id'], FILTER_SANITIZE_NUMBER_INT);
+
+    $sql = "SELECT 
+                rd.*, 
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                (SELECT SUM(amount_paid) FROM caisse_transactions WHERE dossier_id = rd.id) as total_paid
+            FROM reeducation_dossiers rd
+            JOIN patient p ON rd.patient_id = p.id
+            WHERE rd.id = $dossier_id";
+
+    $dossier = $DB->select($sql)[0] ?? null;
+
+    if ($dossier) {
+        $dossier['total_paid'] = $dossier['total_paid'] ?? 0;
+        if ($dossier['payment_mode'] == 'package') {
+            $dossier['total_due'] = (float) $dossier['price'];
+            $dossier['amount_to_pay'] = $dossier['total_due'] - $dossier['total_paid'];
+        } else {
+            $dossier['total_due'] = (float) $dossier['price'] * (int) $dossier['sessions_prescribed'];
+            $dossier['amount_to_pay'] = (float) $dossier['price'];
+        }
+        echo json_encode(["state" => "true", "data" => $dossier]);
+    } else {
+        echo json_encode(["state" => "false"]);
+    }
+}
+
+
+function record_payment($DB)
+{
+    if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['admin', 'nurse'])) {
+        echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
+        return;
+    }
+    if (!isset($_POST['dossier_id']) || !isset($_POST['amount_paid'])) {
+        echo json_encode(["state" => "false", "message" => "Données manquantes."]);
+        return;
+    }
+
+    $dossier_id = filter_var($_POST['dossier_id'], FILTER_SANITIZE_NUMBER_INT);
+    $amount_paid = filter_var($_POST['amount_paid'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+
+    try {
+        if ($amount_paid > 0) {
+            $data = [
+                'dossier_id' => $dossier_id,
+                'amount_paid' => $amount_paid,
+                'recorded_by' => $_SESSION['user']['id']
+            ];
+            $DB->table = 'caisse_transactions';
+            $DB->data = $data;
+            $DB->insert();
+        }
+
+        $sql_dossier = "SELECT price, payment_mode, discount_amount, sessions_prescribed FROM reeducation_dossiers WHERE id = :id";
+        $stmt_dossier = $DB->prepare($sql_dossier);
+        $stmt_dossier->execute([':id' => $dossier_id]);
+        $dossier = $stmt_dossier->fetch(PDO::FETCH_ASSOC);
+
+        $sql_total = "SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = :id";
+        $stmt_total = $DB->prepare($sql_total);
+        $stmt_total->execute([':id' => $dossier_id]);
+        $total_paid = $stmt_total->fetchColumn() ?: 0;
+
+        $price_per_session = 0;
+        if ($dossier['payment_mode'] == 'package') {
+            $total_price = $dossier['price'] - $dossier['discount_amount'];
+            if ($dossier['sessions_prescribed'] > 0) {
+                $price_per_session = $total_price / $dossier['sessions_prescribed'];
+            }
+        } else {
+            $price_per_session = $dossier['price'];
+        }
+
+        $sessions_covered = 0;
+        if ($price_per_session > 0) {
+            $sessions_covered = floor(($total_paid + 0.001) / $price_per_session);
+        } else {
+            $sessions_covered = 999;
+        }
+
+        $sql_reset = "UPDATE reeducation_sessions SET payment_status = 'unpaid' WHERE dossier_id = $dossier_id";
+        $stmt_reset = $DB->prepare($sql_reset);
+        $stmt_reset->execute();
+
+        if ($sessions_covered > 0) {
+            $limit = intval($sessions_covered);
+            $sql_update = "UPDATE reeducation_sessions 
+                           SET payment_status = 'paid' 
+                           WHERE dossier_id = $dossier_id 
+                           ORDER BY id ASC 
+                           LIMIT $limit";
+            $stmt_update = $DB->prepare($sql_update);
+            $stmt_update->execute();
+        }
+
+        echo json_encode(["state" => "true", "message" => "Synchronisation réussie. $sessions_covered séances marquées comme payées."]);
+
+    } catch (Exception $e) {
+        echo json_encode(["state" => "false", "message" => $e->getMessage()]);
+    }
+}
+
+
+function forget_password()
+{
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    // Search in the 'users' table instead of 'doctor'
     $sql = "SELECT * FROM `users` WHERE `deleted` = 0 AND `email` = ?";
     $stmt = $GLOBALS['db']->prepare($sql);
     $stmt->execute([$email]);
@@ -76,8 +568,8 @@ function forget_password() {
     if ($user_data) {
         $newPassword = generateRandomPassword();
         $password_hash = sha1($newPassword);
-        
-        $fullName = $user_data['first_name'].' '.$user_data['last_name'];
+
+        $fullName = $user_data['first_name'] . ' ' . $user_data['last_name'];
         $subject = 'Réinitialisation de votre mot de passe - The Doctor App';
         $body = "
             <h3>Réinitialisation de Mot de Passe</h3>
@@ -87,7 +579,7 @@ function forget_password() {
             <p>Nous vous recommandons de changer ce mot de passe après votre première connexion.</p>
             <p>Merci,<br>L'équipe The Doctor</p>
         ";
-        
+
         $emailSent = sendEmail($email, $fullName, $subject, $body);
 
         if ($emailSent === true) {
@@ -107,10 +599,9 @@ function forget_password() {
     }
 }
 
-/**
- * NEW: Handles password reset initiated by an admin
- */
-function adminResetPassword() {
+
+function adminResetPassword()
+{
     if (!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin') {
         echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
         return;
@@ -121,7 +612,6 @@ function adminResetPassword() {
     $admin_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
     $is_super_admin = empty($admin_cabinet_id);
 
-    // Fetch target user's info
     $sql = "SELECT * FROM `users` WHERE `id` = ?";
     $stmt = $GLOBALS['db']->prepare($sql);
     $stmt->execute([$target_user_id]);
@@ -132,17 +622,15 @@ function adminResetPassword() {
         return;
     }
 
-    // Security check: Cabinet Admin can only reset passwords for users in their own cabinet
     if (!$is_super_admin && $target_user['cabinet_id'] != $admin_cabinet_id) {
         echo json_encode(["state" => "false", "message" => "Vous n'avez pas la permission de réinitialiser le mot de passe de cet utilisateur."]);
         return;
     }
 
-    // Proceed with reset
     $newPassword = generateRandomPassword();
     $password_hash = sha1($newPassword);
-        
-    $fullName = $target_user['first_name'].' '.$target_user['last_name'];
+
+    $fullName = $target_user['first_name'] . ' ' . $target_user['last_name'];
     $subject = 'Votre mot de passe a été réinitialisé par un administrateur';
     $body = "
         <h3>Réinitialisation de Mot de Passe</h3>
@@ -170,84 +658,85 @@ function adminResetPassword() {
 }
 
 
-function time_ago($iTime0, $iTime1 = 0){
+function time_ago($iTime0, $iTime1 = 0)
+{
 
-    if ($iTime1 == 0) { $iTime1 = time(); }
+    if ($iTime1 == 0) {
+        $iTime1 = time();
+    }
     $iTimeElapsed = $iTime1 - strtotime($iTime0);
-	
-    // --- START: MODIFIED LOGIC ---
+
     if ($iTimeElapsed < (60)) {
-        // Use a simple key for translation
         return $GLOBALS['language']['just_now'] ?? 'Just now';
-    } else if ($iTimeElapsed < (60*60)) {
-        $iNum = intval($iTimeElapsed / 60); $sUnit = $GLOBALS['language']['minute'];
-    } else if ($iTimeElapsed < (24*60*60)) {
-        $iNum = intval($iTimeElapsed / (60*60)); $sUnit = $GLOBALS['language']['hour'];
-    } else if ($iTimeElapsed < (30*24*60*60)) {
-        $iNum = intval($iTimeElapsed / (24*60*60)); $sUnit = $GLOBALS['language']['day'];
-    } else if ($iTimeElapsed < (365*24*60*60)) {
-        $iNum = intval($iTimeElapsed / (30*24*60*60)); $sUnit = $GLOBALS['language']['month'];
+    } else if ($iTimeElapsed < (60 * 60)) {
+        $iNum = intval($iTimeElapsed / 60);
+        $sUnit = $GLOBALS['language']['minute'];
+    } else if ($iTimeElapsed < (24 * 60 * 60)) {
+        $iNum = intval($iTimeElapsed / (60 * 60));
+        $sUnit = $GLOBALS['language']['hour'];
+    } else if ($iTimeElapsed < (30 * 24 * 60 * 60)) {
+        $iNum = intval($iTimeElapsed / (24 * 60 * 60));
+        $sUnit = $GLOBALS['language']['day'];
+    } else if ($iTimeElapsed < (365 * 24 * 60 * 60)) {
+        $iNum = intval($iTimeElapsed / (30 * 24 * 60 * 60));
+        $sUnit = $GLOBALS['language']['month'];
     } else {
-        $iNum = intval($iTimeElapsed / (365*24*60*60)); $sUnit = $GLOBALS['language']['year'];
+        $iNum = intval($iTimeElapsed / (365 * 24 * 60 * 60));
+        $sUnit = $GLOBALS['language']['year'];
     }
 
-    return $iNum . " " . $sUnit . (($iNum > 1) ? "s" : ""); // Simplified pluralization
-    // --- END: MODIFIED LOGIC ---
+    return $iNum . " " . $sUnit . (($iNum > 1) ? "s" : "");
 }
 
-function acountState(){
+function acountState()
+{
 
-    // MODIFIED: Use new session structure
-    if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):
+    if (isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):
 
         $conversationId = NULL;
-        if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
+        if (isset($_POST['conversation']) && !empty($_POST['conversation'])) {
             $conversationId = ((int) str_replace('conversationId-', '', ($_POST['conversation'])));
-            $conversationId = is_numeric( $conversationId ) ? $conversationId : NULL;
+            $conversationId = is_numeric($conversationId) ? $conversationId : NULL;
         }
 
-        // MODIFIED: Pass the correct user ID
         $results = conversationsRoom($_SESSION['user']['id']);
         $global_data['chat_list'] = $results;
-        $global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId, ( isset($_POST['last']) ? ($_POST['last']) : NULL ) ) : array());
+        $global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : NULL)) : array());
         $global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
 
         echo json_encode($global_data);
-        
+
     else:
         echo json_encode(array());
     endif;
 }
 
 
-function chat_list($conversationId = NULL){
-    // MODIFIED: Use new session structure
-	if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):	
-		$conversationId = is_numeric(str_replace('conversationId-', '', ($conversationId))) ? str_replace('conversationId-', '', ($conversationId)) : NULL;
-	
-        // MODIFIED: Pass the correct user ID
-		$results = conversationsRoom($_SESSION['user']['id']);
-		$global_data['chat_list'] = $results;
-		$global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId) : array());
-		$global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
-		return $global_data;
-	
-	endif;
-		
-	return array();
+function chat_list($conversationId = NULL)
+{
+    if (isset($_SESSION['user']) && !empty($_SESSION['user']['id'])):
+        $conversationId = is_numeric(str_replace('conversationId-', '', ($conversationId))) ? str_replace('conversationId-', '', ($conversationId)) : NULL;
+
+        $results = conversationsRoom($_SESSION['user']['id']);
+        $global_data['chat_list'] = $results;
+        $global_data['data']['messages'] = (($conversationId != NULL) ? messages($conversationId) : array());
+        $global_data['data']['users'] = (($conversationId != NULL) ? getConversationParticipants($conversationId) : array());
+        return $global_data;
+
+    endif;
+
+    return array();
 }
 
 
 
-function conversationsRoom($user_id, $limit = 20, $offset = 0){
-    
-    // MODIFIED: The query is now more flexible. It finds conversations where the user is either the creator/doctor side (my_particib) or the patient side (id_particib).
-    // It correctly identifies the "other" participant in both scenarios.
+function conversationsRoom($user_id, $limit = 20, $offset = 0)
+{
+
     $query = "
     SELECT DISTINCT 
         conversation.*, 
         (
-            -- This subquery now correctly fetches the OTHER participant's details
             SELECT CONCAT('[', GROUP_CONCAT(
                 JSON_OBJECT(
                     'userId', CASE WHEN p.my_particib = {$user_id} THEN p.id_particib ELSE p.my_particib END,
@@ -292,52 +781,59 @@ function conversationsRoom($user_id, $limit = 20, $offset = 0){
     ORDER BY date_sendLast_msg DESC 
     LIMIT {$limit} OFFSET {$offset}";
 
-	
-		$results = $GLOBALS['db']->select($query);
-		array_walk_recursive($results, function(&$item, $key){
-			if( $key == 'date_sendLast_msg' && !is_null($item) ) $item = time_ago($item);
-			if( $key == 'participants' ) $item = json_decode($item, true);
-			if( $key == 'last_msg' ){ 
-					
-				if(is_array(json_decode($item, true))){
-					$item = json_decode($item, true);
-					$item['message'] = ($item['message']);
-				}
-				
-			}
-			if( $key == 'id' ) $item = ('conversationId-'.$item);
-		});
-		
-	
-	return $results;
+
+    $results = $GLOBALS['db']->select($query);
+    array_walk_recursive($results, function (&$item, $key) {
+        if ($key == 'date_sendLast_msg' && !is_null($item))
+            $item = time_ago($item);
+        if ($key == 'participants')
+            $item = json_decode($item, true);
+        if ($key == 'last_msg') {
+
+            if (is_array(json_decode($item, true))) {
+                $item = json_decode($item, true);
+                $item['message'] = ($item['message']);
+            }
+
+        }
+        if ($key == 'id')
+            $item = ('conversationId-' . $item);
+    });
+
+
+    return $results;
 }
 
-   function chat(){
-    	$results = (( isset($_POST['conversation']) && is_numeric(str_replace('conversationId-', '', ($_POST['conversation']))) ) ? messages(str_replace('conversationId-', '', ($_POST['conversation']))) : array());
-    	echo json_encode($results);
+function chat()
+{
+    $results = ((isset($_POST['conversation']) && is_numeric(str_replace('conversationId-', '', ($_POST['conversation'])))) ? messages(str_replace('conversationId-', '', ($_POST['conversation']))) : array());
+    echo json_encode($results);
+}
+
+function messages($conversationId, $messageId = NULL, $limit = 40, $offset = 0)
+{
+    $afterId = ($messageId != NULL && $messageId != 0 ? " AND messages.id > $messageId" : '');
+    $query = "SELECT DISTINCT messages.id, messages.type, messages.message,messages.id_sender,participant.my_particib, participant.id_particib, patient.image,
+        	patient.id AS lhId FROM conversation INNER JOIN participant ON participant.id_conversation = conversation.id INNER JOIN messages ON (messages.id_sender = participant.id_particib OR messages.id_sender = participant.my_particib  )  AND messages.id_conversation = conversation.id INNER JOIN patient ON patient.id = participant.id_particib WHERE participant.deleted = 0 AND conversation.id = '$conversationId' $afterId ORDER BY messages.id";
+    $results = $GLOBALS['db']->select($query);
+    array_walk_recursive($results, function (&$item, $key) {
+        if ($key == 'id')
+            $item = ($item);
+        if ($key == 'message')
+            $item = ($item);
+    });
+
+    return $results;
+}
+
+function getConversationParticipants($conversationId)
+{
+    $current_user_id = $_SESSION['user']['id'] ?? 0;
+    if ($current_user_id === 0) {
+        return [];
     }
 
-    function messages($conversationId, $messageId = NULL, $limit = 40, $offset = 0){
-        	$afterId = ($messageId != NULL && $messageId != 0 ? " AND messages.id > $messageId" : '');
-        	$query ="SELECT DISTINCT messages.id, messages.type, messages.message,messages.id_sender,participant.my_particib, participant.id_particib, patient.image,
-        	patient.id AS lhId FROM conversation INNER JOIN participant ON participant.id_conversation = conversation.id INNER JOIN messages ON (messages.id_sender = participant.id_particib OR messages.id_sender = participant.my_particib  )  AND messages.id_conversation = conversation.id INNER JOIN patient ON patient.id = participant.id_particib WHERE participant.deleted = 0 AND conversation.id = '$conversationId' $afterId ORDER BY messages.id";
-        	$results = $GLOBALS['db']->select($query);
-        	array_walk_recursive($results, function(&$item, $key){
-        		if( $key == 'id' ) $item = ($item);
-        		if( $key == 'message' ) $item = ($item);
-        	});
-		
-        	return $results;
-        }
-
-   function getConversationParticipants($conversationId){
-        // --- START: MODIFIED FUNCTION ---
-        $current_user_id = $_SESSION['user']['id'] ?? 0;
-        if ($current_user_id === 0) {
-            return [];
-        }
-
-        $query = "SELECT 
+    $query = "SELECT 
                     CASE 
                         WHEN p.my_particib = ? THEN p.id_particib 
                         ELSE p.my_particib 
@@ -349,78 +845,79 @@ function conversationsRoom($user_id, $limit = 20, $offset = 0){
                 FROM participant p
                 WHERE p.id_conversation = ? 
                 AND (p.my_particib = ? OR p.id_particib = ?)";
-        
-        $stmt = $GLOBALS['db']->prepare($query);
-        $stmt->execute([$current_user_id, $current_user_id, $conversationId, $current_user_id, $current_user_id]);
-        $participants_info = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $participants_details = [];
-        foreach ($participants_info as $info) {
-            if ($info['participant_id'] != $current_user_id) {
-                if ($info['participant_type'] === 'patient') {
-                    $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image FROM patient WHERE id = ?";
-                } else {
-                    $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image1 as image FROM users WHERE id = ?";
-                }
-                $stmt_details = $GLOBALS['db']->prepare($sql_details);
-                $stmt_details->execute([$info['participant_id']]);
-                $details = $stmt_details->fetch(PDO::FETCH_ASSOC);
-                if ($details) {
-                    $participants_details[] = $details;
-                }
+    $stmt = $GLOBALS['db']->prepare($query);
+    $stmt->execute([$current_user_id, $current_user_id, $conversationId, $current_user_id, $current_user_id]);
+    $participants_info = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $participants_details = [];
+    foreach ($participants_info as $info) {
+        if ($info['participant_id'] != $current_user_id) {
+            if ($info['participant_type'] === 'patient') {
+                $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image FROM patient WHERE id = ?";
+            } else {
+                $sql_details = "SELECT id, CONCAT(first_name, ' ', last_name) as full_name, image1 as image FROM users WHERE id = ?";
+            }
+            $stmt_details = $GLOBALS['db']->prepare($sql_details);
+            $stmt_details->execute([$info['participant_id']]);
+            $details = $stmt_details->fetch(PDO::FETCH_ASSOC);
+            if ($details) {
+                $participants_details[] = $details;
             }
         }
-        
-        return $participants_details;
-        // --- END: MODIFIED FUNCTION ---
     }
 
-function is_image($path){
+    return $participants_details;
+}
 
-	$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+function is_image($path)
+{
+
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
     $imageExtensions = array(
-		'png' ,
-		'jpe' ,
-		'jpeg',
-		'jpg' ,
-		'gif' ,
-		'bmp' ,
-		'ico' ,
-		'tiff',
-		'tif' ,
-	);
-	
+        'png',
+        'jpe',
+        'jpeg',
+        'jpg',
+        'gif',
+        'bmp',
+        'ico',
+        'tiff',
+        'tif',
+    );
+
     if (in_array($extension, $imageExtensions)) {
         return true;
     }
     return false;
 }
 
-function is_fileExt($path){
+function is_fileExt($path)
+{
 
-	$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-	$filesExtensions = array(
-		'txt' ,
-		'json',
-		'zip' ,
-		'rar' ,
-		'mp3' ,
-		'pdf' ,
-		'psd' ,
-		'ai' ,
-		'eps' ,
-		'ps' ,
-		'doc' ,
-		'rtf' ,
-		'xls' ,
-		'ppt' ,
-		'docx',
-		'xlsx',
-		'pptx',
-	);
-	
+    $filesExtensions = array(
+        'txt',
+        'json',
+        'zip',
+        'rar',
+        'mp3',
+        'pdf',
+        'psd',
+        'ai',
+        'eps',
+        'ps',
+        'doc',
+        'rtf',
+        'xls',
+        'ppt',
+        'docx',
+        'xlsx',
+        'pptx',
+    );
+
     if (in_array($extension, $filesExtensions)) {
         return true;
     }
@@ -429,27 +926,25 @@ function is_fileExt($path){
 
 
 
-function send_msg(){
-    // MODIFIED: Use new session structure
-    if(isset($_SESSION['user']) && !empty($_SESSION['user']['id'])){
-    
-        if(isset($_POST['conversation']) && !empty($_POST['conversation'])){
+function send_msg()
+{
+    if (isset($_SESSION['user']) && !empty($_SESSION['user']['id'])) {
+
+        if (isset($_POST['conversation']) && !empty($_POST['conversation'])) {
             $conversationId = str_replace('conversationId-', '', ($_POST['conversation']));
-        }else{
+        } else {
             $GLOBALS['db']->table = 'conversation';
-            // MODIFIED: Use new session structure
-            $GLOBALS['db']->data = array( "id_creator" => 	$_SESSION['user']['id'] );
+            $GLOBALS['db']->data = array("id_creator" => $_SESSION['user']['id']);
             $conversationId = $GLOBALS['db']->insert();
-            if($conversationId){
+            if ($conversationId) {
             }
-        }	
-        if($conversationId && is_numeric($conversationId)){
-            
-            // --- START: MODIFIED LOGIC ---
+        }
+        if ($conversationId && is_numeric($conversationId)) {
+
             $message_content = '';
             $message_type = 0;
 
-            if(isset($_POST['file']) && $_POST['file'] === 'true' && isset($_POST['file_path'])) {
+            if (isset($_POST['file']) && $_POST['file'] === 'true' && isset($_POST['file_path'])) {
                 $message_content = $_POST['file_path'];
                 $message_type = is_image($message_content) ? 1 : (is_fileExt($message_content) ? 2 : 0);
             } elseif (isset($_POST['message'])) {
@@ -461,570 +956,541 @@ function send_msg(){
             }
 
             $data = array(
-                "id_conversation" => $conversationId, 
-                "id_sender" => 	$_SESSION['user']['id'], 
-                "message" 	=> 	$message_content,
-                "type"		=>	$message_type
+                "id_conversation" => $conversationId,
+                "id_sender" => $_SESSION['user']['id'],
+                "message" => $message_content,
+                "type" => $message_type
             );
-            // --- END: MODIFIED LOGIC ---
 
             $GLOBALS['db']->table = 'messages';
             $GLOBALS['db']->data = $data;
 
             $inserted = $GLOBALS['db']->insert();
-            
-            if($inserted){
-                $results = messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : 0) );
+
+            if ($inserted) {
+                $results = messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : 0));
 
                 echo json_encode(array("state" => "true", "data" => $results));
                 // (push_notification($conversationId, $inserted));
-            }
-            else
+            } else
                 echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-        }else
+        } else
             echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-    }else
+    } else
         echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
 }
 
 
- 
-function post_conversation(){
-	// MODIFIED: Use new session structure
+
+function post_conversation()
+{
     $user_id = $_SESSION['user']['id'] ?? 0;
-	$data = array("id_creator" => $user_id);
+    $data = array("id_creator" => $user_id);
 
-	if(isset($_POST['name']) && !empty($_POST['name']))
-		$data = array_merge($data, ["name" => $_POST['name']]);
+    if (isset($_POST['name']) && !empty($_POST['name']))
+        $data = array_merge($data, ["name" => $_POST['name']]);
 
-	if(isset($_POST['csrf'])){
-		$csrf_token = customDecrypt($_POST['csrf']);
-	
-		if( ! is_csrf_valid($csrf_token) ){
-			echo json_encode(["state" => "false", "message" => 'The form is forged']);
-			exit();
-		}
-	}else{
-		echo json_encode(["state" => "false", "message" => 'The form is forged']);
-		exit();
-	}
+    if (isset($_POST['csrf'])) {
+        $csrf_token = customDecrypt($_POST['csrf']);
 
-	$GLOBALS['db']->table = 'conversation';
-	$GLOBALS['db']->data = $data;
+        if (!is_csrf_valid($csrf_token)) {
+            echo json_encode(["state" => "false", "message" => 'The form is forged']);
+            exit();
+        }
+    } else {
+        echo json_encode(["state" => "false", "message" => 'The form is forged']);
+        exit();
+    }
 
-	$inserted_conversation_id = $GLOBALS['db']->insert();
-	
-	if($inserted_conversation_id){
-		if(isset($_POST['participants']) && !empty($_POST['participants']) ){
-			
-            // --- START: MODIFIED LOGIC ---
-            // Create two-way participation records so the chat appears for both users.
+    $GLOBALS['db']->table = 'conversation';
+    $GLOBALS['db']->data = $data;
+
+    $inserted_conversation_id = $GLOBALS['db']->insert();
+
+    if ($inserted_conversation_id) {
+        if (isset($_POST['participants']) && !empty($_POST['participants'])) {
+
             $subData = [];
-            foreach ($_POST['participants'] as $participant_id){
-                // Record for the creator seeing the participant
-				$subData[] = [
-                    'id_conversation' => $inserted_conversation_id,
-                    'my_particib' => $user_id, // The creator (doctor/admin)
-                    'id_particib' => $participant_id // The other person (patient)
-                ];
-
-                // Record for the participant seeing the creator
+            foreach ($_POST['participants'] as $participant_id) {
                 $subData[] = [
                     'id_conversation' => $inserted_conversation_id,
-                    'my_particib' => $participant_id, // The other person (patient)
-                    'id_particib' => $user_id // The creator (doctor/admin)
+                    'my_particib' => $user_id,
+                    'id_particib' => $participant_id
                 ];
-			}
-            // --- END: MODIFIED LOGIC ---
 
-			$GLOBALS['db']->table = 'participant';
-			$GLOBALS['db']->data = $subData;
-			$GLOBALS['db']->multi = true;
+                $subData[] = [
+                    'id_conversation' => $inserted_conversation_id,
+                    'my_particib' => $participant_id,
+                    'id_particib' => $user_id
+                ];
+            }
 
-			$secondinsert = $GLOBALS['db']->insert();
-			
-			if($secondinsert){
-				echo  json_encode(["state" => "true", "message" => 'Added successfully']); 
-			}else
-				echo json_encode(["state" => "false", "message" => "something went wrong while adding participants"]);
+            $GLOBALS['db']->table = 'participant';
+            $GLOBALS['db']->data = $subData;
+            $GLOBALS['db']->multi = true;
 
-		}else
-			echo  json_encode(["state" => "true", "message" => 'Added successfully']); 
-	}else{
-		echo json_encode(["state" => "false", "message" => "something went wrong while creating conversation"]);
-	}
+            $secondinsert = $GLOBALS['db']->insert();
+
+            if ($secondinsert) {
+                echo json_encode(["state" => "true", "message" => 'Added successfully']);
+            } else
+                echo json_encode(["state" => "false", "message" => "something went wrong while adding participants"]);
+
+        } else
+            echo json_encode(["state" => "true", "message" => 'Added successfully']);
+    } else {
+        echo json_encode(["state" => "false", "message" => "something went wrong while creating conversation"]);
+    }
 }
-function subscribeToTopic($tokens, $topic){
-	
-	foreach($tokens as $token){
-		$curl = curl_init();
+function subscribeToTopic($tokens, $topic)
+{
 
-		curl_setopt_array($curl, array(
-		CURLOPT_URL => "https://iid.googleapis.com/iid/v1/$token[token]/rel/topics/$topic",
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_ENCODING => '',
-		CURLOPT_MAXREDIRS => 10,
-		CURLOPT_TIMEOUT => 0,
-		CURLOPT_FOLLOWLOCATION => true,
-		CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-		CURLOPT_CUSTOMREQUEST => 'POST',
-		CURLOPT_HTTPHEADER => array(
-			'Content-Type: application/json',
-			'Authorization: Bearer AAAAPiEtOI4:APA91bHdSiAII41N4XyIPgvWG8mSapghX1KiLWHycZsTQpcHuyqixmropj3T2Iav-6yny77FwOMbu63YPnEBlkxBCF7CizuqIOn5EW-NglsMN5S_4nFVFntjL_NKTtSP-k7HqK7Ruqoz'
-		),
-		));
+    foreach ($tokens as $token) {
+        $curl = curl_init();
 
-		$response = curl_exec($curl);
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://iid.googleapis.com/iid/v1/$token[token]/rel/topics/$topic",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Authorization: Bearer AAAAPiEtOI4:APA91bHdSiAII41N4XyIPgvWG8mSapghX1KiLWHycZsTQpcHuyqixmropj3T2Iav-6yny77FwOMbu63YPnEBlkxBCF7CizuqIOn5EW-NglsMN5S_4nFVFntjL_NKTtSP-k7HqK7Ruqoz'
+            ),
+        ));
 
-		curl_close($curl);
-	}
-	return $response;
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+    }
+    return $response;
 }
 
-function push_notification($conversationId, $messageId){
+function push_notification($conversationId, $messageId)
+{
 
-	$query ="SELECT DISTINCT messages.*, lhuissier.username FROM conversation INNER JOIN participant ON participant.id_conversation = conversation.id INNER JOIN messages ON messages.id_sender = participant.id_particib AND messages.id_conversation = conversation.id INNER JOIN lhuissier ON lhuissier.id = participant.id_particib WHERE participant.deleted = 0 AND conversation.id = '$conversationId'  AND messages.id = $messageId";
-	$message = $GLOBALS['db']->select($query);
-	$message = $message[0];
+    $query = "SELECT DISTINCT messages.*, lhuissier.username FROM conversation INNER JOIN participant ON participant.id_conversation = conversation.id INNER JOIN messages ON messages.id_sender = participant.id_particib AND messages.id_conversation = conversation.id INNER JOIN lhuissier ON lhuissier.id = participant.id_particib WHERE participant.deleted = 0 AND conversation.id = '$conversationId'  AND messages.id = $messageId";
+    $message = $GLOBALS['db']->select($query);
+    $message = $message[0];
 
-	$curl = curl_init();
+    $curl = curl_init();
 
-	curl_setopt_array($curl, array(
-	  CURLOPT_URL => 'https://fcm.googleapis.com/fcm/send',
-	  CURLOPT_RETURNTRANSFER => true,
-	  CURLOPT_ENCODING => '',
-	  CURLOPT_MAXREDIRS => 10,
-	  CURLOPT_TIMEOUT => 0,
-	  CURLOPT_FOLLOWLOCATION => true,
-	  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-	  CURLOPT_CUSTOMREQUEST => 'POST',
-	  CURLOPT_POSTFIELDS =>
-	  '{
-			"to": "/topics/chat_'.$conversationId.'",
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => 'https://fcm.googleapis.com/fcm/send',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_POSTFIELDS =>
+            '{
+			"to": "/topics/chat_' . $conversationId . '",
 			"notification": {
 			
-				"title": "You received a message from '.$message['username'].'"
-			},	"data": '.json_encode($message).',"content_available": true,
+				"title": "You received a message from ' . $message['username'] . '"
+			},	"data": ' . json_encode($message) . ',"content_available": true,
 		}',
-	  CURLOPT_HTTPHEADER => array(
-		'Authorization: key= AAAAPiEtOI4:APA91bHdSiAII41N4XyIPgvWG8mSapghX1KiLWHycZsTQpcHuyqixmropj3T2Iav-6yny77FwOMbu63YPnEBlkxBCF7CizuqIOn5EW-NglsMN5S_4nFVFntjL_NKTtSP-k7HqK7Ruqoz',
-		'Content-Type: application/json'
-	  ),
-	));
-	
-	$response = curl_exec($curl);
-	
-	curl_close($curl);
-	return $response;
+        CURLOPT_HTTPHEADER => array(
+            'Authorization: key= AAAAPiEtOI4:APA91bHdSiAII41N4XyIPgvWG8mSapghX1KiLWHycZsTQpcHuyqixmropj3T2Iav-6yny77FwOMbu63YPnEBlkxBCF7CizuqIOn5EW-NglsMN5S_4nFVFntjL_NKTtSP-k7HqK7Ruqoz',
+            'Content-Type: application/json'
+        ),
+    ));
+
+    $response = curl_exec($curl);
+
+    curl_close($curl);
+    return $response;
 }
 
 
-    function moveEvent($DB){
+function moveEvent($DB)
+{
 
-        if(isset($_POST['id']) && !empty($_POST['id']) && isset($_POST['date']) && !empty($_POST['date'])){
-    
-            $table = 'rdv';
-    
-            $data= array("date"  =>  $_POST['date'], "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['id']);
-                    
-            $DB->table = $table;
-            $DB->data = $data;
-            $DB->where = 'id = ' .$_POST['id'];
-    
-            $updated = true && $DB->update();
-                  //  push_notificationRDV($_POST['id']);
-            //  if ($updated) 
-            //   echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
-            //  else 
-            //   echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
-            
-    
-        }else{
-            echo json_encode(["state" => "false", "message" => "missing data"]);
-        }
-        $DB = null;
+    if (isset($_POST['id']) && !empty($_POST['id']) && isset($_POST['date']) && !empty($_POST['date'])) {
+
+        $table = 'rdv';
+
+        $data = array("date" => $_POST['date'], "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['id']);
+
+        $DB->table = $table;
+        $DB->data = $data;
+        $DB->where = 'id = ' . $_POST['id'];
+
+        $updated = true && $DB->update();
+
+
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing data"]);
     }
+    $DB = null;
+}
 
-    function removeEvent($DB){
+function removeEvent($DB)
+{
 
-        if( isset($_POST['id']) && !empty($_POST['id']) ){
-    
-            $table = 'rdv';
-    
-            $data= array("deleted"  =>  1, "modified_at" => date('Y-m-d H:i:s'), "modified_by"  =>  $_SESSION['user']['id']);
-                    
-            $DB->table = $table;
-            $DB->data = $data;
-            $DB->where = 'id = ' .$_POST['id'];
-    
-            $updated = true && $DB->update();
-                    
-            if ($updated) 
-                echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Successfully Deleted']]);
-            else 
-                echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
-            
-    
-        }else{
-            echo json_encode(["state" => "false", "message" => "missing id"]);
-        }
-        $DB = null;
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
+
+        $table = 'rdv';
+
+        $data = array("deleted" => 1, "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['id']);
+
+        $DB->table = $table;
+        $DB->data = $data;
+        $DB->where = 'id = ' . $_POST['id'];
+
+        $updated = true && $DB->update();
+
+        if ($updated)
+            echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Successfully Deleted']]);
+        else
+            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
+
+
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing id"]);
     }
+    $DB = null;
+}
 
-function updateEvent($DB){
+function updateEvent($DB)
+{
 
-        if(isset($_POST['id']) && !empty($_POST['id'])){
-    
-            $table = 'rdv';
-            $unique_val = $_POST['id'];
-            $state = $_POST['rdv__state'];
-    
-            $DB->table = $table;
-            $GLOBALS['db']->data = array("state" => "$state");
-            $DB->where = 'id = ' .$unique_val;
-            $updated = true && $DB->update();
-            
-            if ($updated){ 
-             //  push_notificationRDV($unique_val);
-               echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
-               
-            }else{ 
-               // echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
-            }
-    
-        }else{
-            echo json_encode(["state" => "false", "message" => "missing id"]);
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
+
+        $table = 'rdv';
+        $unique_val = $_POST['id'];
+        $state = $_POST['rdv__state'];
+
+        $DB->table = $table;
+        $GLOBALS['db']->data = array("state" => "$state");
+        $DB->where = 'id = ' . $unique_val;
+        $updated = true && $DB->update();
+
+        if ($updated) {
+            echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
+
+        } else {
         }
-        $DB = null;
-    }
 
-function postEvent($DB){
-        $array_data = array();
-        $table = 'planning';
-    
-        foreach($_POST['data'] as $data){
-                
-            if (strpos($data['name'], '__') !== false) {
-                $table_key = explode('__', $data['name'])[0];
-                $column = explode('__', $data['name'])[1];
-    
-                if(stripos($column, 'password') !== false || stripos($column, 'pass') !== false){
-                    $array_data[$table_key][$column] = sha1($data['value']);
-                }else{
-                    if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
-                        $array_data[$table_key][$column][] = $data['value'];
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+    }
+    $DB = null;
+}
+
+function postEvent($DB)
+{
+    $array_data = array();
+    $table = 'planning';
+
+    foreach ($_POST['data'] as $data) {
+
+        if (strpos($data['name'], '__') !== false) {
+            $table_key = explode('__', $data['name'])[0];
+            $column = explode('__', $data['name'])[1];
+
+            if (stripos($column, 'password') !== false || stripos($column, 'pass') !== false) {
+                $array_data[$table_key][$column] = sha1($data['value']);
+            } else {
+                if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
+                    $array_data[$table_key][$column][] = $data['value'];
+                } else {
+                    if (isset($array_data[$table_key][$column])) {
+                        $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
                     } else {
-                        // Create a new array only if there are multiple values
-                        if (isset($array_data[$table_key][$column])) {
-                            $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
-                        } else {
-                            // Create a new non-array value
-                            $array_data[$table_key][$column] = $data['value'];
-                        }
+                        $array_data[$table_key][$column] = $data['value'];
                     }
                 }
-            }else if(stripos($data['name'], 'csrf') !== false){
-                $csrf = $data['value'];
-                unset($data['csrf']);
             }
+        } else if (stripos($data['name'], 'csrf') !== false) {
+            $csrf = $data['value'];
+            unset($data['csrf']);
         }
-    
-        if(isset($csrf)){
-            $csrf = customDecrypt($csrf);
-            if(!is_csrf_valid($csrf)){
-                echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
-                exit();
-            }
-        } else {
+    }
+
+    if (isset($csrf)) {
+        $csrf = customDecrypt($csrf);
+        if (!is_csrf_valid($csrf)) {
             echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
             exit();
         }
-    
-        $filteredData = array_filter($array_data, function($key) use ($table) {
-            return $key != $table;
-        }, ARRAY_FILTER_USE_KEY);
-    
-        $restData = array_diff_key($array_data, $filteredData);
-        $restData = array_values($restData)[0];
-        $restData = array_merge( $restData, array("Garage_id"  =>  $_SESSION['user']['id'], "created_by"  =>  $_SESSION['user']['id']) );
-        $DB->table 	= $table;
-        $DB->data 	= $restData;
-        $last_id 	= $DB->insert();
-        $inserted = true && $last_id;
-        
-        if(is_array($filteredData) && !empty($filteredData)){
-            $unique_id = ((substr($table, -1) === 's') ? substr($table, 0, -1) : $table).'_id';
-            foreach ($filteredData as $table_name => $data) {
-                $DB->table = $table_name;
-                
-                if(is_array($data['service_id'])){
-                    $extraData = array("$unique_id"  =>  $last_id);
-                    
-                    $data = array_map(function($service_id) use ($extraData) {
-                        return array_merge($extraData, ['service_id' => $service_id]);
-                    }, $data['service_id']);
-                    $DB->multi = true;      
-                }else{
-                    $data = array_merge( $data, array("$unique_id"  =>  $last_id) );
-                }
-                $DB->data = $data;
-                $inserted = $inserted && $DB->insert();
-            }
-        }
-    
-        if($inserted){
-            echo  json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]); 
-        } else {
-            echo json_encode(["state" => "false", "message" => $inserted]);
-        }
-    
-        $DB = null;
+    } else {
+        echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+        exit();
     }
 
+    $filteredData = array_filter($array_data, function ($key) use ($table) {
+        return $key != $table;
+    }, ARRAY_FILTER_USE_KEY);
 
-    function get_RDV($id = NULL, $return=false){
-        $user_role = $_SESSION['user']['role'] ?? null;
-        $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
-        $user_id = $_SESSION['user']['id'] ?? 0;
-    
-        $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
-        
-        // Build WHERE clause based on user role and cabinet
-        $where_clause = "";
-        if ($user_role === 'admin' && !empty($user_cabinet_id)) {
-            // Cabinet Admin sees all RDVs in their cabinet
-            $where_clause = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
-        } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
-            // Doctor/Nurse sees only their own RDVs
-            $where_clause = " AND rdv.doctor_id = " . intval($user_id);
-        }
-        // Super Admin (admin with null cabinet_id) has no cabinet filter, so they see all RDVs
-    
-        $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (".implode(', ', array_map('intval', $_POST['filters'])).")" : " AND rdv.state >= -1" ); // Default to show all states
-        
-        $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
-                COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name
-                FROM rdv 
-                LEFT JOIN patient ON patient.id = rdv.patient_id 
-                WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
-                
-        $res =  $GLOBALS['db']->select($sql);
-        
-        $convertedData = []; // Initialize as empty array
-        if (!empty($res)) {
-            foreach ($res as $items) {
-                $arrayData = [
-                    'id' => $items['id'],
-                    'title' => $items['patient_name'],
-                    'allDay' => true,
-                    'start' => $items['Date_RDV'],
-                    'end' => $items['Date_RDV'],
-                    'extendedProps' => [
-                        'calendar' => match((int)$items['state']) {
-                            0 => 'warning', // Créé
-                            1 => 'info',    // Accepté
-                            2 => 'success', // Complété
-                            3 => 'danger',  // Annulé
-                            default => 'secondary'
-                        },
-                        'phone' => ($items['phone'] ?? ''),
-                        'num_rdv' => ($items['rdv_num'] ?? ''),
-                        'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
-                    ]
-                ];
-                $convertedData[] = $arrayData;
+    $restData = array_diff_key($array_data, $filteredData);
+    $restData = array_values($restData)[0];
+    $restData = array_merge($restData, array("Garage_id" => $_SESSION['user']['id'], "created_by" => $_SESSION['user']['id']));
+    $DB->table = $table;
+    $DB->data = $restData;
+    $last_id = $DB->insert();
+    $inserted = true && $last_id;
+
+    if (is_array($filteredData) && !empty($filteredData)) {
+        $unique_id = ((substr($table, -1) === 's') ? substr($table, 0, -1) : $table) . '_id';
+        foreach ($filteredData as $table_name => $data) {
+            $DB->table = $table_name;
+
+            if (is_array($data['service_id'])) {
+                $extraData = array("$unique_id" => $last_id);
+
+                $data = array_map(function ($service_id) use ($extraData) {
+                    return array_merge($extraData, ['service_id' => $service_id]);
+                }, $data['service_id']);
+                $DB->multi = true;
+            } else {
+                $data = array_merge($data, array("$unique_id" => $last_id));
             }
+            $DB->data = $data;
+            $inserted = $inserted && $DB->insert();
         }
-    
-        if(empty($convertedData)){
+    }
+
+    if ($inserted) {
+        echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]);
+    } else {
+        echo json_encode(["state" => "false", "message" => $inserted]);
+    }
+
+    $DB = null;
+}
+
+
+function get_RDV($id = NULL, $return = false)
+{
+    $user_role = $_SESSION['user']['role'] ?? null;
+    $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+    $user_id = $_SESSION['user']['id'] ?? 0;
+
+    $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
+
+    $where_clause = "";
+    if ($user_role === 'admin' && !empty($user_cabinet_id)) {
+        // FIX: Ensure we check cabinet_id correctly. 
+        // Also, include logic to see RDVs where the doctor belongs to the admin's cabinet, 
+        // just in case the cabinet_id was not set on the RDV row itself (legacy data).
+        $where_clause = " AND (rdv.cabinet_id = " . intval($user_cabinet_id) .
+            " OR rdv.doctor_id IN (SELECT id FROM users WHERE cabinet_id = " . intval($user_cabinet_id) . "))";
+
+    } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
+        $where_clause = " AND rdv.doctor_id = " . intval($user_id);
+    }
+
+    $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (" . implode(', ', array_map('intval', $_POST['filters'])) . ")" : " AND rdv.state >= -1");
+
+    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
+            COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name,
+            rs.payment_status
+            FROM rdv 
+            LEFT JOIN patient ON patient.id = rdv.patient_id
+            LEFT JOIN reeducation_sessions rs ON rdv.reeducation_session_id = rs.id
+            WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
+
+    $res = $GLOBALS['db']->select($sql);
+
+    $convertedData = [];
+    if (!empty($res)) {
+        foreach ($res as $items) {
+            $title = $items['patient_name'];
+            if ($items['payment_status'] === 'paid') {
+                $title .= ' (Payé ✔️)';
+            } elseif ($items['payment_status'] === 'unpaid') {
+                $title .= ' (Impayé ❌)';
+            }
+
             $arrayData = [
-                'id' => '0',
-                'title' => 'start calendar',
-                'allDay' => false,
-                'start' => '1970-01-01',
-                'end' => '1970-01-01',
+                'id' => $items['id'],
+                'title' => $title,
+                'allDay' => true,
+                'start' => $items['Date_RDV'],
+                'end' => $items['Date_RDV'],
                 'extendedProps' => [
-                    'calendar' => 'secondary',
-                    'Client_id' => 0
+                    'calendar' => match ((int) $items['state']) {
+                        0 => 'warning', 1 => 'info', 2 => 'success', 3 => 'danger',
+                        default => 'secondary'
+                    },
+                    'phone' => ($items['phone'] ?? ''),
+                    'num_rdv' => ($items['rdv_num'] ?? ''),
+                    'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
                 ]
             ];
             $convertedData[] = $arrayData;
         }
-    
-        if($return) { return $convertedData; }
-    
-        echo json_encode($convertedData);
     }
 
-
-    // START: MODIFIED
-    function postRdv(){
-        $patient_id = filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT);
-        $first_name = filter_var(($_POST['first_name'] ?? ""), FILTER_SANITIZE_STRING);
-        $last_name = filter_var(($_POST['last_name'] ?? ""), FILTER_SANITIZE_STRING);
-        $phone = filter_var(($_POST['phone'] ?? ""), FILTER_SANITIZE_STRING);
-        
-        // If no existing patient is selected, create a new one
-        if (empty($patient_id)) {
-            if (!empty($first_name) && !empty($last_name)) {
-                $patient_data = [
-                    "first_name" => $first_name,
-                    "last_name" => $last_name,
-                    "phone" => $phone,
-                    "created_by" => $_SESSION['user']['id'],
-                    "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
-                ];
-                $GLOBALS['db']->table = 'patient';
-                $GLOBALS['db']->data = $patient_data;
-                $patient_id = $GLOBALS['db']->insert();
-                
-                if (!$patient_id) {
-                    echo json_encode(["state" => "false", "message" => "Erreur lors de la création du nouveau patient."]);
-                    return;
-                }
-            } else {
-                 echo json_encode(["state" => "false", "message" => "Les informations du patient sont requises."]);
-                 return;
-            }
-        }
-    
-        $data = [
-            "doctor_id"     =>  filter_var(($_POST['doctor'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
-            "patient_id"    =>  $patient_id,
-            "date"          =>  filter_var(($_POST['date'] ?? date("Y-m-d")), FILTER_SANITIZE_STRING),
-            "first_name"    =>  $first_name,
-            "last_name"     =>  $last_name,
-            "phone"         =>  $phone,
-            "rdv_num"       =>  filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
-            "created_by"    =>  $_SESSION['user']['id'],
-            "cabinet_id"    =>  $_SESSION['user']['cabinet_id'] ?? null
+    if (empty($convertedData)) {
+        $arrayData = [
+            'id' => '0',
+            'title' => 'start calendar',
+            'allDay' => false,
+            'start' => '1970-01-01',
+            'end' => '1970-01-01',
+            'extendedProps' => ['calendar' => 'secondary', 'Client_id' => 0]
         ];
-    
-        $GLOBALS['db']->table = 'rdv';
-        $GLOBALS['db']->data = $data;
-        $res = $GLOBALS['db']->insert();
-        
-        if($res)
-            echo json_encode( ["state" => "true", "message" => $GLOBALS['language']['Added successfully']] );
-        else
-            echo json_encode( ["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']] );
+        $convertedData[] = $arrayData;
     }
-    // END: MODIFIED
 
-function getPatients($id, $return = false){
+    if ($return) {
+        return $convertedData;
+    }
 
-	$id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
-	$sql = "SELECT patient.*, communes.id as communeId, communes.name as communeName, willaya.id as willayaId, willaya.willaya FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0 AND patient.id = $id";
+    echo json_encode($convertedData);
+}
 
-	$response = $GLOBALS['db']->select($sql);
-	$GLOBALS['db'] = null;
-    
-    if($return)
+
+function postRdv()
+{
+    $patient_id = filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT);
+    $first_name = filter_var(($_POST['first_name'] ?? ""), FILTER_SANITIZE_STRING);
+    $last_name = filter_var(($_POST['last_name'] ?? ""), FILTER_SANITIZE_STRING);
+    $phone = filter_var(($_POST['phone'] ?? ""), FILTER_SANITIZE_STRING);
+
+    if (empty($patient_id)) {
+        if (!empty($first_name) && !empty($last_name)) {
+            $patient_data = [
+                "first_name" => $first_name,
+                "last_name" => $last_name,
+                "phone" => $phone,
+                "created_by" => $_SESSION['user']['id'],
+                "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
+            ];
+            $GLOBALS['db']->table = 'patient';
+            $GLOBALS['db']->data = $patient_data;
+            $patient_id = $GLOBALS['db']->insert();
+
+            if (!$patient_id) {
+                echo json_encode(["state" => "false", "message" => "Erreur lors de la création du nouveau patient."]);
+                return;
+            }
+        } else {
+            echo json_encode(["state" => "false", "message" => "Les informations du patient sont requises."]);
+            return;
+        }
+    }
+
+    $data = [
+        "doctor_id" => filter_var(($_POST['doctor'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+        "patient_id" => $patient_id,
+        "date" => filter_var(($_POST['date'] ?? date("Y-m-d")), FILTER_SANITIZE_STRING),
+        "first_name" => $first_name,
+        "last_name" => $last_name,
+        "phone" => $phone,
+        "rdv_num" => filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+        "created_by" => $_SESSION['user']['id'],
+        "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
+    ];
+
+    $GLOBALS['db']->table = 'rdv';
+    $GLOBALS['db']->data = $data;
+    $res = $GLOBALS['db']->insert();
+
+    if ($res)
+        echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]);
+    else
+        echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
+}
+
+function getPatients($id, $return = false)
+{
+
+    $id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
+    $sql = "SELECT patient.*, communes.id as communeId, communes.name as communeName, willaya.id as willayaId, willaya.willaya FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0 AND patient.id = $id";
+
+    $response = $GLOBALS['db']->select($sql);
+    $GLOBALS['db'] = null;
+
+    if ($return)
         return $response;
     else
-        echo  json_encode($response);
+        echo json_encode($response);
 
 }
 
-function getUsers($id){
-	
+function getUsers($id)
+{
+
     $id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
-	$sql = "SELECT doctor.*, communes.id as communeId, willaya.id as willayaId FROM doctor LEFT JOIN communes ON communes.id = doctor.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE doctor.deleted = 0 AND doctor.id = $id";
+    $sql = "SELECT doctor.*, communes.id as communeId, willaya.id as willayaId FROM doctor LEFT JOIN communes ON communes.id = doctor.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE doctor.deleted = 0 AND doctor.id = $id";
 
-	$response = $GLOBALS['db']->select($sql);
-	$GLOBALS['db'] = null;
-	return $response;
-
-}
-
-
-function updateState(){
-	
-	// MODIFIED: Use new, correct session structure for the security check
-	if( isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id']) ){
-		$id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
-		$state = abs(filter_var($_POST['state'], FILTER_SANITIZE_NUMBER_INT));
-        
-        // This logic can be uncommented if you need to manage ticket counts upon cancellation
-        // if($state == 3){
-
-        //     $doctor = getRdvDoctor($id);
-        //     $dateString = filter_var($doctor['rdv_date'], FILTER_SANITIZE_STRING) ;
-
-            
-        //     if($dateString != ""){
-        //         $date = new DateTime($dateString);
-        //         setlocale(LC_TIME, 'fr_FR');
-        //         $dayName = ucwords(strftime('%A', $date->getTimestamp()));
-                
-        //         $datetime = date('Y-m-d H:i:s');
-
-        //         $tickets_rest = json_decode($doctor['tickets_rest'], true);
-        //         $tickets_rest[$dayName] = $tickets_rest[$dayName] + 1;
-                
-        //         $GLOBALS['db']->table = 'doctor';
-        //         $GLOBALS['db']->data = array("tickets_rest" => json_encode($tickets_rest), "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
-        //         $GLOBALS['db']->where = "id = $doctor[id]";
-
-        //         $updated = $GLOBALS['db']->update();
-                
-        //     }
-        // }
-
-		$datetime = date('Y-m-d H:i:s');
-
-		$GLOBALS['db']->table = 'rdv';
-		// MODIFIED: Use new, correct session structure for modified_by
-		$GLOBALS['db']->data = array("state" => "$state", "modified_at"  =>  "$datetime", "modified_by"  =>  $_SESSION['user']['id']);
-		$GLOBALS['db']->where = "id = $id";
-
-		$updated = $GLOBALS['db']->update();
-		if($updated){
-			echo  json_encode(["state" => $updated, "message" => $GLOBALS['language']['Edited successfully']]); 
-		}else{
-			echo json_encode(["state" => "false", "message" => $updated]);
-		}
-	}else
-		echo json_encode( ["state" => "false", "message" => "missing id"] );
-
-}
-function getRdvPatient(){
-
-	$id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
-	$sql = "SELECT patient.*, communes.name as communeName, willaya.willaya FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE rdv.id = $id";
-
-	$response = $GLOBALS['db']->select($sql);
-	$GLOBALS['db'] = null;
-    
-    echo  json_encode($response);
+    $response = $GLOBALS['db']->select($sql);
+    $GLOBALS['db'] = null;
+    return $response;
 
 }
 
-function getRdvDoctor($id){
 
-	$id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
-	$sql = "SELECT doctor.*, rdv.date as rdv_date FROM rdv LEFT JOIN doctor ON doctor.id = rdv.doctor_id WHERE rdv.id = $id";
+function updateState()
+{
 
-	$response = $GLOBALS['db']->select($sql);
-    
+    if (isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id'])) {
+        $id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
+        $state = abs(filter_var($_POST['state'], FILTER_SANITIZE_NUMBER_INT));
+
+        $datetime = date('Y-m-d H:i:s');
+
+        $GLOBALS['db']->table = 'rdv';
+        $GLOBALS['db']->data = array("state" => "$state", "modified_at" => "$datetime", "modified_by" => $_SESSION['user']['id']);
+        $GLOBALS['db']->where = "id = $id";
+
+        $updated = $GLOBALS['db']->update();
+        if ($updated) {
+            echo json_encode(["state" => $updated, "message" => $GLOBALS['language']['Edited successfully']]);
+        } else {
+            echo json_encode(["state" => "false", "message" => $updated]);
+        }
+    } else
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+
+}
+function getRdvPatient()
+{
+
+    $id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
+    $sql = "SELECT patient.*, communes.name as communeName, willaya.willaya FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE rdv.id = $id";
+
+    $response = $GLOBALS['db']->select($sql);
+    $GLOBALS['db'] = null;
+
+    echo json_encode($response);
+
+}
+
+function getRdvDoctor($id)
+{
+
+    $id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
+    $sql = "SELECT doctor.*, rdv.date as rdv_date FROM rdv LEFT JOIN doctor ON doctor.id = rdv.doctor_id WHERE rdv.id = $id";
+
+    $response = $GLOBALS['db']->select($sql);
+
     return $response[0] ?? [];
 }
 
 
 
-function handleRdv_nbr(){
+function handleRdv_nbr()
+{
     try {
         $response = [];
-        if(isset($_POST['doctor']) && !empty($_POST['doctor']) ){
+        if (isset($_POST['doctor']) && !empty($_POST['doctor'])) {
             $doctor_id = filter_var(($_POST['doctor']), FILTER_SANITIZE_NUMBER_INT);
-            $dateString = filter_var( ($_POST['date'] ?? date('Y-m-d')), FILTER_SANITIZE_STRING) ;
-    
+            $dateString = filter_var(($_POST['date'] ?? date('Y-m-d')), FILTER_SANITIZE_STRING);
+
             $date = new DateTime($dateString);
-            // Use French locale to get French day names which match the database JSON keys
-            setlocale(LC_TIME, 'fr_FR.UTF-8', 'fra'); 
+            setlocale(LC_TIME, 'fr_FR.UTF-8', 'fra');
             $dayName = ucwords(strftime('%A', $date->getTimestamp()));
-            
-            // MODIFIED: Fetch from 'users' table instead of 'doctor'
+
             $doctor_info_sql = "SELECT tickets_day FROM users WHERE id = ?";
             $stmt = $GLOBALS['db']->prepare($doctor_info_sql);
             $stmt->execute([$doctor_id]);
@@ -1034,25 +1500,21 @@ function handleRdv_nbr(){
                 $tickets_day_json = $doctor_response['tickets_day'] ?? '[]';
                 $tickets_day_array = json_decode($tickets_day_json, true);
 
-                // Ensure the day name exists in the array
                 $nbrTickets = isset($tickets_day_array[$dayName]) ? intval($tickets_day_array[$dayName]) : 0;
-                
+
                 $restTickets = [];
-                if($nbrTickets > 0){
+                if ($nbrTickets > 0) {
                     $all_possible_tickets = range(1, $nbrTickets);
 
-                    // Fetch reserved ticket numbers for the given doctor and date
                     $reserved_sql = "SELECT rdv_num FROM `rdv` WHERE doctor_id = ? AND state != 3 AND date = ?";
                     $stmt_reserved = $GLOBALS['db']->prepare($reserved_sql);
                     $stmt_reserved->execute([$doctor_id, $dateString]);
                     $reservedTickets = $stmt_reserved->fetchAll(PDO::FETCH_COLUMN);
-                    
-                    // Find the tickets that are not yet reserved
+
                     $restTickets = array_diff($all_possible_tickets, $reservedTickets);
                 }
-                
-                // Format the response for Select2
-                foreach($restTickets as $ticket_num){
+
+                foreach ($restTickets as $ticket_num) {
                     $response[] = array(
                         "id" => $ticket_num,
                         "text" => $ticket_num
@@ -1061,9 +1523,11 @@ function handleRdv_nbr(){
             }
         }
         echo json_encode($response);
-        
+
     } catch (Throwable $th) {
-        // Return an empty array in case of any error
         echo json_encode([]);
     }
+
+
 }
+?>

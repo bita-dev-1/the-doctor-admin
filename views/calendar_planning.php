@@ -1,20 +1,17 @@
 <?php
-    // MODIFIED: Corrected security check to allow all logged-in users
-    if(!isset($_SESSION['user']['id'])){
-        header('location:'.SITE_URL.'/login');
-        exit();
-    }
-    include_once 'header.php';
+if (!isset($_SESSION['user']['id'])) {
+    header('location:' . SITE_URL . '/login');
+    exit();
+}
+include_once 'header.php';
 
-    $table = 'rdv';
-    $result = []; 
-    $calendarCSS = SITE_URL . '/app-assets/vendors/css/calendars/fullcalendar.min.css';
-    $appCalendarCSS = SITE_URL . '/app-assets/css/pages/app-calendar.css';
-    $btn_text = 'Ajouter';
+$table = 'rdv';
+$result = [];
+$calendarCSS = SITE_URL . '/app-assets/vendors/css/calendars/fullcalendar.min.css';
+$appCalendarCSS = SITE_URL . '/app-assets/css/pages/app-calendar.css';
+$btn_text = 'Ajouter';
 
-    // Set the doctor ID for the calendar. 
-    // If admin, it's initially empty, if doctor/nurse, it's their own ID.
-    $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['user']['id'] : '';
+$doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['user']['id'] : '';
 ?>
 
 <link rel="stylesheet" type="text/css" href="<?= $calendarCSS ?>">
@@ -34,34 +31,35 @@
                         <div class="col app-calendar-sidebar flex-grow-0 overflow-hidden d-flex flex-column" id="app-calendar-sidebar">
                             <div class="sidebar-wrapper">
                                 <div class="card-body d-flex justify-content-center">
-                                    <button class="btn btn-primary btn-toggle-sidebar w-100" data-bs-toggle="modal" data-bs-target="#add-new-sidebar">
+                                    <!-- START: MODIFIED BUTTON -->
+                                    <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addRdvModal">
                                         <span class="align-middle">Ajouter rendez-vous</span>
                                     </button>
+                                    <!-- END: MODIFIED BUTTON -->
                                 </div>
                                 <div class="card-body pb-0">
-                                    <!-- NEW: Add Doctor filter for Admins -->
-                                    <?php if ($_SESSION['user']['role'] === 'admin') : ?>
-                                        <div class="mb-1">
-                                            <?php
+                                    <?php if ($_SESSION['user']['role'] === 'admin'): ?>
+                                            <div class="mb-1">
+                                                <?php
                                                 $doctor_where_clause = "role = 'doctor' AND deleted = 0";
                                                 if (!empty($_SESSION['user']['cabinet_id'])) {
                                                     $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
                                                 }
                                                 $input = array(
-                                                    "label"         => $GLOBALS['language']['doctor'],
-                                                    "name_id"       => "calendar_doctor_filter",
-                                                    "placeholder"   => "Tous les médecins",
-                                                    "class"         => "",
-                                                    "serverSide"    => array(
-                                                        "table"     => "users",
-                                                        "value"     => "id",
-                                                        "text"      => array("first_name", "last_name"),
-                                                        "where"     => $doctor_where_clause
+                                                    "label" => $GLOBALS['language']['doctor'],
+                                                    "name_id" => "calendar_doctor_filter",
+                                                    "placeholder" => "Tous les médecins",
+                                                    "class" => "",
+                                                    "serverSide" => array(
+                                                        "table" => "users",
+                                                        "value" => "id",
+                                                        "text" => array("first_name", "last_name"),
+                                                        "where" => $doctor_where_clause
                                                     )
                                                 );
                                                 draw_select($input);
-                                            ?>
-                                        </div>
+                                                ?>
+                                            </div>
                                     <?php endif; ?>
                                     
                                     <h5 class="section-label mb-1"><span class="align-middle">Filtre</span></h5>
@@ -104,6 +102,84 @@
                         <div class="body-content-overlay"></div>
                     </div>
                 </div>
+
+                <!-- START: ADDED "ADD RDV" MODAL -->
+                <div class="modal fade" id="addRdvModal" tabindex="-1" aria-labelledby="addRdvModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addRdvModalLabel">Ajouter un Rendez-vous</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form class="rdvForm" method="post" role="form">
+                                <div class="modal-body">
+                                    <?php set_csrf() ?>
+                                    <div class="row">
+                                        <?php if ($_SESSION['user']['role'] == 'admin') { ?>
+                                            <div class="col-lg-6 col-md-6 col-12 mb-1">
+                                                <?php
+                                                $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                    $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                }
+                                                draw_select([
+                                                    "label" => $GLOBALS['language']['doctor'],
+                                                    "name_id" => "doctor_id",
+                                                    "placeholder" => $GLOBALS['language']['doctor'],
+                                                    "serverSide" => [
+                                                        "table" => "users",
+                                                        "value" => "id",
+                                                        "text" => ["first_name", "last_name"],
+                                                        "where" => $doctor_where_clause
+                                                    ]
+                                                ]);
+                                                ?>
+                                            </div>
+                                        <?php } else {
+                                            draw_input(["type" => "hidden", "name_id" => "doctor_id", "value" => $_SESSION['user']['id']]);
+                                        } ?>
+                                        <div class="col-lg-6 col-md-6 col-12 mb-1">
+                                            <?php
+                                            draw_select([
+                                                "label" => $GLOBALS['language']['patient'],
+                                                "name_id" => "patient_id",
+                                                "placeholder" => 'Rechercher par nom, téléphone, ID...',
+                                                "serverSide" => [
+                                                    "table" => "patient",
+                                                    "value" => "id",
+                                                    "text" => ["first_name", "last_name", "phone", "id"],
+                                                    "where" => "deleted = 0"
+                                                ]
+                                            ]);
+                                            ?>
+                                        </div>
+                                        <div class="col-lg-4 col-md-6 col-12 mb-1">
+                                            <?php draw_input(["label" => $GLOBALS['language']['firstname'], "type" => "text", "name_id" => "first_name", "placeholder" => $GLOBALS['language']['firstname']]); ?>
+                                        </div>
+                                        <div class="col-lg-4 col-md-6 col-12 mb-1">
+                                            <?php draw_input(["label" => $GLOBALS['language']['lastname'], "type" => "text", "name_id" => "last_name", "placeholder" => $GLOBALS['language']['lastname']]); ?>
+                                        </div>
+                                        <div class="col-lg-4 col-md-6 col-12 mb-1">
+                                            <?php draw_input(["label" => $GLOBALS['language']['phone'], "type" => "text", "name_id" => "phone", "placeholder" => $GLOBALS['language']['phone']]); ?>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-12 mb-1">
+                                            <?php draw_input(["label" => $GLOBALS['language']['date'], "type" => "text", "name_id" => "date", "placeholder" => "YYYY-MM-DD", "class" => "picker"]); ?>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-12 mb-1">
+                                            <?php draw_select(["label" => $GLOBALS['language']['rdv_num'], "name_id" => "rdv_num", "placeholder" => $GLOBALS['language']['rdv_num'], "class" => "rdv_num", "attr" => "data-search = '-1'"]); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <?php draw_button(["text" => $btn_text, "type" => "submit", "name_id" => "submit", "class" => "btn-primary"]); ?>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- END: ADDED "ADD RDV" MODAL -->
+
 
                 <!-- Calendar Add/Edit Event Modal -->
                 <div class="modal modal-slide-in event-sidebar fade" id="add-new-sidebar">
@@ -168,7 +244,6 @@ $handlerURL = SITE_URL . '/handlers';
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   var calendarEl = document.getElementById('calendar');
-  var addEventBtn = $('.btn-toggle-sidebar');
   var eventSidebar = $('.event-sidebar');
   var eventTitle = $('#title');
   var eventLabel = $('#select-label');
@@ -183,117 +258,75 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var selectedEvent = {};
 
-  // Init event sidebar
   if (eventSidebar.length) {
-    eventSidebar.modal({
-      show: false
-    });
+    eventSidebar.modal({ show: false });
   }
 
-  // Init select2
   if (eventLabel.length) {
     function renderBadges(option) {
-      if (!option.id) {
-        return option.text;
-      }
-      var $badge =
-        "<span class='badge badge-light-" +
-        $(option.element).data('label') +
-        " me-1'>" +
-        option.text +
-        '</span>';
-
+      if (!option.id) { return option.text; }
+      var $badge = "<span class='badge badge-light-" + $(option.element).data('label') + " me-1'>" + option.text + '</span>';
       return $badge;
     }
-
     eventLabel.wrap('<div class="position-relative"></div>').select2({
       placeholder: 'Select value',
       dropdownParent: eventLabel.parent(),
       templateResult: renderBadges,
       templateSelection: renderBadges,
       minimumResultsForSearch: -1,
-      escapeMarkup: function (es) {
-        return es;
-      }
+      escapeMarkup: function (es) { return es; }
     });
   }
 
-  // Init date picker
   if (startDate.length) {
-    var start = startDate.flatpickr({
-      enableTime: false,
-      dateFormat: 'Y-m-d'
-    });
+    var start = startDate.flatpickr({ enableTime: false, dateFormat: 'Y-m-d' });
   }
   
-  // Calendar colors
-  var calendarsColor = {
-      warning: 'warning',
-      info: 'info',
-      success: 'success',
-      danger: 'danger',
-      secondary: 'secondary'
-  };
+  var calendarsColor = { warning: 'warning', info: 'info', success: 'success', danger: 'danger', secondary: 'secondary' };
 
-  // Calendar
   var calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
     events: function(fetchInfo, successCallback, failureCallback) {
-        // MODIFIED: Logic to fetch events based on role and filters
         var doctorId = $('#calendar_doctor_filter').val() || $(calendarEl).data('doctor-id') || '';
         var filters = [];
-        $('.calendar-events-filter .input-filter:checked').each(function () {
-            filters.push($(this).data('value'));
-        });
+        $('.calendar-events-filter .input-filter:checked').each(function () { filters.push($(this).data('value')); });
         
         $.ajax({
-            url: '<?= $handlerURL ?>',
-            type: 'POST',
-            data: {
-                method: 'get_RDV',
-                doctor_id: doctorId,
-                filters: filters
-            },
+            url: '<?= $handlerURL ?>', type: 'POST',
+            data: { method: 'get_RDV', doctor_id: doctorId, filters: filters },
             success: function(res) {
                 var events = JSON.parse(res);
                 if (Array.isArray(events) && events.length > 0 && events[0].id === '0') {
-                    successCallback([]); // Return empty if only the placeholder event is returned
+                    successCallback([]);
                 } else {
                     successCallback(events);
                 }
             },
-            error: function() {
-                failureCallback();
-            }
+            error: function() { failureCallback(); }
         });
     },
-    editable: true,
-    dragScroll: true,
-    dayMaxEvents: 2,
-    eventResizableFromStart: true,
-    customButtons: {
-      sidebarToggle: {
-        text: 'Sidebar'
-      }
-    },
-    headerToolbar: {
-      start: 'sidebarToggle, prev,next, title',
-      end: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
-    },
-    direction: 'ltr', // Assuming ltr, change if needed
-    initialDate: new Date(),
-    navLinks: true, // can click day/week names to navigate views
+    editable: true, dragScroll: true, dayMaxEvents: 2, eventResizableFromStart: true,
+    customButtons: { sidebarToggle: { text: 'Sidebar' } },
+    headerToolbar: { start: 'sidebarToggle, prev,next, title', end: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth' },
+    direction: 'ltr', initialDate: new Date(), navLinks: true,
     eventClassNames: function ({ event: calendarEvent }) {
       const colorName = calendarsColor[calendarEvent._def.extendedProps.calendar];
       return ['fc-event-' + colorName];
     },
     dateClick: function (info) {
-        // This functionality is disabled as we use a dedicated 'add' button
+        // --- START: MODIFIED ---
+        // Open the ADD modal when a date is clicked
+        var addRdvModal = new bootstrap.Modal(document.getElementById('addRdvModal'));
+        // Reset form and pre-fill date
+        $('#addRdvModal form')[0].reset();
+        $('#addRdvModal .select2').val(null).trigger('change');
+        $('#addRdvModal #date').val(info.dateStr); 
+        addRdvModal.show();
+        // --- END: MODIFIED ---
     },
     eventClick: function (info) {
       selectedEvent = info.event;
       eventSidebar.modal('show');
-      addEventBtn.addClass('d-none');
       
       eventTitle.val(info.event.title);
       start.setDate(info.event.start, true, 'Y-m-d');
@@ -304,40 +337,23 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     eventDrop: function (info) {
         $.ajax({
-            url: '<?= $handlerURL ?>',
-            type: 'POST',
-            data: {
-                method: 'moveEvent',
-                id: info.event.id,
-                date: moment(info.event.start).format('YYYY-MM-DD')
-            },
-            success: function(res) {
-                // You can add a success notification here if you want
-            }
+            url: '<?= $handlerURL ?>', type: 'POST',
+            data: { method: 'moveEvent', id: info.event.id, date: moment(info.event.start).format('YYYY-MM-DD') },
+            success: function(res) { /* Optional success notification */ }
         });
     },
-    eventResize: function (info) {
-        // This is not used for RDV but kept from original file
-    },
+    eventResize: function (info) { /* Not used */ },
     refetchEventsOnNavigate: true
   });
   
   calendar.render();
 
-  // Form submit
   $(eventForm).on('submit', function (e) {
     e.preventDefault();
     if (eventForm.valid()) {
-      var eventData = {
-        id: eventForm.attr('data-id'),
-        date: startDate.val(),
-        rdv__state: eventLabel.val(),
-        method: 'updateEvent'
-      };
+      var eventData = { id: eventForm.attr('data-id'), date: startDate.val(), rdv__state: eventLabel.val(), method: 'updateEvent' };
       $.ajax({
-        url: '<?= $handlerURL ?>',
-        type: 'POST',
-        data: eventData,
+        url: '<?= $handlerURL ?>', type: 'POST', data: eventData,
         success: function(res) {
           calendar.refetchEvents();
           eventSidebar.modal('hide');
@@ -346,7 +362,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Modal close
   eventSidebar.on('hidden.bs.modal', function () {
     eventForm[0].reset();
     eventForm.attr('data-id', 0);
@@ -357,34 +372,23 @@ document.addEventListener('DOMContentLoaded', function () {
     eventNumRdv.val('');
   });
 
-  // Sidebar filter
   if (selectAll.length) {
     selectAll.on('change', function () {
       var $this = $(this);
-
-      if ($this.prop('checked')) {
-        filterInput.prop('checked', true);
-      } else {
-        filterInput.prop('checked', false);
-      }
+      if ($this.prop('checked')) { filterInput.prop('checked', true); } 
+      else { filterInput.prop('checked', false); }
       calendar.refetchEvents();
     });
   }
   if (filterInput.length) {
     filterInput.on('change', function () {
-      if ($('.input-filter:checked').length < $('.input-filter').length) {
-        selectAll.prop('checked', false);
-      } else {
-        selectAll.prop('checked', true);
-      }
+      if ($('.input-filter:checked').length < $('.input-filter').length) { selectAll.prop('checked', false); } 
+      else { selectAll.prop('checked', true); }
       calendar.refetchEvents();
     });
   }
 
-  // MODIFIED: Add event listener for the new doctor filter
-  $('#calendar_doctor_filter').on('change', function() {
-      calendar.refetchEvents();
-  });
+  $('#calendar_doctor_filter').on('change', function() { calendar.refetchEvents(); });
 });
 
 // --- Your existing script for the modal form ---
@@ -404,14 +408,11 @@ $(document).ready(function() {
         dropdownParent: $('.rdv_num.select2').parent(),
         placeholder: $('.rdv_num.select2').attr('placeholder'),
         ajax: {
-            type: "post",
-            dataType: "json",
-            url: "<?= $handlerURL ?>",
-            delay: 250,
+            type: "post", dataType: "json", url: "<?= $handlerURL ?>", delay: 250,
             data: function (params) {
                 var query = { method: 'handleRdv_nbr' };
-                if($('.picker').val() != "") query.date = $('.picker').val();
-                if($('#doctor_id').val() != null) query.doctor = $('#doctor_id').val();
+                if($('.rdvForm .picker').val() != "") query.date = $('.rdvForm .picker').val();
+                if($('.rdvForm #doctor_id').val() != null) query.doctor = $('.rdvForm #doctor_id').val();
                 return query;
             },
             processResults: function (data) { return { results: data }; },
@@ -426,9 +427,9 @@ $(document).ready(function() {
             type: "POST", url: "<?= $handlerURL ?>", data: { id: self.val(), method: "getPatients" }, dataType: "json",
             success: function(data) {
                 if (data[0] && data[0].hasOwnProperty('id')) {
-                    $('#first_name').val(data[0].first_name);
-                    $('#last_name').val(data[0].last_name);
-                    $('#phone').val(data[0].phone);
+                    $('#addRdvModal #first_name').val(data[0].first_name);
+                    $('#addRdvModal #last_name').val(data[0].last_name);
+                    $('#addRdvModal #phone').val(data[0].phone);
                 }
             }
         });
@@ -438,14 +439,9 @@ $(document).ready(function() {
         e.preventDefault();
         var self = $(this);
         var data = {
-            patient: $('#patient_id').val(),
-            doctor: $('#doctor_id').val(),
-            rdv_num: $('#rdv_num').val(),
-            date: $('#date').val(),
-            first_name: $('#first_name').val(),
-            last_name: $('#last_name').val(),
-            phone: $('#phone').val(),
-            method: "postRdv"
+            patient: $('#patient_id').val(), doctor: self.find('#doctor_id').val(), rdv_num: $('#rdv_num').val(),
+            date: self.find('#date').val(), first_name: $('#first_name').val(), last_name: $('#last_name').val(),
+            phone: $('#phone').val(), method: "postRdv"
         };
         $.ajax({
             type: "POST", url: "<?= $handlerURL ?>", data: data, dataType: "json",
@@ -467,8 +463,7 @@ $(document).ready(function() {
                 }
             },
             error: function() {
-                Swal.fire({
-                    title: 'An error occurred!', text: 'Please try again later.', icon: 'error', confirmButtonText: 'OK',
+                Swal.fire({ title: 'An error occurred!', text: 'Please try again later.', icon: 'error', confirmButtonText: 'OK',
                     customClass: { confirmButton: 'btn btn-primary' }, buttonsStyling: false
                 });
             },
@@ -479,7 +474,7 @@ $(document).ready(function() {
         });
     });
 
-    $('#add-new-sidebar').on('hidden.bs.modal', function () {
+    $('#addRdvModal').on('hidden.bs.modal', function () {
         $(this).find('form.rdvForm')[0].reset();
         $(this).find('.select2').val(null).trigger('change');
     });

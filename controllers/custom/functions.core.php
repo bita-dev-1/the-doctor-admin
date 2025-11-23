@@ -15,40 +15,46 @@ if (!class_exists('PHPMailer\PHPMailer\PHPMailer') && defined('PROJECT_ROOT')) {
 global $DB;
 $DB = new DB();
 
-function getSelected($request){
 
-    $data	    =   json_decode(customDecrypt($request));
-    $table 		=   $data->table;
-    $select_val =   $data->value;
-    $select_txt =   implode(",' ',",$data->text);
-    $where 		=   isset($data->where) && !empty($data->where) ? " AND ".$data->where : "";
+
+function getSelected($request)
+{
+    $data = json_decode(customDecrypt($request));
+    $table = $data->table;
+    $select_val = $data->value;
+    $select_txt = implode(",' ',", $data->text);
+    $where = isset($data->where) && !empty($data->where) ? " AND " . $data->where : "";
 
     $join_query = '';
     if (isset($data->join) && is_array($data->join) && !empty($data->join)) {
-        $join_query = implode(' ', array_map(function($j) {
-            return $j['type'].' '.$j['table'].' ON '.$j['condition'];
+        $join_query = implode(' ', array_map(function ($j) {
+            $j = (array) $j;
+            return $j['type'] . ' ' . $j['table'] . ' ON ' . $j['condition'];
         }, $data->join));
     }
 
-    $selected = " AND ".$select_val;
-    if(isset($data->selected) && !empty($data->selected))
-        $selected .= ( is_array($data->selected) ? " IN (". implode(',' , $data->selected).") " : " = ".$data->selected );
-    
-    $sql = "SELECT $select_val, CONCAT_WS(' ',$select_txt) AS select_txt FROM $table $join_query WHERE 1 $where $selected LIMIT 10";
-    
+    $selected = " AND " . $select_val;
+    if (isset($data->selected) && !empty($data->selected))
+        $selected .= (is_array($data->selected) ? " IN (" . implode(',', $data->selected) . ") " : " = " . $data->selected);
+
+    // التعديل هنا: إضافة "AS select_value" لتوحيد مفتاح المصفوفة
+    $sql = "SELECT $select_val AS select_value, CONCAT_WS(' ',$select_txt) AS select_txt FROM $table $join_query WHERE 1 $where $selected LIMIT 10";
+
     $response = $GLOBALS['DB']->select($sql);
 
-    foreach($response as $res){
-        echo '<option value="'.$res[$select_val].'" selected="selected">'.$res['select_txt'].'</option>';
+    foreach ($response as $res) {
+        // استخدام المفتاح الموحد 'select_value' بدلاً من المتغير $select_val
+        echo '<option value="' . $res['select_value'] . '" selected="selected">' . $res['select_txt'] . '</option>';
     }
 }
 
-function dataById($data, $table, $join = []){
+function dataById($data, $table, $join = [])
+{
 
     $join_query = '';
     if (!empty($join)) {
-        $join_query = implode(' ', array_map(function($j) {
-            return $j['type'].' '.$j['table'].' ON '.$j['condition'];
+        $join_query = implode(' ', array_map(function ($j) {
+            return $j['type'] . ' ' . $j['table'] . ' ON ' . $j['condition'];
         }, $join));
     }
 
@@ -62,29 +68,30 @@ function dataById($data, $table, $join = []){
 /**
  * NEW: Generic and secure function to send emails using settings from .env
  */
-function sendEmail($recipientEmail, $recipientName, $subject, $body) {
+function sendEmail($recipientEmail, $recipientName, $subject, $body)
+{
     $mail = new PHPMailer(true);
 
     try {
         //Server settings
         // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Uncomment for debugging
         $mail->isSMTP();
-        $mail->Host       = MAIL_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = MAIL_USERNAME;
-        $mail->Password   = MAIL_PASSWORD;
+        $mail->Host = MAIL_HOST;
+        $mail->SMTPAuth = true;
+        $mail->Username = MAIL_USERNAME;
+        $mail->Password = MAIL_PASSWORD;
         $mail->SMTPSecure = MAIL_ENCRYPTION; // PHPMailer::ENCRYPTION_SMTPS or 'tls'
-        $mail->Port       = MAIL_PORT;
-        $mail->CharSet    = 'UTF-8';
+        $mail->Port = MAIL_PORT;
+        $mail->CharSet = 'UTF-8';
 
         //Recipients
         $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
         $mail->addAddress($recipientEmail, $recipientName);
-    
+
         // Content
-        $mail->isHTML(true);                                  
+        $mail->isHTML(true);
         $mail->Subject = $subject;
-        $mail->Body    = $body;
+        $mail->Body = $body;
 
         $mail->send();
         return true;
@@ -97,7 +104,8 @@ function sendEmail($recipientEmail, $recipientName, $subject, $body) {
 
 
 // Function to generate a random password
-function generateRandomPassword($length = 10) {
+function generateRandomPassword($length = 10)
+{
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
     $password = '';
     $char_length = strlen($characters);
@@ -106,3 +114,4 @@ function generateRandomPassword($length = 10) {
     }
     return $password;
 }
+

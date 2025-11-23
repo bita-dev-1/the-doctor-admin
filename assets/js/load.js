@@ -162,6 +162,12 @@ $("input.picker").on("change", function (e) {
 });
 
 function call_data_table(data) {
+  // --- LOGGING STEP 2 ---
+  console.log(
+    "[LOG 2] Initializing DataTable with data:",
+    JSON.parse(JSON.stringify(data))
+  );
+
   var dataButton = "",
     buttons = [];
   if (data.hasOwnProperty("button")) {
@@ -170,15 +176,50 @@ function call_data_table(data) {
 
     var singleBtn = {};
     $.each(dataButton, function (index, value) {
+      // --- LOGGING STEP 3 ---
+      console.log("[LOG 3] Processing button definition:", value);
+
       singleBtn = {};
       if (!value.hasOwnProperty("collection")) {
         if (value.hasOwnProperty("text")) singleBtn.text = value["text"];
         if (value.hasOwnProperty("class")) singleBtn.className = value["class"];
-        if (value.hasOwnProperty("attr")) singleBtn.attr = value["attr"];
-        else if (value.hasOwnProperty("url"))
+
+        // --- LOGGING STEP 4 ---
+        if (value.hasOwnProperty("attr")) {
+          // DataTables expects 'attr' to be an object, not a string. Let's parse it.
+          let attrObject = {};
+          // Simple parser for "key=value key2='value 2'"
+          const attributes = value["attr"].match(
+            /([a-zA-Z0-9_-]+)=["']([^"']+)["']/g
+          );
+          if (attributes) {
+            attributes.forEach((attr) => {
+              const parts = attr.split("=");
+              const key = parts[0];
+              const val = parts[1].replace(/["']/g, ""); // remove quotes
+              attrObject[key] = val;
+            });
+          }
+          singleBtn.attr = attrObject;
+          console.log("[LOG 4] Applying attributes:", attrObject);
+        }
+
+        if (value.hasOwnProperty("url")) {
           singleBtn.action = function (e, dt, button, config) {
             window.location = value["url"];
           };
+        } else if (value.hasOwnProperty("action") && value.action === "popup") {
+          // For popup buttons, we don't need a JS action,
+          // the data-bs-* attributes handled by Bootstrap's JS are enough.
+          // We define a null action to prevent DataTables default behavior.
+          singleBtn.action = function (e, dt, node, config) {
+            // This function intentionally left blank.
+            // The modal is triggered by Bootstrap's data attributes.
+          };
+          console.log(
+            "[LOG 5] Popup button identified. Action is set to null function."
+          );
+        }
       } else {
         singleBtn.extend = "collection";
         if (value.hasOwnProperty("class")) singleBtn.className = value["class"];
