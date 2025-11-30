@@ -99,7 +99,8 @@ if (isset($_SESSION['user'])) {
                                     FROM caisse_transactions ct
                                     JOIN reeducation_dossiers rd ON ct.dossier_id = rd.id
                                     JOIN patient p ON rd.patient_id = p.id
-                                    JOIN users u ON ct.recorded_by = u.id",
+                                    JOIN users u ON ct.recorded_by = u.id 
+                                    WHERE 1=1", // <--- تمت الإضافة هنا
 
         // استبدل عنصر المصفوفة "qr_cabinet_services_table" بالكود التالي:
 
