@@ -90,9 +90,83 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
         case 'generate_sessions_manual':
             generate_sessions_manual($db);
             break;
+        case 'get_technician_report_details':
+            get_technician_report_details($db);
+            break;
     }
 }
 
+
+function get_technician_report_details($DB)
+{
+    // 1. التحقق من الصلاحيات
+    if (!isset($_SESSION['user']['id']) || $_SESSION['user']['role'] !== 'admin') {
+        echo json_encode(["state" => "false", "message" => "Auth required"]);
+        return;
+    }
+
+    // 2. استقبال وتأمين المدخلات
+    $tech_id = filter_var($_POST['tech_id'], FILTER_SANITIZE_NUMBER_INT);
+    $date_from = $_POST['date_from'];
+    $date_to = $_POST['date_to'];
+
+    // 3. تحديد شرط ربط الخدمات (لضمان جلب إعدادات العيادة الصحيحة)
+    $cabinet_id = $_SESSION['user']['cabinet_id'] ?? 0;
+
+    // إذا كان أدمن عيادة، نربط بإعدادات عيادته. 
+    // إذا كان سوبر أدمن، نحاول الربط بإعدادات عيادة التقني.
+    $service_join_condition = $cabinet_id
+        ? "cs.cabinet_id = $cabinet_id"
+        : "cs.cabinet_id = (SELECT cabinet_id FROM users WHERE id = rd.technician_id)";
+
+    // 4. استعلام SQL مع المنطق الهجين
+    $sql = "SELECT 
+                rs.completed_at,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                rt.name as act_name,
+                
+                -- سعر الجلسة الواحدة (للعرض)
+                (rd.price / GREATEST(rd.sessions_prescribed, 1)) as session_price,
+                
+                -- القيمة الخام للعمولة (للعرض في العمود Règle Com.)
+                rd.technician_percentage as raw_commission_value,
+                cs.commission_type,
+                
+                -- *** حساب صافي أجر التقني للجلسة ***
+                CASE 
+                    -- 1. الأولوية للقيمة المحفوظة (نظام الاستحقاق الجديد)
+                    WHEN rs.commission_amount > 0 THEN rs.commission_amount
+                    
+                    -- 2. إذا كانت البيانات قديمة: حساب المبلغ الثابت (تقسيم الإجمالي على عدد الحصص)
+                    WHEN cs.commission_type = 'fixed' THEN (rd.technician_percentage / GREATEST(rd.sessions_prescribed, 1))
+                    
+                    -- 3. إذا كانت البيانات قديمة: حساب النسبة المئوية
+                    ELSE ((rd.price / GREATEST(rd.sessions_prescribed, 1)) * (rd.technician_percentage / 100))
+                END as commission_amount
+                
+            FROM reeducation_sessions rs
+            JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
+            JOIN patient p ON rd.patient_id = p.id
+            LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
+            LEFT JOIN cabinet_services cs ON rd.reeducation_type_id = cs.reeducation_type_id AND $service_join_condition AND cs.deleted = 0
+            WHERE rs.status = 'completed' 
+            AND rd.technician_id = :tech_id
+            AND rs.completed_at BETWEEN :date_from AND :date_to
+            ORDER BY rs.completed_at DESC";
+
+    // 5. تنفيذ الاستعلام
+    $stmt = $DB->prepare($sql);
+    $stmt->execute([
+        ':tech_id' => $tech_id,
+        ':date_from' => $date_from . ' 00:00:00',
+        ':date_to' => $date_to . ' 23:59:59'
+    ]);
+
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 6. إرجاع النتيجة
+    echo json_encode(["state" => "true", "data" => $data]);
+}
 // --- دالة توليد الجلسات يدوياً (المصححة) ---
 function generate_sessions_manual($DB)
 {
@@ -369,8 +443,11 @@ function reschedule_session($DB)
     }
 }
 
+
+
 function validate_session($DB)
 {
+    // 1. التحقق من الصلاحيات
     if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['doctor', 'nurse', 'admin'])) {
         echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
         return;
@@ -384,16 +461,53 @@ function validate_session($DB)
     $session_status = $_POST['session_status'] ?? 'completed';
     $completed_at = date('Y-m-d H:i:s');
 
-    $session_info = $DB->select("SELECT rs.dossier_id FROM reeducation_sessions rs WHERE rs.id = $session_id")[0] ?? null;
+    // 2. جلب معلومات الجلسة والملف ونوع العمولة بدقة
+    // نربط مع الخدمات لنجلب نوع العمولة (ثابت أم نسبة)
+    $sql_info = "SELECT 
+                    rs.dossier_id, 
+                    rd.price, 
+                    rd.sessions_prescribed, 
+                    rd.technician_percentage,
+                    rd.technician_id,
+                    cs.commission_type
+                 FROM reeducation_sessions rs 
+                 JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
+                 -- محاولة جلب إعدادات الخدمة الخاصة بعيادة التقني
+                 LEFT JOIN users u ON rd.technician_id = u.id
+                 LEFT JOIN cabinet_services cs ON rd.reeducation_type_id = cs.reeducation_type_id 
+                    AND cs.cabinet_id = u.cabinet_id
+                    AND cs.deleted = 0
+                 WHERE rs.id = $session_id";
 
-    if (!$session_info) {
+    $info = $DB->select($sql_info)[0] ?? null;
+
+    if (!$info) {
         echo json_encode(["state" => "false", "message" => "Session introuvable."]);
         return;
     }
-    $dossier_id = $session_info['dossier_id'];
 
     $DB->pdo->beginTransaction();
     try {
+        $commission_amount = 0;
+
+        // 3. حساب العمولة (فقط إذا كانت الجلسة مكتملة)
+        if ($session_status === 'completed') {
+            $sessions_count = (int) $info['sessions_prescribed'];
+            if ($sessions_count <= 0)
+                $sessions_count = 1;
+
+            // إذا كان النوع "مبلغ ثابت" (Fixed)
+            if (isset($info['commission_type']) && $info['commission_type'] === 'fixed') {
+                // نقسم المبلغ الثابت الإجمالي على عدد الحصص
+                $commission_amount = (float) $info['technician_percentage'] / $sessions_count;
+            } else {
+                // إذا كان "نسبة مئوية" (Percent) - الافتراضي
+                $session_price = (float) $info['price'] / $sessions_count;
+                $commission_amount = $session_price * ((float) $info['technician_percentage'] / 100);
+            }
+        }
+
+        // 4. تجهيز بيانات التحديث (تأكدنا من إضافة commission_amount)
         $session_data = [
             'status' => $session_status,
             'completed_at' => $completed_at,
@@ -401,17 +515,25 @@ function validate_session($DB)
             'exercises_performed' => $_POST['exercises_performed'] ?? null,
             'pain_scale' => $_POST['pain_scale'] ?? null,
             'observations' => $_POST['observations'] ?? null,
-            'duration' => $_POST['duration'] ?? null
+            'duration' => $_POST['duration'] ?? null,
+            'commission_amount' => number_format($commission_amount, 2, '.', '') // تخزين الرقم بتنسيق عشري صحيح
         ];
 
+        // 5. تنفيذ التحديث
         $DB->table = 'reeducation_sessions';
         $DB->data = $session_data;
         $DB->where = 'id = ' . $session_id;
-        $DB->update();
 
+        if (!$DB->update()) {
+            throw new Exception("Erreur lors de la mise à jour de la session.");
+        }
+
+        // 6. تحديث عداد الجلسات في الملف (Logic قديم لكن ضروري)
         if ($session_status === 'completed') {
-            $DB->update('reeducation_dossiers', [], "id=$dossier_id", "sessions_completed = sessions_completed + 1");
+            $DB->update('reeducation_dossiers', [], "id=" . $info['dossier_id'], "sessions_completed = sessions_completed + 1");
 
+            // تحديث حالة الدفع (Paid/Unpaid) بناء على المبلغ المدفوع مسبقاً
+            $dossier_id = $info['dossier_id'];
             $dossier = $DB->select("SELECT price, payment_mode, discount_amount, sessions_prescribed FROM reeducation_dossiers WHERE id = $dossier_id")[0];
             $total_paid = $DB->select("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = $dossier_id")[0]['total'] ?? 0;
 
@@ -421,6 +543,7 @@ function validate_session($DB)
 
             $sessions_covered = ($price_per_session > 0) ? floor(($total_paid + 0.001) / $price_per_session) : 999;
 
+            // إعادة تعيين الكل إلى Unpaid ثم تحديث المدفوع فقط
             $DB->update('reeducation_sessions', ['payment_status' => 'unpaid'], "dossier_id = $dossier_id");
 
             if ($sessions_covered > 0) {
@@ -431,7 +554,7 @@ function validate_session($DB)
         }
 
         $DB->pdo->commit();
-        echo json_encode(["state" => "true", "message" => "Séance validée."]);
+        echo json_encode(["state" => "true", "message" => "Validé : Commission calculée = " . number_format($commission_amount, 2) . " DA"]);
 
     } catch (Exception $e) {
         $DB->pdo->rollBack();
