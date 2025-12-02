@@ -10,6 +10,13 @@
 
 # Environment variables file
 /.env
-
+/vendor
+/.env
+/api/uploads/*
+!/api/uploads/.gitkeep
+/database backup
+.DS_Store
+.idea
+.vscode
 # Composer dependencies
 /vendor/
