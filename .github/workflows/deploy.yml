@@ -3,24 +3,21 @@ name: Deploy to CloudPanel
 on:
   push:
     branches:
-      - main # تأكد أن اسم الفرع الرئيسي لديك هو main (أو غيره إلى master إذا لزم الأمر)
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. جلب الكود من GitHub
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. إعداد PHP (للتأكد من سلامة الكود قبل الرفع)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.1" # نفس إصدار PHP المختار في CloudPanel
+          php-version: "8.1"
 
-      # 3. رفع الملفات باستخدام Rsync
       - name: Deploy to Server via Rsync
         uses: easingthemes/ssh-deploy@main
         env:
@@ -29,27 +26,20 @@ jobs:
           SOURCE: "/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          # المسار الصحيح بناءً على الرابط الذي أرسلته
           TARGET: "/home/cloudpanel/htdocs/the-doctor.cloud/"
-          # استثناء الملفات الحساسة والمجلدات التي يتم توليدها في السيرفر
           EXCLUDE: "/.git/, /.github/, /.env, /database backup/, /api/uploads/, /vendor/"
+          # 👇 التعديل الأول: تحديد منفذ SSH لعملية النقل
+          REMOTE_PORT: 8022
 
-      # 4. تنفيذ أوامر ما بعد الرفع داخل السيرفر
       - name: Post Deployment Commands
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          # 👇 التعديل الثاني: تحديد منفذ SSH للأوامر
+          port: 8022
           script: |
-            # الدخول لمجلد المشروع
             cd /home/cloudpanel/htdocs/the-doctor.cloud/
-
-            # تثبيت المكتبات داخل السيرفر لضمان التوافق
             composer install --no-dev --optimize-autoloader
-
-            # التأكد من صلاحيات الكتابة لمجلد الصور (مهم جداً)
             chmod -R 775 api/uploads
-
-            # تنظيف الكاش (اختياري، مفيد إذا كنت تستخدم كاش)
-            # php index.php clear-cache
