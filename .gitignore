@@ -3,20 +3,23 @@
 # =================================================================
 # تجاهل المجلد الذي يحتوي على مكتبات PHP التي يتم تثبيتها عبر Composer
 /vendor/
-# تجاهل المكتبات الخارجية الخاصة بالقالب
-/app-assets/vendors/
 
-/upload
+/api/uploads/
+/web-api/uploads/
+/uploads/
+
+
+# =================================================================
+# ملفات خاصة بالبيئة والخادم وقاعدة البيانات
+# =================================================================
+# تجاهل ملفات الإعدادات الخاصة بالخادم وملفات تفريغ قاعدة البيانات
+/.user.ini
+/php.ini
+/the-doctor (database).sql
 
 # Environment variables file
 /.env
-/vendor
-/.env
-/api/uploads/*
-!/api/uploads/.gitkeep
-/database backup
-.DS_Store
-.idea
-.vscode
+/.exclude
+
 # Composer dependencies
 /vendor/

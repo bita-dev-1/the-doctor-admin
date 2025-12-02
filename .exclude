@@ -65,6 +65,6 @@
 
 # Environment variables file
 /.env
-
+/.exclude
 # Composer dependencies
 /vendor/
