@@ -6,7 +6,7 @@
 # تجاهل المكتبات الخارجية الخاصة بالقالب
 /app-assets/vendors/
 
-
+/upload
 
 # Environment variables file
 /.env
