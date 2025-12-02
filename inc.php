@@ -1,11 +1,19 @@
 <?php
+// --- Define Project Root ---
+define('PROJECT_ROOT', __DIR__);
+
+// --- Fix Session Path (لحل مشكلة CSRF) ---
+// نحدد مسار حفظ الجلسات داخل مجلد tmp في المشروع
+$session_save_path = PROJECT_ROOT . '/tmp';
+if (!file_exists($session_save_path)) {
+    mkdir($session_save_path, 0777, true);
+}
+session_save_path($session_save_path);
+
 // --- Start Session ---
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-// --- Define Project Root ---
-define('PROJECT_ROOT', __DIR__);
 
 // --- Autoload Composer dependencies and load environment variables ---
 require_once PROJECT_ROOT . '/vendor/autoload.php';
@@ -14,7 +22,8 @@ try {
     $dotenv = Dotenv\Dotenv::createImmutable(PROJECT_ROOT);
     $dotenv->load();
 } catch (\Dotenv\Exception\InvalidPathException $e) {
-    die("Could not find .env file. Please create one in the root directory.");
+    // die("Could not find .env file. Please create one in the root directory.");
+    // تم التعليق لتجنب توقف الموقع في حال عدم وجود الملف، الاعتماد على القيم الافتراضية
 }
 
 // --- Auto-detect Environment and Paths ---
