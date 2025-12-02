@@ -14,37 +14,29 @@ $technician_filter = isset($_GET['technician_id']) && !empty($_GET['technician_i
 // فلتر العيادة (Multi-tenant)
 $cabinet_filter_sql = "";
 $users_cabinet_sql = "";
-$service_join_condition = "1=1"; // شرط افتراضي لربط الخدمات
+$service_join_condition = "1=1"; 
 
 if (!empty($_SESSION['user']['cabinet_id'])) {
     $cabinet_id = intval($_SESSION['user']['cabinet_id']);
     $cabinet_filter_sql = " AND u.cabinet_id = $cabinet_id";
     $users_cabinet_sql = " AND cabinet_id = $cabinet_id";
-    // التأكد من ربط الخدمة الخاصة بنفس العيادة
     $service_join_condition = "cs.cabinet_id = $cabinet_id";
 }
 
 // --- 2. جلب البيانات الإحصائية العامة (KPIs) ---
-
-// أ. حساب الإيرادات وأجر التقني (المنطق الهجين)
 $kpi_sql = "SELECT 
         COUNT(CASE WHEN rs.status = 'completed' THEN 1 END) as total_completed,
         COUNT(CASE WHEN rs.status = 'absent' THEN 1 END) as total_absent,
-        
-        -- الإيرادات النظرية (سعر الملف / عدد الحصص)
         SUM(CASE WHEN rs.status = 'completed' THEN (rd.price / GREATEST(rd.sessions_prescribed, 1)) ELSE 0 END) as theoretical_revenue,
-        
-        -- حساب عمولة التقني (الأولوية للقيمة المحفوظة، ثم الحساب التقديري للقديم)
         SUM(
             CASE WHEN rs.status = 'completed' THEN 
                 CASE 
-                    WHEN rs.commission_amount > 0 THEN rs.commission_amount -- القيمة المحفوظة (نظام الاستحقاق)
-                    WHEN cs.commission_type = 'fixed' THEN (rd.technician_percentage / GREATEST(rd.sessions_prescribed, 1)) -- قديم: تقسيم الثابت
-                    ELSE ((rd.price / GREATEST(rd.sessions_prescribed, 1)) * (rd.technician_percentage / 100)) -- قديم: نسبة مئوية
+                    WHEN rs.commission_amount > 0 THEN rs.commission_amount 
+                    WHEN cs.commission_type = 'fixed' THEN (rd.technician_percentage / GREATEST(rd.sessions_prescribed, 1)) 
+                    ELSE ((rd.price / GREATEST(rd.sessions_prescribed, 1)) * (rd.technician_percentage / 100)) 
                 END
             ELSE 0 END
         ) as tech_commission,
-        
         AVG(CASE WHEN rs.status = 'completed' THEN rs.duration ELSE NULL END) as avg_duration,
         AVG(CASE WHEN rs.status = 'completed' THEN rs.pain_scale ELSE NULL END) as avg_pain
     FROM reeducation_sessions rs
@@ -59,7 +51,7 @@ $stmt_kpi = $db->prepare($kpi_sql);
 $stmt_kpi->execute([':date_from' => $date_from . ' 00:00:00', ':date_to' => $date_to . ' 23:59:59']);
 $kpi_data = $stmt_kpi->fetch(PDO::FETCH_ASSOC);
 
-// ب. حساب المدفوعات الفعلية (الكاش الذي دخل الخزينة)
+// ب. حساب المدفوعات الفعلية
 $cash_sql = "SELECT SUM(amount_paid) as total_cash 
                  FROM caisse_transactions ct
                  JOIN reeducation_dossiers rd ON ct.dossier_id = rd.id
@@ -71,7 +63,7 @@ $stmt_cash = $db->prepare($cash_sql);
 $stmt_cash->execute([':date_from' => $date_from . ' 00:00:00', ':date_to' => $date_to . ' 23:59:59']);
 $total_cash_in = $stmt_cash->fetchColumn() ?: 0;
 
-// --- 3. بيانات الرسم البياني (الإيرادات حسب الأيام) ---
+// --- 3. بيانات الرسم البياني ---
 $chart_sql = "SELECT 
         DATE(rs.completed_at) as day_date,
         SUM(rd.price / GREATEST(rd.sessions_prescribed, 1)) as daily_revenue
@@ -88,7 +80,7 @@ $stmt_chart = $db->prepare($chart_sql);
 $stmt_chart->execute([':date_from' => $date_from . ' 00:00:00', ':date_to' => $date_to . ' 23:59:59']);
 $daily_stats = $stmt_chart->fetchAll(PDO::FETCH_ASSOC);
 
-// --- 4. بيانات الرسم الدائري (توزيع أنواع العلاج) ---
+// --- 4. بيانات الرسم الدائري ---
 $types_sql = "SELECT 
         rt.name as type_name,
         COUNT(rs.id) as session_count
@@ -112,8 +104,6 @@ $tech_table_sql = "SELECT
         COUNT(CASE WHEN rs.status = 'completed' THEN 1 END) as completed_sessions,
         COUNT(CASE WHEN rs.status = 'absent' THEN 1 END) as absent_sessions,
         SUM(CASE WHEN rs.status = 'completed' THEN (rd.price / GREATEST(rd.sessions_prescribed, 1)) ELSE 0 END) as generated_revenue,
-        
-        -- نفس المنطق الهجين هنا
         SUM(
             CASE WHEN rs.status = 'completed' THEN 
                 CASE 
@@ -123,7 +113,6 @@ $tech_table_sql = "SELECT
                 END
             ELSE 0 END
         ) as tech_share,
-        
         AVG(CASE WHEN rs.status = 'completed' THEN rs.pain_scale ELSE NULL END) as avg_pain
     FROM reeducation_sessions rs
     JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
@@ -139,6 +128,87 @@ $stmt_tech->execute([':date_from' => $date_from . ' 00:00:00', ':date_to' => $da
 $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
+
+<!-- START: CSS FOR PRINTING -->
+<style>
+    @media print {
+        /* إخفاء جميع العناصر غير الضرورية */
+        body * {
+            visibility: hidden;
+        }
+        
+        /* إخفاء العناصر الهيكلية للقالب */
+        .app-content, .header-navbar, .main-menu, footer, .btn, .modal-footer, .btn-close, .modal-header .btn-close {
+            display: none !important;
+        }
+        
+        /* إظهار المودال ومحتوياته فقط */
+        #techDetailsModal, #techDetailsModal * {
+            visibility: visible;
+        }
+
+        /* تنسيق المودال ليملأ الصفحة */
+        #techDetailsModal {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin: 0;
+            padding: 0;
+            background: white;
+            overflow: visible !important;
+        }
+
+        .modal-dialog {
+            margin: 0;
+            padding: 0;
+            max-width: 100%;
+            width: 100%;
+            transform: none !important;
+        }
+
+        .modal-content {
+            border: none;
+            box-shadow: none;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        /* إظهار الترويسة الخاصة بالطباعة */
+        .d-print-block {
+            display: block !important;
+        }
+        
+        /* تحسين مظهر الجدول */
+        .table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 12px;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+            color: #000 !important;
+        }
+        .badge {
+            border: 1px solid #000;
+            color: #000 !important;
+            background: transparent !important;
+            padding: 2px 5px;
+        }
+        
+        /* إخفاء التنبيهات اللونية */
+        .alert {
+            border: 1px solid #000;
+            background: none !important;
+            color: #000 !important;
+        }
+    }
+</style>
+<!-- END: CSS FOR PRINTING -->
 
 <div class="app-content content">
     <div class="content-wrapper p-0">
@@ -379,7 +449,15 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-primary p-1 mb-2">
+                <!-- ترويسة الطباعة (تظهر فقط عند الطباعة) -->
+                <div class="d-none d-print-block text-center mb-4">
+                    <h3>Fiche de Paie / Rapport d'Activité</h3>
+                    <h4 id="print-tech-name"></h4>
+                    <p>Période du <?= date('d/m/Y', strtotime($date_from)) ?> au <?= date('d/m/Y', strtotime($date_to)) ?></p>
+                    <hr>
+                </div>
+
+                <div class="alert alert-primary p-1 mb-2 d-print-none">
                     <i data-feather="calendar" class="me-50"></i> Période:
                     <strong><?= date('d/m/Y', strtotime($date_from)) ?></strong> au
                     <strong><?= date('d/m/Y', strtotime($date_to)) ?></strong>
@@ -488,6 +566,7 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
 
             // Setup Modal Headers
             $('#modal-tech-name').text(techName);
+            $('#print-tech-name').text(techName); // For print view
             $('#modal-total-amount').text(new Intl.NumberFormat('fr-FR').format(totalAmount) + ' DA');
             $('#modal-table-body').html('<tr><td colspan="6" class="text-center p-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>');
 
@@ -518,9 +597,7 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
 
                                 // العرض الصحيح لنوع العمولة (Fixe أو نسبة)
                                 var comDisplay = '';
-                                // نتحقق من القيمة المحفوظة أولاً (إذا كان هناك تخزين مسبق)
                                 if (item.commission_type === 'fixed') {
-                                    // عرض المبلغ الثابت الإجمالي للملف
                                     comDisplay = '<span class="badge badge-light-info">Fixe (' + parseFloat(item.raw_commission_value) + ')</span>';
                                 } else {
                                     comDisplay = parseFloat(item.raw_commission_value) + '%';

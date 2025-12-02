@@ -83,6 +83,14 @@ get(SITE_URL . '/reeducation/update/$id', 'views/form_reeducation.php');
 /******* [Begin]: Route Core *********/
 post(SITE_URL . '/handlers', 'controllers/custom/handlers.php');
 post(SITE_URL . '/data', 'controllers/data.core.php');
-any('/404', 'views/404.php');
+get(SITE_URL . '/salle_kine', 'views/salle_kine.php');
+
+
 
 /******* [End]: Route Core *********/
+
+
+
+
+
+any('/404', path_to_include: 'views/404.php');

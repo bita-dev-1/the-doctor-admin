@@ -93,8 +93,656 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
         case 'get_technician_report_details':
             get_technician_report_details($db);
             break;
+        case 'get_kine_queue':
+            get_kine_queue($db);
+            break;
+        case 'get_kine_workspace_data':
+            get_kine_workspace_data($db);
+            break;
+        case 'get_calendar_stats':
+            get_calendar_stats($db);
+            break;
+
+        case 'get_daily_calendar_stats':
+            get_daily_calendar_stats($db);
+            break;
+        // ADD THIS NEW CASE
+        case 'postReeducationDossier':
+            postReeducationDossier($db);
+            break;
+
     }
 }
+
+
+function postReeducationDossier($DB)
+{
+    try {
+        if (!isset($_SESSION['user']['id'])) {
+            throw new Exception("Auth required");
+        }
+
+        $DB->pdo->beginTransaction();
+
+        // 1. Prepare Dossier Data
+        $array_data = array();
+        $table = 'reeducation_dossiers';
+
+        // Parse form data (handling the __ prefix convention)
+        foreach ($_POST['data'] as $data) {
+            if (strpos($data['name'], '__') !== false) {
+                $table_key = explode('__', $data['name'])[0];
+                $column = explode('__', $data['name'])[1];
+                if ($table_key === $table) {
+                    $array_data[$column] = $data['value'];
+                }
+            } else if (stripos($data['name'], 'csrf') !== false) {
+                $csrf = $data['value'];
+            }
+        }
+
+        // CSRF Check
+        if (isset($csrf)) {
+            $csrf = customDecrypt($csrf);
+            if (!is_csrf_valid($csrf)) {
+                throw new Exception($GLOBALS['language']['The form is forged']);
+            }
+        }
+
+        // Add System Fields
+        $array_data['created_by'] = $_SESSION['user']['id'];
+        $array_data['status'] = 'active'; // Default status
+
+        // Insert Dossier
+        $DB->table = $table;
+        $DB->data = $array_data;
+        $dossier_id = $DB->insert();
+
+        if (!$dossier_id) {
+            throw new Exception("Erreur lors de la création du dossier.");
+        }
+
+        // 2. Process Selected Dates (if any)
+        $dates_json = $_POST['initial_sessions_dates'] ?? '[]';
+        $dates = json_decode($dates_json, true);
+
+        if (!empty($dates) && is_array($dates)) {
+
+            // Get Technician Cabinet ID (needed for RDV)
+            $tech_id = $array_data['technician_id'];
+            $tech_data = $DB->select("SELECT cabinet_id FROM users WHERE id = $tech_id")[0] ?? null;
+            $cabinet_id = $tech_data['cabinet_id'] ?? ($_SESSION['user']['cabinet_id'] ?? null);
+
+            foreach ($dates as $date_str) {
+                if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $date_str))
+                    continue;
+
+                // A. Create RDV
+                $rdv_data = [
+                    'patient_id' => $array_data['patient_id'],
+                    'doctor_id' => $tech_id,
+                    'cabinet_id' => $cabinet_id,
+                    'date' => $date_str,
+                    'state' => 0, // Created
+                    'created_by' => $_SESSION['user']['id'],
+                ];
+                $DB->table = 'rdv';
+                $DB->data = $rdv_data;
+                $rdv_id = $DB->insert();
+
+                if (!$rdv_id)
+                    throw new Exception("Erreur création RDV pour le $date_str");
+
+                // B. Create Session
+                $session_data = [
+                    'dossier_id' => $dossier_id,
+                    'rdv_id' => $rdv_id,
+                    'status' => 'planned',
+                ];
+                $DB->table = 'reeducation_sessions';
+                $DB->data = $session_data;
+                $session_id = $DB->insert();
+
+                // C. Link RDV to Session
+                $DB->table = 'rdv';
+                $DB->data = ['reeducation_session_id' => $session_id];
+                $DB->where = 'id = ' . $rdv_id;
+                $DB->update();
+            }
+        }
+
+        $DB->pdo->commit();
+        echo json_encode(["state" => "true", "id" => $dossier_id, "message" => "Dossier créé avec " . count($dates) . " séances planifiées."]);
+
+    } catch (Exception $e) {
+        if ($DB->pdo->inTransaction()) {
+            $DB->pdo->rollBack();
+        }
+        echo json_encode(["state" => "false", "message" => $e->getMessage()]);
+    }
+}
+
+
+function get_kine_queue($DB)
+{
+    // 1. التحقق من هوية المستخدم
+    if (!isset($_SESSION['user']['id'])) {
+        echo json_encode([]);
+        return;
+    }
+
+    $tech_id = $_SESSION['user']['id'];
+    $today = date('Y-m-d');
+
+    // 2. جلب قائمة "اليوم" (Aujourd'hui)
+    // المنطق هنا كان صحيحاً (يعتمد على ID)، لذا نتركه كما هو
+    $sql_today = "SELECT 
+                rs.id as session_id,
+                rs.status,
+                r.hours as time,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                LEFT(p.first_name, 1) as f_init, LEFT(p.last_name, 1) as l_init,
+                rt.name as act_name,
+                -- حساب دقيق: عدد الجلسات التي تسبق أو تساوي الجلسة الحالية
+                (SELECT COUNT(*) FROM reeducation_sessions s2 WHERE s2.dossier_id = rs.dossier_id AND s2.id <= rs.id) as session_num,
+                rd.sessions_prescribed as total_sessions
+            FROM reeducation_sessions rs
+            JOIN rdv r ON rs.rdv_id = r.id
+            JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
+            JOIN patient p ON rd.patient_id = p.id
+            LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
+            WHERE r.date = '$today' 
+            AND rd.technician_id = $tech_id
+            AND r.deleted = 0
+            ORDER BY r.hours ASC";
+
+    $data_today = $DB->select($sql_today);
+
+    foreach ($data_today as &$row) {
+        $row['initials'] = strtoupper(($row['f_init'] ?? '') . ($row['l_init'] ?? ''));
+    }
+
+    // 3. جلب قائمة "الملفات النشطة" (En cours)
+    // التعديل الجذري هنا: استخدام Subquery لحساب الترتيب الدقيق للجلسة المختارة
+    $sql_active = "SELECT 
+                    derived.*,
+                    -- الحساب الدقيق لرقم الجلسة بناءً على الـ ID الذي تم اختياره
+                    (SELECT COUNT(*) FROM reeducation_sessions s2 WHERE s2.dossier_id = derived.dossier_id AND s2.id <= derived.session_id) as session_num
+                FROM (
+                    SELECT 
+                        rd.id as dossier_id,
+                        -- تحديد الجلسة المستهدفة (القادمة أو الأخيرة)
+                        COALESCE(
+                            (SELECT id FROM reeducation_sessions WHERE dossier_id = rd.id AND status = 'planned' ORDER BY id ASC LIMIT 1),
+                            (SELECT id FROM reeducation_sessions WHERE dossier_id = rd.id ORDER BY id DESC LIMIT 1)
+                        ) as session_id,
+                        
+                        'active' as status,
+                        '' as time,
+                        CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                        LEFT(p.first_name, 1) as f_init, LEFT(p.last_name, 1) as l_init,
+                        rt.name as act_name,
+                        rd.sessions_prescribed as total_sessions
+                    FROM reeducation_dossiers rd
+                    JOIN patient p ON rd.patient_id = p.id
+                    LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
+                    WHERE rd.technician_id = $tech_id
+                    AND rd.status = 'active'
+                    AND rd.deleted = 0
+                ) as derived
+                WHERE derived.session_id IS NOT NULL
+                ORDER BY derived.dossier_id DESC
+                LIMIT 50";
+
+    $data_active = $DB->select($sql_active);
+
+    foreach ($data_active as &$row) {
+        $row['initials'] = strtoupper(($row['f_init'] ?? '') . ($row['l_init'] ?? ''));
+    }
+
+    // 4. إرجاع النتيجة
+    echo json_encode([
+        "state" => "true",
+        "data" => [
+            "today" => $data_today,
+            "active" => $data_active
+        ]
+    ]);
+}
+/* --- 1. تحديث دالة get_RDV --- */
+function get_RDV($id = NULL, $return = false)
+{
+    $user_role = $_SESSION['user']['role'] ?? null;
+    $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+    $user_id = $_SESSION['user']['id'] ?? 0;
+
+    $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
+
+    $where_clause = "";
+    if ($user_role === 'admin' && !empty($user_cabinet_id)) {
+        $where_clause = " AND (rdv.cabinet_id = " . intval($user_cabinet_id) .
+            " OR rdv.doctor_id IN (SELECT id FROM users WHERE cabinet_id = " . intval($user_cabinet_id) . "))";
+
+    } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
+        $where_clause = " AND rdv.doctor_id = " . intval($user_id);
+    }
+
+    $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (" . implode(', ', array_map('intval', $_POST['filters'])) . ")" : " AND rdv.state >= -1");
+
+    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
+            COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name,
+            rs.payment_status
+            FROM rdv 
+            LEFT JOIN patient ON patient.id = rdv.patient_id
+            LEFT JOIN reeducation_sessions rs ON rdv.reeducation_session_id = rs.id
+            WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
+
+    $res = $GLOBALS['db']->select($sql);
+
+    $convertedData = [];
+    if (!empty($res)) {
+        foreach ($res as $items) {
+            $title = $items['patient_name'];
+            if ($items['payment_status'] === 'paid') {
+                $title .= ' (Payé ✔️)';
+            } elseif ($items['payment_status'] === 'unpaid') {
+                $title .= ' (Impayé ❌)';
+            }
+
+            $arrayData = [
+                'id' => $items['id'],
+                'title' => $title,
+                'allDay' => true,
+                'start' => $items['Date_RDV'],
+                'end' => $items['Date_RDV'],
+                'extendedProps' => [
+                    'calendar' => match ((int) $items['state']) {
+                        0 => 'warning', 1 => 'info', 2 => 'success', 3 => 'danger',
+                        default => 'secondary'
+                    },
+                    // +++++++ هذا هو السطر المهم جداً الذي كان ناقصاً +++++++
+                    'state_id' => (int) $items['state'],
+                    // ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                    'phone' => ($items['phone'] ?? ''),
+                    'num_rdv' => ($items['rdv_num'] ?? ''),
+                    'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
+                ]
+            ];
+            $convertedData[] = $arrayData;
+        }
+    }
+
+    if (empty($convertedData)) {
+        $arrayData = [
+            'id' => '0',
+            'title' => 'start calendar',
+            'allDay' => false,
+            'start' => '1970-01-01',
+            'end' => '1970-01-01',
+            'extendedProps' => ['calendar' => 'secondary', 'state_id' => 0, 'Client_id' => 0]
+        ];
+        $convertedData[] = $arrayData;
+    }
+
+    if ($return) {
+        return $convertedData;
+    }
+
+    echo json_encode($convertedData);
+}
+
+
+function get_daily_calendar_stats($DB)
+{
+    $start_date = $_POST['start'];
+    $end_date = $_POST['end'];
+    $doctor_id = $_POST['doctor_id'] ?? '';
+
+    // 1. تحديد الطبيب
+    $target_doctor_id = 0;
+    if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+        $target_doctor_id = $_SESSION['user']['id'];
+    } elseif (!empty($doctor_id)) {
+        $target_doctor_id = intval($doctor_id);
+    }
+
+    // جلب الإعدادات
+    $doctor_settings = [];
+    if ($target_doctor_id) {
+        $doc = $DB->select("SELECT tickets_day, travel_hours FROM users WHERE id = $target_doctor_id")[0] ?? null;
+        if ($doc) {
+            $doctor_settings['tickets'] = json_decode($doc['tickets_day'] ?? '[]', true);
+            $doctor_settings['hours'] = json_decode($doc['travel_hours'] ?? '[]', true);
+        }
+    }
+
+    // 2. جلب المواعيد مجمعة حسب اليوم والحالة
+    $where_clause = "rdv.deleted = 0 AND rdv.date BETWEEN '$start_date' AND '$end_date'";
+    if ($target_doctor_id) {
+        $where_clause .= " AND rdv.doctor_id = $target_doctor_id";
+    } elseif (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND rdv.cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+    }
+
+    // التجميع حسب التاريخ والحالة
+    $sql = "SELECT DATE(date) as day_date, state, COUNT(*) as count 
+            FROM rdv 
+            WHERE $where_clause 
+            GROUP BY DATE(date), state";
+
+    $results = $DB->select($sql);
+
+    // تنسيق البيانات: [التاريخ] => [الإجمالي، تفاصيل الحالات]
+    $stats = [];
+    foreach ($results as $row) {
+        $date = $row['day_date'];
+        $state = intval($row['state']);
+        $count = intval($row['count']);
+
+        if (!isset($stats[$date])) {
+            $stats[$date] = [
+                'total' => 0,
+                'details' => [0 => 0, 1 => 0, 2 => 0, 3 => 0] // 0:Created, 1:Accepted, 2:Completed, 3:Canceled
+            ];
+        }
+
+        // لا نحسب الملغاة في الإجمالي الخاص بالسعة، لكن نحتفظ بها في التفاصيل
+        if ($state != 3) {
+            $stats[$date]['total'] += $count;
+        }
+        $stats[$date]['details'][$state] = $count;
+    }
+
+    echo json_encode([
+        'bookings' => $stats,
+        'settings' => $doctor_settings
+    ]);
+}
+
+function get_calendar_stats($DB)
+{
+    // تحديد النطاق الزمني (من التقويم)
+    $start_date = $_POST['start'] ?? date('Y-m-01');
+    $end_date = $_POST['end'] ?? date('Y-m-t');
+    $doctor_id = $_POST['doctor_id'] ?? '';
+
+    // شروط الفلترة حسب الصلاحيات
+    $where_clause = "rdv.deleted = 0 AND rdv.date BETWEEN '$start_date' AND '$end_date'";
+
+    if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+        $where_clause .= " AND rdv.doctor_id = " . $_SESSION['user']['id'];
+    } elseif (!empty($doctor_id)) {
+        $where_clause .= " AND rdv.doctor_id = " . intval($doctor_id);
+    } elseif (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND rdv.cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+    }
+
+    // جلب الإحصائيات مجمعة حسب الحالة
+    $sql = "SELECT state, COUNT(*) as count FROM rdv WHERE $where_clause GROUP BY state";
+    $results = $DB->select($sql);
+
+    // تهيئة القيم الافتراضية
+    $stats = [
+        'total' => 0,
+        'created' => 0,   // state 0
+        'confirmed' => 0, // state 1
+        'completed' => 0, // state 2
+        'canceled' => 0   // state 3
+    ];
+
+    foreach ($results as $row) {
+        $count = intval($row['count']);
+        $stats['total'] += $count;
+
+        switch ($row['state']) {
+            case 0:
+                $stats['created'] = $count;
+                break;
+            case 1:
+                $stats['confirmed'] = $count;
+                break;
+            case 2:
+                $stats['completed'] = $count;
+                break;
+            case 3:
+                $stats['canceled'] = $count;
+                break;
+
+        }
+    }
+
+    echo json_encode($stats);
+}
+
+
+function get_kine_workspace_data($DB)
+{
+    $session_id = filter_var($_POST['session_id'], FILTER_SANITIZE_NUMBER_INT);
+
+    if (empty($session_id)) {
+        echo '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                <div class="mb-2">
+                    <i data-feather="alert-circle" style="width: 50px; height: 50px;"></i>
+                </div>
+                <h4>Aucune séance trouvée</h4>
+                <p>Ce dossier ne contient pas encore de séances planifiées.</p>
+              </div>
+              <script>if(feather) feather.replace();</script>';
+        return;
+    }
+
+    $sql = "SELECT 
+                rs.id as session_id, rs.status, rs.payment_status, rs.observations, rs.pain_scale, 
+                rs.duration, rs.exercises_performed, rs.rdv_id,
+                r.date as rdv_date, r.hours as rdv_time,
+                rd.id as dossier_id, rd.price, rd.payment_mode, rd.sessions_prescribed, rd.sessions_completed,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name, p.phone, p.id as patient_id,
+                rt.name as act_name,
+                (SELECT SUM(amount_paid) FROM caisse_transactions WHERE dossier_id = rd.id) as total_paid,
+                (SELECT COUNT(*) FROM reeducation_sessions sub WHERE sub.dossier_id = rs.dossier_id AND sub.id <= rs.id) as current_rank
+            FROM reeducation_sessions rs
+            JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
+            JOIN patient p ON rd.patient_id = p.id
+            LEFT JOIN rdv r ON rs.rdv_id = r.id
+            LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
+            WHERE rs.id = $session_id";
+
+    $data = $DB->select($sql)[0] ?? null;
+
+    if (!$data) {
+        echo '<div class="alert alert-danger m-2">Erreur : Session introuvable ou supprimée.</div>';
+        return;
+    }
+
+    $total_price = (float) $data['price'];
+    $total_paid = (float) ($data['total_paid'] ?? 0);
+    $remaining = $total_price - $total_paid;
+    if ($remaining < 0) $remaining = 0;
+
+    $session_price = $data['sessions_prescribed'] > 0 ? ($total_price / $data['sessions_prescribed']) : 0;
+
+    $current_rank = $data['current_rank'];
+    $total_sessions = $data['sessions_prescribed'];
+    $progress_percent = $total_sessions > 0 ? ($current_rank / $total_sessions) * 100 : 0;
+
+    $is_completed = ($data['status'] === 'completed');
+    $readonly_attr = $is_completed ? 'disabled' : '';
+    $is_session_paid = ($data['payment_status'] === 'paid');
+
+    $rdv_date_display = date('d/m/Y', strtotime($data['rdv_date']));
+    
+    // *** التعديل الهام هنا: ضمان صيغة التاريخ الصافية ***
+    $rdv_date_iso = date('Y-m-d', strtotime($data['rdv_date'])); 
+
+    ?>
+        <input type="hidden" id="workspace_session_id" value="<?= $data['session_id'] ?>">
+        <!-- القيمة هنا أصبحت YYYY-MM-DD فقط -->
+        <input type="hidden" id="workspace_rdv_date" value="<?= $rdv_date_iso ?>">
+
+        <div class="card mb-2 border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar bg-light-primary p-50 me-2" style="width: 50px; height: 50px;">
+                            <span class="avatar-content fs-4"><?= strtoupper(substr($data['patient_name'], 0, 2)) ?></span>
+                        </div>
+                        <div>
+                            <h4 class="mb-0 text-primary fw-bolder"><?= $data['patient_name'] ?></h4>
+                            <div class="mt-1">
+                                <span class="badge bg-light-secondary"><?= $data['act_name'] ?></span>
+                                <span class="badge bg-light-info ms-1">
+                                    <i data-feather="calendar" style="width: 12px; height: 12px;"></i> <?= $rdv_date_display ?>
+                                </span>
+                                <small class="text-muted ms-1"><i data-feather="phone"></i> <?= $data['phone'] ?></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end" id="action-buttons-container">
+                        <?php if (!$is_completed): ?>
+                                <button class="btn btn-outline-info me-1 reschedule-session-btn" data-rdv="<?= $data['rdv_id'] ?>"
+                                    data-date="<?= $data['rdv_date'] ?>" data-time="<?= $data['rdv_time'] ?>">
+                                    <i data-feather="calendar"></i> Reporter
+                                </button>
+
+                                <button class="btn btn-success shadow validate-session-btn" data-id="<?= $data['session_id'] ?>">
+                                    <i data-feather="check-circle"></i> Terminer
+                                </button>
+                        <?php else: ?>
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="badge bg-success fs-6 p-2"><i data-feather="check"></i> Terminée</span>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="enableEditMode()">
+                                        <i data-feather="edit-2"></i> Modifier
+                                    </button>
+                                    <button class="btn btn-primary btn-sm d-none" id="btn-save-edit"
+                                        onclick="$('.validate-session-btn').click()">
+                                        Enregistrer
+                                    </button>
+                                    <button class="d-none validate-session-btn" data-id="<?= $data['session_id'] ?>"></button>
+                                </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="mt-2">
+                    <div class="d-flex justify-content-between mb-50">
+                        <span class="fw-bold text-dark">Séance actuelle : <span
+                                class="text-primary fs-5"><?= $current_rank ?></span> / <?= $total_sessions ?></span>
+                        <span class="text-muted"><?= round($progress_percent) ?>%</span>
+                    </div>
+                    <div class="progress progress-bar-primary" style="height: 12px">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                            style="width: <?= $progress_percent ?>%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row match-height">
+            <div class="col-md-7">
+                <div class="card h-100">
+                    <div class="card-header border-bottom">
+                        <h5 class="card-title">Détails Cliniques</h5>
+                    </div>
+                    <div class="card-body pt-2">
+                        <form id="session-notes-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label fw-bold">Durée (min)</label>
+                                    <input type="number" class="form-control" id="ws-duration" name="duration"
+                                        value="<?= $data['duration'] ?? '' ?>" placeholder="Ex: 45" <?= $readonly_attr ?>>
+                                </div>
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label fw-bold">Évaluation Douleur (0-10)</label>
+                                    <div class="d-flex align-items-center">
+                                        <input type="range" class="form-range me-2" min="0" max="10" step="1" id="ws-pain"
+                                            value="<?= $data['pain_scale'] ?? 0 ?>" oninput="$('#pain-val').text(this.value)"
+                                            <?= $readonly_attr ?>>
+                                        <span class="fw-bold text-primary fs-4"
+                                            id="pain-val"><?= $data['pain_scale'] ?? 0 ?></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-1">
+                                <label class="form-label fw-bold">Exercices Effectués</label>
+                                <textarea class="form-control" rows="2" id="ws-exercises" name="exercises_performed"
+                                    placeholder="Liste des exercices..." <?= $readonly_attr ?>><?= $data['exercises_performed'] ?></textarea>
+                            </div>
+
+                            <div class="mb-1">
+                                <label class="form-label fw-bold">Notes & Observations</label>
+                                <textarea class="form-control" rows="3" id="ws-observations" name="observations"
+                                    placeholder="Progrès, réactions du patient..." <?= $readonly_attr ?>><?= $data['observations'] ?></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <?php
+                $borderColor = ($remaining == 0 || $is_session_paid) ? 'success' : 'danger';
+                $bgColor = ($remaining == 0 || $is_session_paid) ? 'bg-light-success' : 'bg-light-danger';
+                $textColor = ($remaining == 0 || $is_session_paid) ? 'text-success' : 'text-danger';
+                ?>
+                <div class="card h-100 border-<?= $borderColor ?>">
+                    <div class="card-header <?= $bgColor ?>">
+                        <h5 class="card-title <?= $textColor ?>">Finance</h5>
+                    </div>
+                    <div class="card-body pt-2 text-center">
+
+                        <?php if ($is_session_paid): ?>
+                                <div class="text-success mb-2">
+                                    <i data-feather="check-circle" style="width: 60px; height: 60px; stroke-width: 1.5;"></i>
+                                    <h3 class="text-success mt-1">Séance Payée</h3>
+                                    <?php if ($remaining > 0): ?>
+                                            <p class="text-muted mt-1 mb-0">Reste total sur le dossier :
+                                                <br><strong><?= number_format($remaining, 0) ?> DA</strong>
+                                            </p>
+                                    <?php endif; ?>
+                                </div>
+                        <?php elseif ($remaining == 0): ?>
+                                <div class="text-success mb-2">
+                                    <i data-feather="check-circle" style="width: 60px; height: 60px; stroke-width: 1.5;"></i>
+                                    <h3 class="text-success mt-1">Dossier Réglé</h3>
+                                    <p class="text-muted">Aucun paiement en attente.</p>
+                                </div>
+                        <?php else: ?>
+                                <h6 class="text-muted">Reste à payer</h6>
+                                <h1 class="fw-bolder mb-2 display-6"><?= number_format($remaining, 0) ?> <small class="fs-6">DA</small>
+                                </h1>
+                                <div class="d-grid gap-1">
+                                    <button class="btn btn-primary"
+                                        onclick="processQuickPay(<?= $data['dossier_id'] ?>, <?= number_format($session_price, 2, '.', '') ?>)">
+                                        <i data-feather="dollar-sign"></i> Payer la séance (<?= number_format($session_price, 0) ?> DA)
+                                    </button>
+                                    <?php if ($remaining > $session_price): ?>
+                                            <button class="btn btn-outline-secondary"
+                                                onclick="processQuickPay(<?= $data['dossier_id'] ?>, <?= number_format($remaining, 2, '.', '') ?>)">
+                                                Tout solder (<?= number_format($remaining, 0) ?> DA)
+                                            </button>
+                                    <?php endif; ?>
+                                </div>
+                        <?php endif; ?>
+
+                        <div class="mt-2 text-start bg-white border p-1 rounded">
+                            <div class="d-flex justify-content-between">
+                                <small>Total Dossier:</small>
+                                <small class="fw-bold"><?= number_format($total_price, 0) ?> DA</small>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>Déjà payé:</small>
+                                <small class="fw-bold text-success"><?= number_format($total_paid, 0) ?> DA</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+}
+
 
 
 function get_technician_report_details($DB)
@@ -445,6 +1093,7 @@ function reschedule_session($DB)
 
 
 
+
 function validate_session($DB)
 {
     // 1. التحقق من الصلاحيات
@@ -461,8 +1110,16 @@ function validate_session($DB)
     $session_status = $_POST['session_status'] ?? 'completed';
     $completed_at = date('Y-m-d H:i:s');
 
-    // 2. جلب معلومات الجلسة والملف ونوع العمولة بدقة
-    // نربط مع الخدمات لنجلب نوع العمولة (ثابت أم نسبة)
+    // 2. جلب الحالة السابقة للجلسة (لمعرفة هل هي تعديل أم إنهاء جديد)
+    $old_session_sql = "SELECT status, dossier_id FROM reeducation_sessions WHERE id = $session_id";
+    $old_session = $DB->select($old_session_sql)[0] ?? null;
+
+    if (!$old_session) {
+        echo json_encode(["state" => "false", "message" => "Session introuvable."]);
+        return;
+    }
+
+    // 3. جلب تفاصيل الملف وقواعد العمولة
     $sql_info = "SELECT 
                     rs.dossier_id, 
                     rd.price, 
@@ -472,7 +1129,7 @@ function validate_session($DB)
                     cs.commission_type
                  FROM reeducation_sessions rs 
                  JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
-                 -- محاولة جلب إعدادات الخدمة الخاصة بعيادة التقني
+                 -- نربط مع المستخدم لجلب العيادة، ثم مع الخدمات لجلب نوع العمولة
                  LEFT JOIN users u ON rd.technician_id = u.id
                  LEFT JOIN cabinet_services cs ON rd.reeducation_type_id = cs.reeducation_type_id 
                     AND cs.cabinet_id = u.cabinet_id
@@ -482,7 +1139,7 @@ function validate_session($DB)
     $info = $DB->select($sql_info)[0] ?? null;
 
     if (!$info) {
-        echo json_encode(["state" => "false", "message" => "Session introuvable."]);
+        echo json_encode(["state" => "false", "message" => "Dossier introuvable."]);
         return;
     }
 
@@ -490,36 +1147,39 @@ function validate_session($DB)
     try {
         $commission_amount = 0;
 
-        // 3. حساب العمولة (فقط إذا كانت الجلسة مكتملة)
+        // 4. حساب العمولة (يتم الحساب في كل مرة لضمان الدقة عند التعديل)
         if ($session_status === 'completed') {
             $sessions_count = (int) $info['sessions_prescribed'];
             if ($sessions_count <= 0)
                 $sessions_count = 1;
 
-            // إذا كان النوع "مبلغ ثابت" (Fixed)
             if (isset($info['commission_type']) && $info['commission_type'] === 'fixed') {
-                // نقسم المبلغ الثابت الإجمالي على عدد الحصص
+                // إذا كان المبلغ ثابتاً للملف، نقسمه على عدد الحصص
                 $commission_amount = (float) $info['technician_percentage'] / $sessions_count;
             } else {
-                // إذا كان "نسبة مئوية" (Percent) - الافتراضي
+                // إذا كان نسبة مئوية
                 $session_price = (float) $info['price'] / $sessions_count;
                 $commission_amount = $session_price * ((float) $info['technician_percentage'] / 100);
             }
         }
 
-        // 4. تجهيز بيانات التحديث (تأكدنا من إضافة commission_amount)
+        // 5. تحديث بيانات الجلسة
         $session_data = [
             'status' => $session_status,
+            // نحدث التاريخ فقط إذا لم تكن مكتملة من قبل، أو يمكنك تحديثه دائماً حسب الرغبة (هنا نحدثه دائماً لتوثيق آخر تعديل)
             'completed_at' => $completed_at,
-            'completed_by' => $_SESSION['user']['id'],
             'exercises_performed' => $_POST['exercises_performed'] ?? null,
             'pain_scale' => $_POST['pain_scale'] ?? null,
             'observations' => $_POST['observations'] ?? null,
             'duration' => $_POST['duration'] ?? null,
-            'commission_amount' => number_format($commission_amount, 2, '.', '') // تخزين الرقم بتنسيق عشري صحيح
+            'commission_amount' => number_format($commission_amount, 2, '.', '') // الحفظ في قاعدة البيانات
         ];
 
-        // 5. تنفيذ التحديث
+        // تحديث القائم بالعملية فقط إذا كانت جلسة جديدة
+        if ($old_session['status'] !== 'completed') {
+            $session_data['completed_by'] = $_SESSION['user']['id'];
+        }
+
         $DB->table = 'reeducation_sessions';
         $DB->data = $session_data;
         $DB->where = 'id = ' . $session_id;
@@ -528,33 +1188,47 @@ function validate_session($DB)
             throw new Exception("Erreur lors de la mise à jour de la session.");
         }
 
-        // 6. تحديث عداد الجلسات في الملف (Logic قديم لكن ضروري)
-        if ($session_status === 'completed') {
+        // 6. تحديث عداد الملف وحالة الدفع (فقط إذا كانت الجلسة جديدة وليست تعديل)
+        if ($old_session['status'] !== 'completed' && $session_status === 'completed') {
+
+            // أ. زيادة العداد
             $DB->update('reeducation_dossiers', [], "id=" . $info['dossier_id'], "sessions_completed = sessions_completed + 1");
 
-            // تحديث حالة الدفع (Paid/Unpaid) بناء على المبلغ المدفوع مسبقاً
+            // ب. تحديث حالة الدفع للجلسات (Paid/Unpaid) بناءً على الرصيد
             $dossier_id = $info['dossier_id'];
-            $dossier = $DB->select("SELECT price, payment_mode, discount_amount, sessions_prescribed FROM reeducation_dossiers WHERE id = $dossier_id")[0];
-            $total_paid = $DB->select("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = $dossier_id")[0]['total'] ?? 0;
 
-            $price_per_session = ($dossier['payment_mode'] == 'package' && $dossier['sessions_prescribed'] > 0)
-                ? ($dossier['price'] - $dossier['discount_amount']) / $dossier['sessions_prescribed']
-                : $dossier['price'];
+            // جلب المدفوعات
+            $total_paid_query = $DB->select("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = $dossier_id")[0];
+            $total_paid = $total_paid_query['total'] ?? 0;
 
-            $sessions_covered = ($price_per_session > 0) ? floor(($total_paid + 0.001) / $price_per_session) : 999;
+            // حساب سعر الجلسة الواحدة (الصافي)
+            // ملاحظة: الخصم يطبق على الإجمالي، لذا سعر الجلسة = (السعر - الخصم) / العدد
+            $dossier_data = $DB->select("SELECT price, discount_amount, sessions_prescribed, payment_mode FROM reeducation_dossiers WHERE id = $dossier_id")[0];
 
-            // إعادة تعيين الكل إلى Unpaid ثم تحديث المدفوع فقط
+            $net_price = (float) $dossier_data['price'] - (float) $dossier_data['discount_amount'];
+            $count = (int) $dossier_data['sessions_prescribed'] > 0 ? (int) $dossier_data['sessions_prescribed'] : 1;
+            $price_per_session = $net_price / $count;
+
+            // عدد الجلسات المغطاة
+            $sessions_covered = ($price_per_session > 0) ? floor(($total_paid + 0.1) / $price_per_session) : 999;
+
+            // إعادة تعيين الكل إلى Unpaid لضمان الترتيب
             $DB->update('reeducation_sessions', ['payment_status' => 'unpaid'], "dossier_id = $dossier_id");
 
+            // تحديث الجلسات المغطاة إلى Paid
             if ($sessions_covered > 0) {
-                $sql_pay = "UPDATE reeducation_sessions SET payment_status = 'paid' WHERE dossier_id = $dossier_id ORDER BY id ASC LIMIT " . intval($sessions_covered);
+                $limit = intval($sessions_covered);
+                // نحدث أقدم الجلسات أولاً
+                $sql_pay = "UPDATE reeducation_sessions SET payment_status = 'paid' WHERE dossier_id = $dossier_id ORDER BY id ASC LIMIT $limit";
                 $stmt = $DB->prepare($sql_pay);
                 $stmt->execute();
             }
         }
 
         $DB->pdo->commit();
-        echo json_encode(["state" => "true", "message" => "Validé : Commission calculée = " . number_format($commission_amount, 2) . " DA"]);
+
+        $msg = ($old_session['status'] === 'completed') ? "Modifications enregistrées." : "Séance terminée avec succès.";
+        echo json_encode(["state" => "true", "message" => $msg]);
 
     } catch (Exception $e) {
         $DB->pdo->rollBack();
@@ -640,9 +1314,11 @@ function get_dossier_payment_info($DB)
     }
 }
 
+
 function record_payment($DB)
 {
-    if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['admin', 'nurse'])) {
+    // التعديل هنا: إضافة 'doctor' إلى المصفوفة
+    if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['admin', 'nurse', 'doctor'])) {
         echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
         return;
     }
@@ -915,83 +1591,7 @@ function postEvent($DB)
     $DB = null;
 }
 
-function get_RDV($id = NULL, $return = false)
-{
-    $user_role = $_SESSION['user']['role'] ?? null;
-    $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
-    $user_id = $_SESSION['user']['id'] ?? 0;
 
-    $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
-
-    $where_clause = "";
-    if ($user_role === 'admin' && !empty($user_cabinet_id)) {
-        $where_clause = " AND (rdv.cabinet_id = " . intval($user_cabinet_id) .
-            " OR rdv.doctor_id IN (SELECT id FROM users WHERE cabinet_id = " . intval($user_cabinet_id) . "))";
-
-    } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
-        $where_clause = " AND rdv.doctor_id = " . intval($user_id);
-    }
-
-    $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (" . implode(', ', array_map('intval', $_POST['filters'])) . ")" : " AND rdv.state >= -1");
-
-    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
-            COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name,
-            rs.payment_status
-            FROM rdv 
-            LEFT JOIN patient ON patient.id = rdv.patient_id
-            LEFT JOIN reeducation_sessions rs ON rdv.reeducation_session_id = rs.id
-            WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
-
-    $res = $GLOBALS['db']->select($sql);
-
-    $convertedData = [];
-    if (!empty($res)) {
-        foreach ($res as $items) {
-            $title = $items['patient_name'];
-            if ($items['payment_status'] === 'paid') {
-                $title .= ' (Payé ✔️)';
-            } elseif ($items['payment_status'] === 'unpaid') {
-                $title .= ' (Impayé ❌)';
-            }
-
-            $arrayData = [
-                'id' => $items['id'],
-                'title' => $title,
-                'allDay' => true,
-                'start' => $items['Date_RDV'],
-                'end' => $items['Date_RDV'],
-                'extendedProps' => [
-                    'calendar' => match ((int) $items['state']) {
-                        0 => 'warning', 1 => 'info', 2 => 'success', 3 => 'danger',
-                        default => 'secondary'
-                    },
-                    'phone' => ($items['phone'] ?? ''),
-                    'num_rdv' => ($items['rdv_num'] ?? ''),
-                    'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
-                ]
-            ];
-            $convertedData[] = $arrayData;
-        }
-    }
-
-    if (empty($convertedData)) {
-        $arrayData = [
-            'id' => '0',
-            'title' => 'start calendar',
-            'allDay' => false,
-            'start' => '1970-01-01',
-            'end' => '1970-01-01',
-            'extendedProps' => ['calendar' => 'secondary', 'Client_id' => 0]
-        ];
-        $convertedData[] = $arrayData;
-    }
-
-    if ($return) {
-        return $convertedData;
-    }
-
-    echo json_encode($convertedData);
-}
 
 function postRdv()
 {
