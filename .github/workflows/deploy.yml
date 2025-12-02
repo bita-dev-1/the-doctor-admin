@@ -26,9 +26,8 @@ jobs:
           SOURCE: "/"
           REMOTE_HOST: ${{ secrets.HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: "/home/cloudpanel/htdocs/the-doctor.cloud/"
+          TARGET: "/home/cloud-doctor/htdocs/the-doctor.cloud/"
           EXCLUDE: "/.git/, /.github/, /.env, /database backup/, /api/uploads/, /vendor/"
-          # 👇 التعديل الأول: تحديد منفذ SSH لعملية النقل
           REMOTE_PORT: 8022
 
       - name: Post Deployment Commands
@@ -37,9 +36,10 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          # 👇 التعديل الثاني: تحديد منفذ SSH للأوامر
           port: 8022
           script: |
-            cd /home/cloudpanel/htdocs/the-doctor.cloud/
+            cd /home/cloud-doctor/htdocs/the-doctor.cloud/
+
             composer install --no-dev --optimize-autoloader
+
             chmod -R 775 api/uploads
