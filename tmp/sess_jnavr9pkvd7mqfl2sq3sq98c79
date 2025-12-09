@@ -1,1 +1,0 @@
-csrf|s:100:"ab83a5d4b1d4d7f30865cbf70a0eb67a4bf03e5367fd0ea4b996336d36bc182e934654ae1d5d2867886e1a6b07b41dc35c2a";user|a:8:{s:2:"id";i:485;s:4:"role";s:5:"admin";s:10:"cabinet_id";N;s:10:"first_name";s:3:"The";s:9:"last_name";s:6:"Doctor";s:6:"image1";s:43:"http://localhost:8001/uploads/518058817.png";s:20:"must_change_password";i:0;s:12:"kine_enabled";N;}

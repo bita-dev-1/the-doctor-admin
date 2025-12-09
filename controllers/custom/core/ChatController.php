@@ -1,26 +1,149 @@
 <?php
 
+// --- دالة مساعدة للتسجيل (Logging Helper) ---
+function chat_debug_log($message, $data = null)
+{
+    // يمكنك تفعيل هذا السطر إذا أردت تتبع الأخطاء في ملف الـ log
+    // error_log("[CHAT_DEBUG] " . $message . ($data ? " | DATA: " . print_r($data, true) : ""));
+}
+
+// --- دالة لجلب قائمة المحادثات ---
+function conversationsRoom($userId)
+{
+    global $db;
+
+    $sql = "SELECT c.id, c.created_at 
+            FROM conversation c
+            INNER JOIN participant p ON c.id = p.id_conversation
+            WHERE p.id_particib = $userId AND c.deleted = 0
+            ORDER BY c.created_at DESC";
+
+    $conversations = $db->select($sql);
+    $result = [];
+
+    if (!empty($conversations)) {
+        foreach ($conversations as $conv) {
+            // جلب بيانات الطرف الآخر
+            $p_sql = "SELECT u.first_name, u.last_name, u.image1
+                      FROM participant p
+                      INNER JOIN users u ON p.id_particib = u.id
+                      WHERE p.id_conversation = {$conv['id']} AND p.id_particib != $userId";
+            $partner = $db->select($p_sql)[0] ?? null;
+
+            // جلب آخر رسالة
+            $m_sql = "SELECT message, type, created_at FROM messages WHERE id_conversation = {$conv['id']} ORDER BY id DESC LIMIT 1";
+            $last_msg = $db->select($m_sql)[0] ?? null;
+
+            $full_name = $partner ? $partner['first_name'] . ' ' . $partner['last_name'] : 'Utilisateur inconnu';
+
+            $result[] = [
+                'id' => $conv['id'],
+                'participants' => [['user' => $full_name]],
+                'image' => ($partner['image1'] ?? '/assets/images/default_User.png'), // مسار الصورة الافتراضي كما في الكود الخاص بك
+                'last_msg' => $last_msg
+            ];
+        }
+    }
+    return $result;
+}
+
+// --- دالة لجلب الرسائل ---
+function messages($conversationId, $lastMsgId = null)
+{
+    global $db;
+    $conversationId = intval($conversationId);
+
+    $where = "m.id_conversation = $conversationId";
+    if ($lastMsgId) {
+        $where .= " AND m.id > " . intval($lastMsgId);
+    }
+
+    // جلب الرسائل مع تحديد المرسل
+    $sql = "SELECT m.*, m.id_sender as my_particib, m.id_sender as id_particib 
+            FROM messages m 
+            WHERE $where 
+            ORDER BY m.created_at ASC";
+
+    return $db->select($sql);
+}
+
+// --- دالة لجلب المشاركين ---
+function getConversationParticipants($conversationId)
+{
+    global $db;
+    $user_id = $_SESSION['user']['id'];
+    $conversationId = intval($conversationId);
+
+    $sql = "SELECT u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name, u.image1 as image
+            FROM participant p
+            JOIN users u ON p.id_particib = u.id
+            WHERE p.id_conversation = $conversationId AND u.id != $user_id";
+
+    return $db->select($sql);
+}
+
+// --- الدالة الرئيسية المجمعة للواجهة ---
+function chat_list($current_conversation_id = null)
+{
+    $user_id = $_SESSION['user']['id'];
+    $response = ['chat_list' => [], 'data' => ['messages' => [], 'users' => []]];
+
+    // 1. جلب قائمة المحادثات
+    $response['chat_list'] = conversationsRoom($user_id);
+
+    // 2. جلب الرسائل للمحادثة المحددة (إذا كان المعرف صالحاً)
+    if ($current_conversation_id && is_numeric($current_conversation_id)) {
+        $conv_id = intval($current_conversation_id);
+        $response['data']['messages'] = messages($conv_id);
+        $response['data']['users'] = getConversationParticipants($conv_id);
+    }
+
+    return $response;
+}
+
+// --- Legacy Endpoint ---
 function chat()
 {
-    $results = ((isset($_POST['conversation']) && is_numeric(str_replace('conversationId-', '', ($_POST['conversation'])))) ? messages(str_replace('conversationId-', '', ($_POST['conversation']))) : array());
+    $conversationId = null;
+    if (isset($_POST['conversation'])) {
+        $rawId = str_replace('conversationId-', '', $_POST['conversation']);
+        if (is_numeric($rawId)) {
+            $conversationId = intval($rawId);
+        }
+    }
+
+    $results = ($conversationId) ? messages($conversationId) : array();
     echo json_encode($results);
 }
 
+// --- دالة إرسال الرسالة ---
 function send_msg()
 {
     if (isset($_SESSION['user']) && !empty($_SESSION['user']['id'])) {
+        $userId = $_SESSION['user']['id'];
+        $conversationId = null;
+
+        // 1. محاولة استخراج معرف المحادثة
         if (isset($_POST['conversation']) && !empty($_POST['conversation'])) {
-            $conversationId = str_replace('conversationId-', '', ($_POST['conversation']));
-        } else {
-            $GLOBALS['db']->table = 'conversation';
-            $GLOBALS['db']->data = array("id_creator" => $_SESSION['user']['id']);
-            $conversationId = $GLOBALS['db']->insert();
-            if ($conversationId) {
+            $rawId = str_replace('conversationId-', '', $_POST['conversation']);
+
+            if (is_numeric($rawId)) {
+                $conversationId = intval($rawId);
             }
         }
+
+        // 2. إنشاء محادثة جديدة إذا لم توجد
+        if (empty($conversationId)) {
+            $GLOBALS['db']->table = 'conversation';
+            $GLOBALS['db']->data = array("id_creator" => $userId);
+            $conversationId = $GLOBALS['db']->insert();
+        }
+
+        // 3. إدخال الرسالة
         if ($conversationId && is_numeric($conversationId)) {
             $message_content = '';
             $message_type = 0;
+
             if (isset($_POST['file']) && $_POST['file'] === 'true' && isset($_POST['file_path'])) {
                 $message_content = $_POST['file_path'];
                 $message_type = is_image($message_content) ? 1 : (is_fileExt($message_content) ? 2 : 0);
@@ -31,24 +154,29 @@ function send_msg()
                 echo json_encode(array("state" => "false", "message" => "Message content is missing"));
                 return;
             }
+
             $data = array(
                 "id_conversation" => $conversationId,
-                "id_sender" => $_SESSION['user']['id'],
+                "id_sender" => $userId,
                 "message" => $message_content,
                 "type" => $message_type
             );
+
             $GLOBALS['db']->table = 'messages';
             $GLOBALS['db']->data = $data;
             $inserted = $GLOBALS['db']->insert();
+
             if ($inserted) {
-                $results = messages($conversationId, (isset($_POST['last']) ? ($_POST['last']) : 0));
-                echo json_encode(array("state" => "true", "data" => $results));
-            } else
-                echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-        } else
-            echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
-    } else
-        echo json_encode(array("state" => "false", "message" => "une erreur s'est produite, veuillez actualiser la page et réessayer"));
+                echo json_encode(array("state" => "true"));
+            } else {
+                echo json_encode(array("state" => "false", "message" => "une erreur s'est produite"));
+            }
+        } else {
+            echo json_encode(array("state" => "false", "message" => "Conversation invalide."));
+        }
+    } else {
+        echo json_encode(array("state" => "false", "message" => "Session expirée."));
+    }
 }
 
 function post_conversation()
@@ -57,32 +185,22 @@ function post_conversation()
     $data = array("id_creator" => $user_id);
     if (isset($_POST['name']) && !empty($_POST['name']))
         $data = array_merge($data, ["name" => $_POST['name']]);
-    if (isset($_POST['csrf'])) {
-        $csrf_token = customDecrypt($_POST['csrf']);
-        if (!is_csrf_valid($csrf_token)) {
-            echo json_encode(["state" => "false", "message" => 'The form is forged']);
-            exit();
-        }
-    } else {
-        echo json_encode(["state" => "false", "message" => 'The form is forged']);
-        exit();
-    }
+
     $GLOBALS['db']->table = 'conversation';
     $GLOBALS['db']->data = $data;
     $inserted_conversation_id = $GLOBALS['db']->insert();
     if ($inserted_conversation_id) {
         if (isset($_POST['participants']) && !empty($_POST['participants'])) {
             $subData = [];
-            foreach ($_POST['participants'] as $participant_id) {
+            $subData[] = [
+                'id_conversation' => $inserted_conversation_id,
+                'id_particib' => $user_id
+            ];
+            $participants = is_array($_POST['participants']) ? $_POST['participants'] : [$_POST['participants']];
+            foreach ($participants as $participant_id) {
                 $subData[] = [
                     'id_conversation' => $inserted_conversation_id,
-                    'my_particib' => $user_id,
                     'id_particib' => $participant_id
-                ];
-                $subData[] = [
-                    'id_conversation' => $inserted_conversation_id,
-                    'my_particib' => $participant_id,
-                    'id_particib' => $user_id
                 ];
             }
             $GLOBALS['db']->table = 'participant';
@@ -98,5 +216,15 @@ function post_conversation()
     } else {
         echo json_encode(["state" => "false", "message" => "something went wrong while creating conversation"]);
     }
+}
+
+function is_image($path)
+{
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+}
+function is_fileExt($path)
+{
+    return !is_image($path);
 }
 ?>
