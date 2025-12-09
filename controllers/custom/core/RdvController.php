@@ -38,6 +38,7 @@ function postRdv()
         "last_name" => $last_name,
         "phone" => $phone,
         "rdv_num" => filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+        "state" => 1, // الحالة 1 تعني مقبول تلقائياً
         "created_by" => $_SESSION['user']['id'],
         "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
     ];
@@ -138,26 +139,48 @@ function handleRdv_nbr()
         if (isset($_POST['doctor']) && !empty($_POST['doctor'])) {
             $doctor_id = filter_var(($_POST['doctor']), FILTER_SANITIZE_NUMBER_INT);
             $dateString = filter_var(($_POST['date'] ?? date('Y-m-d')), FILTER_SANITIZE_STRING);
+
+            // --- FIX: Use static array mapping for days ---
             $date = new DateTime($dateString);
-            setlocale(LC_TIME, 'fr_FR.UTF-8', 'fra');
-            $dayName = ucwords(strftime('%A', $date->getTimestamp()));
+            $dayIndex = $date->format('w'); // 0 (Sunday) to 6 (Saturday)
+
+            // أسماء الأيام كما هي مخزنة في قاعدة البيانات (JSON)
+            $daysMap = [
+                0 => "Dimanche",
+                1 => "Lundi",
+                2 => "Mardi",
+                3 => "Mercredi",
+                4 => "Jeudi",
+                5 => "Vendredi",
+                6 => "Samedi"
+            ];
+            $dayName = $daysMap[$dayIndex];
+            // ----------------------------------------------
+
             $doctor_info_sql = "SELECT tickets_day FROM users WHERE id = ?";
             $stmt = $GLOBALS['db']->prepare($doctor_info_sql);
             $stmt->execute([$doctor_id]);
             $doctor_response = $stmt->fetch(PDO::FETCH_ASSOC);
+
             if ($doctor_response) {
                 $tickets_day_json = $doctor_response['tickets_day'] ?? '[]';
                 $tickets_day_array = json_decode($tickets_day_json, true);
+
+                // جلب عدد التذاكر لليوم المحدد
                 $nbrTickets = isset($tickets_day_array[$dayName]) ? intval($tickets_day_array[$dayName]) : 0;
                 $restTickets = [];
+
                 if ($nbrTickets > 0) {
                     $all_possible_tickets = range(1, $nbrTickets);
+                    // استثناء التذاكر المحجوزة (ما عدا الملغاة state=3)
                     $reserved_sql = "SELECT rdv_num FROM `rdv` WHERE doctor_id = ? AND state != 3 AND date = ?";
                     $stmt_reserved = $GLOBALS['db']->prepare($reserved_sql);
                     $stmt_reserved->execute([$doctor_id, $dateString]);
                     $reservedTickets = $stmt_reserved->fetchAll(PDO::FETCH_COLUMN);
+
                     $restTickets = array_diff($all_possible_tickets, $reservedTickets);
                 }
+
                 foreach ($restTickets as $ticket_num) {
                     $response[] = array(
                         "id" => $ticket_num,
@@ -194,12 +217,16 @@ function updateState()
 function moveEvent($DB)
 {
     if (isset($_POST['id']) && !empty($_POST['id']) && isset($_POST['date']) && !empty($_POST['date'])) {
-        $table = 'planning';
-        $data = array("Date_RDV" => $_POST['date'], "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']);
+        $table = 'rdv';
+        $data = array("date" => $_POST['date'], "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['id']);
         $DB->table = $table;
         $DB->data = $data;
         $DB->where = 'id = ' . $_POST['id'];
         $updated = true && $DB->update();
+        if ($updated)
+            echo json_encode(["state" => "true"]);
+        else
+            echo json_encode(["state" => "false"]);
     } else {
         echo json_encode(["state" => "false", "message" => "missing data"]);
     }
@@ -209,8 +236,8 @@ function moveEvent($DB)
 function removeEvent($DB)
 {
     if (isset($_POST['id']) && !empty($_POST['id'])) {
-        $table = 'planning';
-        $data = array("deleted" => 1, "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']);
+        $table = 'rdv';
+        $data = array("deleted" => 1, "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['id']);
         $DB->table = $table;
         $DB->data = $data;
         $DB->where = 'id = ' . $_POST['id'];
@@ -228,76 +255,70 @@ function removeEvent($DB)
 function updateEvent($DB)
 {
     if (isset($_POST['id']) && !empty($_POST['id'])) {
-        $table = 'planning';
+
+        $table = 'rdv';
         $unique_val = $_POST['id'];
+        $csrf = null;
+
         $array_data = array();
-        foreach ($_POST['data'] as $data) {
-            if (strpos($data['name'], '__') !== false) {
-                $table_key = explode('__', $data['name'])[0];
-                $column = explode('__', $data['name'])[1];
-                if (stripos($column, 'password') !== false || stripos($column, 'pass') !== false) {
-                    $array_data[$table_key][$column] = sha1($data['value']);
-                } else {
-                    if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
-                        $array_data[$table_key][$column][] = $data['value'];
-                    } else {
-                        if (isset($array_data[$table_key][$column])) {
-                            $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
-                        } else {
-                            $array_data[$table_key][$column] = $data['value'];
-                        }
+
+        if (isset($_POST['data']) && is_array($_POST['data'])) {
+            foreach ($_POST['data'] as $data) {
+                if (!isset($data['name']) || !isset($data['value']))
+                    continue;
+
+                if (strpos($data['name'], '__') !== false) {
+                    $parts = explode('__', $data['name']);
+                    $table_key = $parts[0];
+                    $column = $parts[1];
+
+                    if ($table_key === $table) {
+                        $array_data[$column] = $data['value'];
                     }
+                } else if (stripos($data['name'], 'csrf') !== false) {
+                    $csrf = $data['value'];
                 }
-            } else if (stripos($data['name'], 'csrf') !== false) {
-                $csrf = $data['value'];
-                unset($data['csrf']);
             }
         }
+
         if (isset($csrf)) {
-            $csrf = customDecrypt($csrf);
-            if (!is_csrf_valid($csrf)) {
-                echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+            try {
+                $decrypted_csrf = customDecrypt($csrf);
+                if (!is_csrf_valid($decrypted_csrf)) {
+                    echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+                    exit();
+                }
+            } catch (Exception $e) {
+                echo json_encode(["state" => "false", "message" => "CSRF Error"]);
                 exit();
             }
         } else {
             echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
             exit();
         }
-        $filteredData = array_filter($array_data, function ($key) use ($table) {
-            return $key != $table;
-        }, ARRAY_FILTER_USE_KEY);
-        $restData = array_diff_key($array_data, $filteredData);
-        $restData = array_values($restData)[0];
-        $restData = array_merge($restData, array("modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']));
+
+        $array_data["modified_at"] = date('Y-m-d H:i:s');
+        $array_data["modified_by"] = $_SESSION['user']['id'] ?? 0;
+
         $DB->table = $table;
-        $DB->data = $restData;
+        $DB->data = $array_data;
         $DB->where = 'id = ' . $unique_val;
-        $updated = true && $DB->update();
-        if ($updated && !isset($_POST['is_quote'])) {
-            $DB->table = 'planning_services';
-            $DB->where = array('planning_id' => $unique_val);
-            $DB->Delete();
-        }
-        if (is_array($filteredData) && !empty($filteredData)) {
-            $unique_id = 'planning_id';
-            foreach ($filteredData as $table_name => $data) {
-                $DB->table = $table_name;
-                if (is_array($data['service_id'])) {
-                    $extraData = array("$unique_id" => $unique_val);
-                    $data = array_map(function ($service_id) use ($extraData) {
-                        return array_merge($extraData, ['service_id' => $service_id]);
-                    }, $data['service_id']);
-                    $DB->multi = true;
-                } else {
-                    $data = array_merge($data, array("$unique_id" => $unique_val));
+
+        try {
+            $updated = $DB->update();
+
+            if ($updated) {
+                if (function_exists('push_notificationRDV')) {
+                    push_notificationRDV($unique_val);
                 }
-                $DB->data = $data;
-                $updated = $updated && $DB->insert();
+                echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
+            } else {
+                echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour BDD"]);
             }
+        } catch (Exception $e) {
+            echo json_encode(["state" => "false", "message" => "Exception: " . $e->getMessage()]);
         }
-        if ($updated) {
-            echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
-        }
+
     } else {
         echo json_encode(["state" => "false", "message" => "missing id"]);
     }
@@ -306,73 +327,7 @@ function updateEvent($DB)
 
 function postEvent($DB)
 {
-    $array_data = array();
-    $table = 'planning';
-    foreach ($_POST['data'] as $data) {
-        if (strpos($data['name'], '__') !== false) {
-            $table_key = explode('__', $data['name'])[0];
-            $column = explode('__', $data['name'])[1];
-            if (stripos($column, 'password') !== false || stripos($column, 'pass') !== false) {
-                $array_data[$table_key][$column] = sha1($data['value']);
-            } else {
-                if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
-                    $array_data[$table_key][$column][] = $data['value'];
-                } else {
-                    if (isset($array_data[$table_key][$column])) {
-                        $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
-                    } else {
-                        $array_data[$table_key][$column] = $data['value'];
-                    }
-                }
-            }
-        } else if (stripos($data['name'], 'csrf') !== false) {
-            $csrf = $data['value'];
-            unset($data['csrf']);
-        }
-    }
-    if (isset($csrf)) {
-        $csrf = customDecrypt($csrf);
-        if (!is_csrf_valid($csrf)) {
-            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
-            exit();
-        }
-    } else {
-        echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
-        exit();
-    }
-    $filteredData = array_filter($array_data, function ($key) use ($table) {
-        return $key != $table;
-    }, ARRAY_FILTER_USE_KEY);
-    $restData = array_diff_key($array_data, $filteredData);
-    $restData = array_values($restData)[0];
-    $restData = array_merge($restData, array("Garage_id" => $_SESSION['user']['data'][0]['Id'], "created_by" => $_SESSION['user']['data'][0]['Id']));
-    $DB->table = $table;
-    $DB->data = $restData;
-    $last_id = $DB->insert();
-    $inserted = true && $last_id;
-    if (is_array($filteredData) && !empty($filteredData)) {
-        $unique_id = ((substr($table, -1) === 's') ? substr($table, 0, -1) : $table) . '_id';
-        foreach ($filteredData as $table_name => $data) {
-            $DB->table = $table_name;
-            if (is_array($data['service_id'])) {
-                $extraData = array("$unique_id" => $last_id);
-                $data = array_map(function ($service_id) use ($extraData) {
-                    return array_merge($extraData, ['service_id' => $service_id]);
-                }, $data['service_id']);
-                $DB->multi = true;
-            } else {
-                $data = array_merge($data, array("$unique_id" => $last_id));
-            }
-            $DB->data = $data;
-            $inserted = $inserted && $DB->insert();
-        }
-    }
-    if ($inserted) {
-        echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]);
-    } else {
-        echo json_encode(["state" => "false", "message" => $inserted]);
-    }
-    $DB = null;
+    echo json_encode(["state" => "false", "message" => "Not implemented yet for RDV"]);
 }
 
 function get_daily_calendar_stats($DB)

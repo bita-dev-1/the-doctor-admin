@@ -671,11 +671,20 @@ $handlerURL = SITE_URL . '/handlers';
                 var addRdvModal = new bootstrap.Modal(document.getElementById('addRdvModal'));
                 $('#addRdvModal form')[0].reset();
                 $('#addRdvModal .select2').val(null).trigger('change');
+
+                // 1. تعيين التاريخ في الحقل
                 $('#addRdvModal #date').val(info.dateStr);
-                // Trigger ticket fetch if doctor is pre-selected
+
+                // 2. تفعيل قائمة التذاكر يدوياً لأننا قمنا بتعيين التاريخ
+                $('#addRdvModal #rdv_num').prop('disabled', false);
+
+                // 3. إذا كان الطبيب محدداً مسبقاً (في حالة الأدمن)، نقوم بتحديث القائمة
                 if ($('#addRdvModal #doctor_id').val()) {
-                    $('#addRdvModal #date').trigger('change');
+                    // لا نحتاج لعمل trigger change هنا لأن Select2 سيجلب البيانات عند الفتح
+                    // ولكن يمكننا تصفير القيمة للتأكد
+                    $('#addRdvModal #rdv_num').val(null).trigger('change');
                 }
+
                 addRdvModal.show();
             },
 
@@ -727,13 +736,38 @@ $handlerURL = SITE_URL . '/handlers';
         $(eventForm).on('submit', function (e) {
             e.preventDefault();
             if (eventForm.valid()) {
-                var eventData = { id: eventForm.attr('data-id'), date: startDate.val(), rdv__state: eventLabel.val(), method: 'updateEvent' };
+                // جلب التوكن
+                var csrfToken = $('input[name="csrf"]').val();
+
+                // تجهيز البيانات مع البادئة الصحيحة rdv__
+                var formDataArray = [
+                    { name: 'rdv__state', value: eventLabel.val() },
+                    { name: 'rdv__date', value: startDate.val() },
+                    { name: 'csrf', value: csrfToken }
+                ];
+
+                var eventData = {
+                    id: eventForm.attr('data-id'),
+                    method: 'updateEvent',
+                    data: formDataArray
+                };
+
                 $.ajax({
                     url: '<?= $handlerURL ?>', type: 'POST', data: eventData,
+                    dataType: 'json',
                     success: function (res) {
-                        calendar.refetchEvents();
-                        updateDailyStats(calendar.view.activeStart.toISOString(), calendar.view.activeEnd.toISOString());
-                        eventSidebar.modal('hide');
+                        if (res.state === "true") {
+                            calendar.refetchEvents();
+                            updateDailyStats(calendar.view.activeStart.toISOString(), calendar.view.activeEnd.toISOString());
+                            eventSidebar.modal('hide');
+                            Swal.fire({ icon: 'success', title: 'Succès', text: res.message, timer: 1500, showConfirmButton: false });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Erreur', text: res.message });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(xhr.responseText);
+                        Swal.fire({ icon: 'error', title: 'Erreur', text: 'Erreur serveur (Check Logs)' });
                     }
                 });
             }
@@ -785,35 +819,75 @@ $handlerURL = SITE_URL . '/handlers';
     });
 
     // =================================================================================
-    //  Modal & Ticket Fetching Logic
+    //  Modal & Ticket Fetching Logic (Updated)
     // =================================================================================
     $(document).ready(function () {
         $('.rdvForm').validate({
             rules: { 'doctor_id': { required: true }, 'date': { required: true }, 'rdv_num': { required: true }, 'first_name': { required: true }, 'last_name': { required: true }, 'phone': { required: true } }
         });
 
-        // Initialize Select2 for Ticket Number
-        $('.rdv_num.select2').select2({
-            dropdownParent: $('.rdv_num.select2').parent(),
+        // 1. تعريف متغير لحقل التذاكر
+        var $rdvSelect = $('.rdv_num.select2');
+
+        // 2. تهيئة Select2 (مرة واحدة فقط)
+        $rdvSelect.select2({
+            dropdownParent: $rdvSelect.parent(),
             placeholder: "Sélectionner Ticket",
-            ajax: {
-                type: "post", dataType: "json", url: "<?= $handlerURL ?>", delay: 250,
-                data: function (params) {
-                    var query = { method: 'handleRdv_nbr' };
-                    if ($('.rdvForm .picker').val() != "") query.date = $('.rdvForm .picker').val();
-                    // Get doctor ID from either Select or Hidden input
-                    var docId = $('.rdvForm #doctor_id').val();
-                    if (docId) query.doctor = docId;
-
-                    return query;
-                },
-                processResults: function (data) { return { results: data }; }, cache: true
+            language: {
+                noResults: function () { return "Aucun ticket disponible"; },
+                searching: function () { return "Recherche..."; }
             },
-        }).change(function () { $('.rdv_num.select2').valid(); });
+            ajax: {
+                type: "post",
+                dataType: "json",
+                url: "<?= $handlerURL ?>",
+                delay: 250,
+                data: function (params) {
+                    // قراءة القيم الحالية من المودال
+                    return {
+                        method: 'handleRdv_nbr',
+                        date: $('#addRdvModal #date').val(),
+                        doctor: $('#addRdvModal #doctor_id').val()
+                    };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                },
+                cache: false
+            }
+        });
 
-        // Refresh tickets when date changes
-        $(document).on('change', '.rdvForm .picker', function () {
-            $('.rdv_num.select2').val(null).trigger('change');
+        // 3. تعطيل القائمة افتراضياً
+        $rdvSelect.prop('disabled', true);
+
+        // 4. دالة لتحديث حالة القائمة
+        function updateRdvFieldState() {
+            var selectedDate = $('#addRdvModal #date').val();
+            if (selectedDate && selectedDate !== "") {
+                $rdvSelect.prop('disabled', false);
+            } else {
+                $rdvSelect.prop('disabled', true);
+            }
+            $rdvSelect.val(null).trigger('change');
+        }
+
+        // 5. ربط حدث التغيير بمكتبة Flatpickr داخل المودال
+        var dateElement = document.querySelector("#addRdvModal #date");
+        if (dateElement && dateElement._flatpickr) {
+            dateElement._flatpickr.config.onChange.push(function (selectedDates, dateStr, instance) {
+                $('#addRdvModal #date').val(dateStr);
+                updateRdvFieldState();
+            });
+        }
+
+        // 6. ربط حدث التغيير المباشر (للحالات الأخرى)
+        $(document).on('change', '#addRdvModal #date', function () {
+            updateRdvFieldState();
+        });
+
+        // 7. عند تغيير الطبيب
+        $(document).on('change', '#addRdvModal #doctor_id', function () {
+            $rdvSelect.val(null).trigger('change');
         });
 
         // Fetch Patient Details
@@ -873,6 +947,8 @@ $handlerURL = SITE_URL . '/handlers';
         $('#addRdvModal').on('hidden.bs.modal', function () {
             $(this).find('form.rdvForm')[0].reset();
             $(this).find('.select2').val(null).trigger('change');
+            // إعادة تعطيل القائمة عند الإغلاق
+            $rdvSelect.prop('disabled', true);
         });
     });
 </script>

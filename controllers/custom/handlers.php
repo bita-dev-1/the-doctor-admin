@@ -9,6 +9,10 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 if (isset($_POST['method']) && !empty($_POST['method'])) {
+    // --- FIX: Include Encryption Core ---
+    include_once 'config/encryption.core.php';
+    // ------------------------------------
+
     include_once 'config/DB.php';
     include_once 'includes/lang.php';
     include_once 'controllers/custom/functions.core.php';
@@ -100,7 +104,7 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
             break;
 
         // Reeducation (Kiné)
-        case 'generate_sessions_auto': // Deprecated but kept for compatibility
+        case 'generate_sessions_auto':
             generate_sessions_auto($db);
             break;
         case 'validate_session':
@@ -162,7 +166,6 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
     }
 }
 
-// Helper function for deprecated auto generation (kept to avoid errors if called)
 function generate_sessions_auto($DB)
 {
     echo json_encode(["state" => "false", "message" => "Deprecated function."]);
