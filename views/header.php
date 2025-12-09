@@ -13,6 +13,12 @@ $user_display_role = $roles[$user_role] ?? 'Undefined';
 
 // Check for Super Admin
 $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
+
+// --- NEW: Check if Kiné module is enabled for this cabinet ---
+// If Super Admin, show everything. If Cabinet User, check the flag from session.
+$kine_enabled_in_cabinet = $_SESSION['user']['kine_enabled'] ?? 0;
+$show_kine_menu = ($is_super_admin || $kine_enabled_in_cabinet == 1);
+
 ?>
 <!-- BEGIN: Body-->
 
@@ -90,7 +96,8 @@ $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
 
                 <!-- START: MODIFIED - Hide Operational Links for Super Admin -->
                 <?php if (!$is_super_admin): ?>
-                    <li class=" nav-item"><a class="d-flex align-items-center" href="#"><i data-feather="calendar"></i><span
+                    <li class="nav-item open">
+                        <a class="d-flex align-items-center" href="#"><i data-feather="calendar"></i><span
                                 class="menu-title text-truncate"
                                 data-i18n="Invoice"><?= $GLOBALS['language']['rdv']; ?></span></a>
                         <ul class="menu-content">
@@ -134,97 +141,114 @@ $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
                             <span class="menu-title fw-bolder"><?= $GLOBALS['language']['waitingList']; ?></span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation">
-                            <i data-feather="activity"></i>
-                            <span class="menu-title fw-bolder">Rééducation</span>
-                        </a>
-                    </li>
-                    <!--  REMOVED: Séances du jour (Merged into Espace Kiné) -->
+
+                    <!-- MODIFIED: Show Kiné Menu only if enabled -->
+                    <?php if ($show_kine_menu): ?>
+                        <li class="nav-item">
+                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation">
+                                <i data-feather="activity"></i>
+                                <span class="menu-title fw-bolder">Rééducation</span>
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/messages">
                                 <i data-feather='message-circle'></i>
                                 <span class="menu-title fw-bolder"><?= "Messages"; ?></span>
                             </a>
                         </li>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <!-- END: MODIFIED - Hide Operational Links for Super Admin -->
 
                 <!-- Admin Only Menu -->
                 <?php if ($user_role == 'admin') { ?>
-                        <li class="navigation-header"><span><?= $GLOBALS['language']['administration']; ?></span></li>
+                    <li class="navigation-header"><span><?= $GLOBALS['language']['administration']; ?></span></li>
 
-                        <?php if ($is_super_admin) { ?>
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/cabinets">
-                                        <i data-feather="briefcase"></i>
-                                        <span class="menu-title fw-bolder">Cabinets</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/specialities">
-                                        <i data-feather="star"></i>
-                                        <span class="menu-title fw-bolder"><?= $GLOBALS['language']['specialities']; ?></span>
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation-types">
-                                        <i data-feather="list"></i>
-                                        <span class="menu-title fw-bolder">Types de Rééducation</span>
-                                    </a>
-                                </li>
-                        <?php } else { ?>
-                                <!-- START: New Menu Item for Cabinet Admin -->
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/cabinet-services">
-                                        <i data-feather="settings"></i>
-                                        <span class="menu-title fw-bolder">Configuration Tarifs</span>
-                                    </a>
-                                </li>
-                                <!-- END: New Menu Item for Cabinet Admin -->
-                        <?php } ?>
+                    <?php if ($is_super_admin) { ?>
+                        <li class="nav-item">
+                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/cabinets">
+                                <i data-feather="briefcase"></i>
+                                <span class="menu-title fw-bolder">Cabinets</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/specialities">
+                                <i data-feather="star"></i>
+                                <span class="menu-title fw-bolder"><?= $GLOBALS['language']['specialities']; ?></span>
+                            </a>
+                        </li>
 
                         <li class="nav-item">
-                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/users">
-                                <i data-feather="users"></i>
-                                <span class="menu-title fw-bolder"><?= $GLOBALS['language']['users']; ?></span>
+                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation-types">
+                                <i data-feather="list"></i>
+                                <span class="menu-title fw-bolder">Types de Rééducation</span>
                             </a>
                         </li>
+                    <?php } else { ?>
+                        <!-- START: New Menu Item for Cabinet Admin (Only if Kiné Enabled) -->
+                        <?php if ($show_kine_menu): ?>
+                            <li class="nav-item">
+                                <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/cabinet-services">
+                                    <i data-feather="settings"></i>
+                                    <span class="menu-title fw-bolder">Configuration Tarifs</span>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        <!-- END: New Menu Item for Cabinet Admin -->
+                    <?php } ?>
 
-                        <?php if (!$is_super_admin): // Patients & Reports are not for Super Admin based on "no relation to ops" ?>
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation/reports">
-                                        <i data-feather="bar-chart-2"></i>
-                                        <span class="menu-title fw-bolder">Rapports Kiné</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/patients">
-                                        <i data-feather="user-check"></i>
-                                        <span class="menu-title fw-bolder"><?= $GLOBALS['language']['patients']; ?></span>
-                                    </a>
-                                </li>
-                                <?php if (in_array($user_role, ['admin', 'nurse'])): ?>
-                                        <li class="nav-item">
-                                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/caisse">
-                                                <i data-feather="dollar-sign"></i>
-                                                <span class="menu-title fw-bolder">Caisse</span>
-                                            </a>
-                                        </li>
-                                <?php endif; ?>
+                    <li class="nav-item">
+                        <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/users">
+                            <i data-feather="users"></i>
+                            <span class="menu-title fw-bolder"><?= $GLOBALS['language']['users']; ?></span>
+                        </a>
+                    </li>
+
+                    <?php if (!$is_super_admin): // Patients & Reports are not for Super Admin based on "no relation to ops" ?>
+                        <!-- MODIFIED: Show Reports only if Kiné Enabled -->
+                        <?php if ($show_kine_menu): ?>
+                            <li class="nav-item">
+                                <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/reeducation/reports">
+                                    <i data-feather="bar-chart-2"></i>
+                                    <span class="menu-title fw-bolder">Rapports Kiné</span>
+                                </a>
+                            </li>
                         <?php endif; ?>
 
-                <?php } ?>
-                <?php if (in_array($user_role, ['doctor', 'nurse', 'admin'])): ?>
-                        <li
-                            class="nav-item <?php echo (stripos($_SERVER['REQUEST_URI'], 'salle_kine') !== false) ? 'active' : ''; ?>">
-                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/salle_kine">
-                                <i data-feather="activity"></i> <!-- أيقونة النشاط -->
-                                <span class="menu-title fw-bolder">Espace Kiné (Cockpit)</span>
+                        <li class="nav-item">
+                            <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/patients">
+                                <i data-feather="user-check"></i>
+                                <span class="menu-title fw-bolder"><?= $GLOBALS['language']['patients']; ?></span>
                             </a>
                         </li>
+                        <?php if (in_array($user_role, ['admin', 'nurse'])): ?>
+                            <!-- MODIFIED: Show Caisse only if Kiné Enabled (Assuming Caisse is for Kiné payments) -->
+                            <?php if ($show_kine_menu): ?>
+                                <li class="nav-item">
+                                    <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/caisse">
+                                        <i data-feather="dollar-sign"></i>
+                                        <span class="menu-title fw-bolder">Caisse</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                <?php } ?>
+
+                <?php
+                // MODIFIED: Show Espace Kiné only to Doctors, Nurses, and Cabinet Admins (Exclude Super Admin) AND if Kiné Enabled
+                if ((in_array($user_role, ['doctor', 'nurse']) || ($user_role === 'admin' && !$is_super_admin)) && $show_kine_menu):
+                    ?>
+                    <li
+                        class="nav-item <?php echo (stripos($_SERVER['REQUEST_URI'], 'salle_kine') !== false) ? 'active' : ''; ?>">
+                        <a class="d-flex align-items-center" href="<?= SITE_URL; ?>/salle_kine">
+                            <i data-feather="activity"></i> <!-- أيقونة النشاط -->
+                            <span class="menu-title fw-bolder">Espace Kiné (Cockpit)</span>
+                        </a>
+                    </li>
                 <?php endif; ?>
+
                 <!-- Profile Menu -->
                 <li class="navigation-header"><span><?= $GLOBALS['language']['profile']; ?></span></li>
                 <li class="nav-item">

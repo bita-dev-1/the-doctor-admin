@@ -1,26 +1,33 @@
 <?php
 global $queries;
+$queries = array(); // تهيئة المصفوفة لتجنب الأخطاء في حال عدم وجود جلسة
+
 if (isset($_SESSION['user'])) {
 
     $user_role = $_SESSION['user']['role'] ?? null;
     $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
 
-    // --- START: Dynamic Cabinet Conditions ---
+    // --- تهيئة متغيرات الشروط بقيم فارغة لتجنب أخطاء Undefined Variable ---
     $users_cabinet_condition = "";
     $rdv_cabinet_condition = "";
+    $service_join_condition = "1=1"; // شرط افتراضي صحيح دائماً
 
+    // --- بناء الشروط بناءً على الصلاحيات ---
     if ($user_role === 'admin' && !empty($user_cabinet_id)) {
+        // أدمن العيادة: يرى فقط مستخدمي ومواعيد عيادته
         $users_cabinet_condition = " AND users.cabinet_id = " . intval($user_cabinet_id);
         $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
+        $service_join_condition = "cs.cabinet_id = " . intval($user_cabinet_id);
     } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
+        // الطبيب/الممرض: يرون مواعيدهم أو مواعيد عيادتهم
         if (!empty($user_cabinet_id)) {
             $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
         } else {
             $rdv_cabinet_condition = " AND rdv.cabinet_id IS NULL";
         }
     }
-    // --- END: Dynamic Cabinet Conditions ---
 
+    // --- مصفوفة الاستعلامات ---
     $queries = array(
         "qr_cabinets_table" => "SELECT id, name, address, phone, created_at, id as __action FROM cabinets WHERE deleted = 0",
 
@@ -42,7 +49,7 @@ if (isset($_SESSION['user'])) {
                                   LEFT JOIN specialty ON specialty.id = users.specialty_id 
                                   LEFT JOIN communes ON communes.id = users.commune_id 
                                   LEFT JOIN willaya ON willaya.id = communes.id_willaya 
-                                  WHERE users.deleted = 0 AND users.status = 'active'  $users_cabinet_condition",
+                                  WHERE users.deleted = 0 $users_cabinet_condition",
 
         "qr_doctors_table" => "SELECT users.id, users.image1 as _photo, CONCAT( users.first_name,' ',users.last_name) as full_name, users.phone, users.email, specialty.namefr as specialty, users.id as _stateId, users.rdv as __enableRdv , communes.name as commune, willaya.willaya , users.recomondation, users.views, users.status as _state , users.id as __action FROM users LEFT JOIN specialty ON specialty.id = users.specialty_id LEFT JOIN communes ON communes.id = users.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE users.deleted = 0 AND users.status = 'active' AND users.role = 'doctor' $users_cabinet_condition",
 
@@ -85,7 +92,7 @@ if (isset($_SESSION['user'])) {
         JOIN patient p ON rd.patient_id = p.id
         LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
         LEFT JOIN rdv r ON rs.rdv_id = r.id
-        WHERE rs.status = 'planned' AND r.date = CURDATE() AND rd.technician_id = " . $_SESSION['user']['id'],
+        WHERE rs.status = 'planned' AND r.date = CURDATE() AND rd.technician_id = " . intval($_SESSION['user']['id']),
 
         "qr_reeducation_types_table" => "SELECT id, name, id as __action FROM reeducation_types WHERE deleted = 0",
 
@@ -100,20 +107,18 @@ if (isset($_SESSION['user'])) {
                                     JOIN reeducation_dossiers rd ON ct.dossier_id = rd.id
                                     JOIN patient p ON rd.patient_id = p.id
                                     JOIN users u ON ct.recorded_by = u.id 
-                                    WHERE 1=1", // <--- تمت الإضافة هنا
-
-        // استبدل عنصر المصفوفة "qr_cabinet_services_table" بالكود التالي:
+                                    WHERE 1=1",
 
         "qr_cabinet_services_table" => "SELECT 
-    cs.id, 
-    cs.custom_name, -- تم إضافة هذا العمود
-    rt.name as type_reeducation, 
-    cs.pricing_model, 
-    CONCAT(cs.commission_value, IF(cs.commission_type='percent', '%', ' DA')) as commission_display,
-    cs.id as __action 
-FROM cabinet_services cs 
-JOIN reeducation_types rt ON cs.reeducation_type_id = rt.id 
-WHERE cs.deleted = 0 AND cs.cabinet_id = " . intval($_SESSION['user']['cabinet_id'] ?? 0),
+            cs.id, 
+            cs.custom_name, 
+            rt.name as type_reeducation, 
+            cs.pricing_model, 
+            CONCAT(cs.commission_value, IF(cs.commission_type='percent', '%', ' DA')) as commission_display,
+            cs.id as __action 
+        FROM cabinet_services cs 
+        JOIN reeducation_types rt ON cs.reeducation_type_id = rt.id 
+        WHERE cs.deleted = 0 AND cs.cabinet_id = " . intval($_SESSION['user']['cabinet_id'] ?? 0),
 
     );
 

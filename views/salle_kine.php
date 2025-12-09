@@ -1,14 +1,26 @@
 <?php
-// التحقق من الصلاحيات
+// التحقق من تسجيل الدخول
 if (!isset($_SESSION['user']['id'])) {
     header('location:' . SITE_URL . '/login');
     exit();
 }
+
+// --- START: KINE PERMISSION CHECK ---
+// التحقق مما إذا كان المستخدم سوبر أدمن أو أن العيادة مفعلة لخدمة Kiné
+$is_super_admin = ($_SESSION['user']['role'] === 'admin' && empty($_SESSION['user']['cabinet_id']));
+$kine_enabled = $_SESSION['user']['kine_enabled'] ?? 0;
+
+if (!$is_super_admin && $kine_enabled != 1) {
+    include 'views/404.php';
+    exit();
+}
+// --- END: KINE PERMISSION CHECK ---
+
 include_once 'header.php';
 ?>
 
 <style>
-    /* --- Styles du Cockpit (Layout) --- */
+    /* --- Styles du Cockpit (Layout Base) --- */
     .cockpit-wrapper {
         height: calc(100vh - 170px);
         overflow: hidden;
@@ -51,6 +63,7 @@ include_once 'header.php';
     .patient-card h6 {
         font-size: 0.95rem;
         margin-bottom: 0.2rem;
+        color: #5e5873;
     }
 
     .workspace-area {
@@ -89,6 +102,76 @@ include_once 'header.php';
         font-size: 0.75rem;
         padding: 0.3rem 0.5rem;
     }
+
+    /* ==========================================================================
+       DARK MODE SUPPORT (html.dark-layout)
+       ========================================================================== */
+
+    html.dark-layout .cockpit-wrapper {
+        background-color: #283046;
+        border-color: #3b4253;
+    }
+
+    html.dark-layout .patient-queue {
+        background-color: #283046;
+        border-right-color: #3b4253;
+    }
+
+    html.dark-layout .queue-content .sticky-top {
+        background-color: #283046 !important;
+        /* Override bg-white */
+        border-bottom-color: #3b4253 !important;
+    }
+
+    html.dark-layout .patient-card {
+        border-bottom-color: #3b4253;
+    }
+
+    html.dark-layout .patient-card:hover {
+        background-color: #343d55;
+    }
+
+    html.dark-layout .patient-card.active {
+        background-color: rgba(115, 103, 240, 0.12) !important;
+        /* Darker active state */
+        border-left-color: #7367f0;
+    }
+
+    html.dark-layout .patient-card h6 {
+        color: #d0d2d6;
+    }
+
+    html.dark-layout .workspace-area {
+        background-color: #161d31;
+        /* Darker background for workspace */
+    }
+
+    html.dark-layout .queue-tabs .nav-link {
+        color: #b4b7bd;
+    }
+
+    html.dark-layout .queue-tabs .nav-link.active {
+        color: #7367f0;
+        border-bottom-color: #7367f0;
+    }
+
+    /* Adjust Input Groups in Dark Mode */
+    html.dark-layout .input-group-text {
+        background-color: #3b4253;
+        border-color: #3b4253;
+        color: #b4b7bd;
+    }
+
+    html.dark-layout .form-control {
+        background-color: #283046;
+        border-color: #3b4253;
+        color: #d0d2d6;
+    }
+
+    html.dark-layout .form-control:focus {
+        background-color: #283046;
+        border-color: #7367f0;
+    }
 </style>
 
 <div class="app-content content">
@@ -124,6 +207,7 @@ include_once 'header.php';
                         </ul>
 
                         <div class="tab-content queue-content">
+                            <!-- Tab: Aujourd'hui -->
                             <div class="tab-pane active h-100" id="queue-today" role="tabpanel">
                                 <div class="p-1 border-bottom bg-white sticky-top">
                                     <div class="input-group input-group-merge">
@@ -139,6 +223,7 @@ include_once 'header.php';
                                 </div>
                             </div>
 
+                            <!-- Tab: En cours -->
                             <div class="tab-pane h-100" id="queue-active" role="tabpanel">
                                 <div class="p-1 border-bottom bg-white sticky-top">
                                     <div class="input-group input-group-merge">

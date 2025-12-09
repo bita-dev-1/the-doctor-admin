@@ -1,0 +1,488 @@
+<?php
+
+function postRdv()
+{
+    $patient_id = filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT);
+    $first_name = filter_var(($_POST['first_name'] ?? ""), FILTER_SANITIZE_STRING);
+    $last_name = filter_var(($_POST['last_name'] ?? ""), FILTER_SANITIZE_STRING);
+    $phone = filter_var(($_POST['phone'] ?? ""), FILTER_SANITIZE_STRING);
+
+    if (empty($patient_id)) {
+        if (!empty($first_name) && !empty($last_name)) {
+            $patient_data = [
+                "first_name" => $first_name,
+                "last_name" => $last_name,
+                "phone" => $phone,
+                "created_by" => $_SESSION['user']['id'],
+                "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
+            ];
+            $GLOBALS['db']->table = 'patient';
+            $GLOBALS['db']->data = $patient_data;
+            $patient_id = $GLOBALS['db']->insert();
+
+            if (!$patient_id) {
+                echo json_encode(["state" => "false", "message" => "Erreur lors de la création du nouveau patient."]);
+                return;
+            }
+        } else {
+            echo json_encode(["state" => "false", "message" => "Les informations du patient sont requises."]);
+            return;
+        }
+    }
+
+    $data = [
+        "doctor_id" => filter_var(($_POST['doctor'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+        "patient_id" => $patient_id,
+        "date" => filter_var(($_POST['date'] ?? date("Y-m-d")), FILTER_SANITIZE_STRING),
+        "first_name" => $first_name,
+        "last_name" => $last_name,
+        "phone" => $phone,
+        "rdv_num" => filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
+        "created_by" => $_SESSION['user']['id'],
+        "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
+    ];
+
+    $GLOBALS['db']->table = 'rdv';
+    $GLOBALS['db']->data = $data;
+    $res = $GLOBALS['db']->insert();
+
+    if ($res)
+        echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]);
+    else
+        echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
+}
+
+function get_RDV($id = NULL, $return = false)
+{
+    $user_role = $_SESSION['user']['role'] ?? null;
+    $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
+    $user_id = $_SESSION['user']['id'] ?? 0;
+
+    $id_filter = ($id != NULL ? " AND rdv.id = " . intval($id) : "");
+
+    $where_clause = "";
+    if ($user_role === 'admin' && !empty($user_cabinet_id)) {
+        $where_clause = " AND (rdv.cabinet_id = " . intval($user_cabinet_id) .
+            " OR rdv.doctor_id IN (SELECT id FROM users WHERE cabinet_id = " . intval($user_cabinet_id) . "))";
+
+    } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
+        $where_clause = " AND rdv.doctor_id = " . intval($user_id);
+    }
+
+    $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (" . implode(', ', array_map('intval', $_POST['filters'])) . ")" : " AND rdv.state >= -1");
+
+    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
+            COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name,
+            rs.payment_status
+            FROM rdv 
+            LEFT JOIN patient ON patient.id = rdv.patient_id
+            LEFT JOIN reeducation_sessions rs ON rdv.reeducation_session_id = rs.id
+            WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
+
+    $res = $GLOBALS['db']->select($sql);
+
+    $convertedData = [];
+    if (!empty($res)) {
+        foreach ($res as $items) {
+            $title = $items['patient_name'];
+            if ($items['payment_status'] === 'paid') {
+                $title .= ' (Payé ✔️)';
+            } elseif ($items['payment_status'] === 'unpaid') {
+                $title .= ' (Impayé ❌)';
+            }
+
+            $arrayData = [
+                'id' => $items['id'],
+                'title' => $title,
+                'allDay' => true,
+                'start' => $items['Date_RDV'],
+                'end' => $items['Date_RDV'],
+                'extendedProps' => [
+                    'calendar' => match ((int) $items['state']) {
+                        0 => 'warning', 1 => 'info', 2 => 'success', 3 => 'danger',
+                        default => 'secondary'
+                    },
+                    'state_id' => (int) $items['state'],
+                    'phone' => ($items['phone'] ?? ''),
+                    'num_rdv' => ($items['rdv_num'] ?? ''),
+                    'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
+                ]
+            ];
+            $convertedData[] = $arrayData;
+        }
+    }
+
+    if (empty($convertedData)) {
+        $arrayData = [
+            'id' => '0',
+            'title' => 'start calendar',
+            'allDay' => false,
+            'start' => '1970-01-01',
+            'end' => '1970-01-01',
+            'extendedProps' => ['calendar' => 'secondary', 'state_id' => 0, 'Client_id' => 0]
+        ];
+        $convertedData[] = $arrayData;
+    }
+
+    if ($return) {
+        return $convertedData;
+    }
+
+    echo json_encode($convertedData);
+}
+
+function handleRdv_nbr()
+{
+    try {
+        $response = [];
+        if (isset($_POST['doctor']) && !empty($_POST['doctor'])) {
+            $doctor_id = filter_var(($_POST['doctor']), FILTER_SANITIZE_NUMBER_INT);
+            $dateString = filter_var(($_POST['date'] ?? date('Y-m-d')), FILTER_SANITIZE_STRING);
+            $date = new DateTime($dateString);
+            setlocale(LC_TIME, 'fr_FR.UTF-8', 'fra');
+            $dayName = ucwords(strftime('%A', $date->getTimestamp()));
+            $doctor_info_sql = "SELECT tickets_day FROM users WHERE id = ?";
+            $stmt = $GLOBALS['db']->prepare($doctor_info_sql);
+            $stmt->execute([$doctor_id]);
+            $doctor_response = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($doctor_response) {
+                $tickets_day_json = $doctor_response['tickets_day'] ?? '[]';
+                $tickets_day_array = json_decode($tickets_day_json, true);
+                $nbrTickets = isset($tickets_day_array[$dayName]) ? intval($tickets_day_array[$dayName]) : 0;
+                $restTickets = [];
+                if ($nbrTickets > 0) {
+                    $all_possible_tickets = range(1, $nbrTickets);
+                    $reserved_sql = "SELECT rdv_num FROM `rdv` WHERE doctor_id = ? AND state != 3 AND date = ?";
+                    $stmt_reserved = $GLOBALS['db']->prepare($reserved_sql);
+                    $stmt_reserved->execute([$doctor_id, $dateString]);
+                    $reservedTickets = $stmt_reserved->fetchAll(PDO::FETCH_COLUMN);
+                    $restTickets = array_diff($all_possible_tickets, $reservedTickets);
+                }
+                foreach ($restTickets as $ticket_num) {
+                    $response[] = array(
+                        "id" => $ticket_num,
+                        "text" => $ticket_num
+                    );
+                }
+            }
+        }
+        echo json_encode($response);
+    } catch (Throwable $th) {
+        echo json_encode([]);
+    }
+}
+
+function updateState()
+{
+    if (isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id'])) {
+        $id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
+        $state = abs(filter_var($_POST['state'], FILTER_SANITIZE_NUMBER_INT));
+        $datetime = date('Y-m-d H:i:s');
+        $GLOBALS['db']->table = 'rdv';
+        $GLOBALS['db']->data = array("state" => "$state", "modified_at" => "$datetime", "modified_by" => $_SESSION['user']['id']);
+        $GLOBALS['db']->where = "id = $id";
+        $updated = $GLOBALS['db']->update();
+        if ($updated) {
+            echo json_encode(["state" => $updated, "message" => $GLOBALS['language']['Edited successfully']]);
+        } else {
+            echo json_encode(["state" => "false", "message" => $updated]);
+        }
+    } else
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+}
+
+function moveEvent($DB)
+{
+    if (isset($_POST['id']) && !empty($_POST['id']) && isset($_POST['date']) && !empty($_POST['date'])) {
+        $table = 'planning';
+        $data = array("Date_RDV" => $_POST['date'], "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']);
+        $DB->table = $table;
+        $DB->data = $data;
+        $DB->where = 'id = ' . $_POST['id'];
+        $updated = true && $DB->update();
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing data"]);
+    }
+    $DB = null;
+}
+
+function removeEvent($DB)
+{
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
+        $table = 'planning';
+        $data = array("deleted" => 1, "modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']);
+        $DB->table = $table;
+        $DB->data = $data;
+        $DB->where = 'id = ' . $_POST['id'];
+        $updated = true && $DB->update();
+        if ($updated)
+            echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Successfully Deleted']]);
+        else
+            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+    }
+    $DB = null;
+}
+
+function updateEvent($DB)
+{
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
+        $table = 'planning';
+        $unique_val = $_POST['id'];
+        $array_data = array();
+        foreach ($_POST['data'] as $data) {
+            if (strpos($data['name'], '__') !== false) {
+                $table_key = explode('__', $data['name'])[0];
+                $column = explode('__', $data['name'])[1];
+                if (stripos($column, 'password') !== false || stripos($column, 'pass') !== false) {
+                    $array_data[$table_key][$column] = sha1($data['value']);
+                } else {
+                    if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
+                        $array_data[$table_key][$column][] = $data['value'];
+                    } else {
+                        if (isset($array_data[$table_key][$column])) {
+                            $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
+                        } else {
+                            $array_data[$table_key][$column] = $data['value'];
+                        }
+                    }
+                }
+            } else if (stripos($data['name'], 'csrf') !== false) {
+                $csrf = $data['value'];
+                unset($data['csrf']);
+            }
+        }
+        if (isset($csrf)) {
+            $csrf = customDecrypt($csrf);
+            if (!is_csrf_valid($csrf)) {
+                echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+                exit();
+            }
+        } else {
+            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+            exit();
+        }
+        $filteredData = array_filter($array_data, function ($key) use ($table) {
+            return $key != $table;
+        }, ARRAY_FILTER_USE_KEY);
+        $restData = array_diff_key($array_data, $filteredData);
+        $restData = array_values($restData)[0];
+        $restData = array_merge($restData, array("modified_at" => date('Y-m-d H:i:s'), "modified_by" => $_SESSION['user']['data'][0]['Id']));
+        $DB->table = $table;
+        $DB->data = $restData;
+        $DB->where = 'id = ' . $unique_val;
+        $updated = true && $DB->update();
+        if ($updated && !isset($_POST['is_quote'])) {
+            $DB->table = 'planning_services';
+            $DB->where = array('planning_id' => $unique_val);
+            $DB->Delete();
+        }
+        if (is_array($filteredData) && !empty($filteredData)) {
+            $unique_id = 'planning_id';
+            foreach ($filteredData as $table_name => $data) {
+                $DB->table = $table_name;
+                if (is_array($data['service_id'])) {
+                    $extraData = array("$unique_id" => $unique_val);
+                    $data = array_map(function ($service_id) use ($extraData) {
+                        return array_merge($extraData, ['service_id' => $service_id]);
+                    }, $data['service_id']);
+                    $DB->multi = true;
+                } else {
+                    $data = array_merge($data, array("$unique_id" => $unique_val));
+                }
+                $DB->data = $data;
+                $updated = $updated && $DB->insert();
+            }
+        }
+        if ($updated) {
+            echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
+        }
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+    }
+    $DB = null;
+}
+
+function postEvent($DB)
+{
+    $array_data = array();
+    $table = 'planning';
+    foreach ($_POST['data'] as $data) {
+        if (strpos($data['name'], '__') !== false) {
+            $table_key = explode('__', $data['name'])[0];
+            $column = explode('__', $data['name'])[1];
+            if (stripos($column, 'password') !== false || stripos($column, 'pass') !== false) {
+                $array_data[$table_key][$column] = sha1($data['value']);
+            } else {
+                if (isset($array_data[$table_key][$column]) && is_array($array_data[$table_key][$column])) {
+                    $array_data[$table_key][$column][] = $data['value'];
+                } else {
+                    if (isset($array_data[$table_key][$column])) {
+                        $array_data[$table_key][$column] = [$array_data[$table_key][$column], $data['value']];
+                    } else {
+                        $array_data[$table_key][$column] = $data['value'];
+                    }
+                }
+            }
+        } else if (stripos($data['name'], 'csrf') !== false) {
+            $csrf = $data['value'];
+            unset($data['csrf']);
+        }
+    }
+    if (isset($csrf)) {
+        $csrf = customDecrypt($csrf);
+        if (!is_csrf_valid($csrf)) {
+            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+            exit();
+        }
+    } else {
+        echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+        exit();
+    }
+    $filteredData = array_filter($array_data, function ($key) use ($table) {
+        return $key != $table;
+    }, ARRAY_FILTER_USE_KEY);
+    $restData = array_diff_key($array_data, $filteredData);
+    $restData = array_values($restData)[0];
+    $restData = array_merge($restData, array("Garage_id" => $_SESSION['user']['data'][0]['Id'], "created_by" => $_SESSION['user']['data'][0]['Id']));
+    $DB->table = $table;
+    $DB->data = $restData;
+    $last_id = $DB->insert();
+    $inserted = true && $last_id;
+    if (is_array($filteredData) && !empty($filteredData)) {
+        $unique_id = ((substr($table, -1) === 's') ? substr($table, 0, -1) : $table) . '_id';
+        foreach ($filteredData as $table_name => $data) {
+            $DB->table = $table_name;
+            if (is_array($data['service_id'])) {
+                $extraData = array("$unique_id" => $last_id);
+                $data = array_map(function ($service_id) use ($extraData) {
+                    return array_merge($extraData, ['service_id' => $service_id]);
+                }, $data['service_id']);
+                $DB->multi = true;
+            } else {
+                $data = array_merge($data, array("$unique_id" => $last_id));
+            }
+            $DB->data = $data;
+            $inserted = $inserted && $DB->insert();
+        }
+    }
+    if ($inserted) {
+        echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Added successfully']]);
+    } else {
+        echo json_encode(["state" => "false", "message" => $inserted]);
+    }
+    $DB = null;
+}
+
+function get_daily_calendar_stats($DB)
+{
+    $start_date = $_POST['start'];
+    $end_date = $_POST['end'];
+    $doctor_id = $_POST['doctor_id'] ?? '';
+
+    $target_doctor_id = 0;
+    if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+        $target_doctor_id = $_SESSION['user']['id'];
+    } elseif (!empty($doctor_id)) {
+        $target_doctor_id = intval($doctor_id);
+    }
+
+    $doctor_settings = [];
+    if ($target_doctor_id) {
+        $doc = $DB->select("SELECT tickets_day, travel_hours FROM users WHERE id = $target_doctor_id")[0] ?? null;
+        if ($doc) {
+            $doctor_settings['tickets'] = json_decode($doc['tickets_day'] ?? '[]', true);
+            $doctor_settings['hours'] = json_decode($doc['travel_hours'] ?? '[]', true);
+        }
+    }
+
+    $where_clause = "rdv.deleted = 0 AND rdv.date BETWEEN '$start_date' AND '$end_date'";
+    if ($target_doctor_id) {
+        $where_clause .= " AND rdv.doctor_id = $target_doctor_id";
+    } elseif (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND rdv.cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+    }
+
+    $sql = "SELECT DATE(date) as day_date, state, COUNT(*) as count 
+            FROM rdv 
+            WHERE $where_clause 
+            GROUP BY DATE(date), state";
+
+    $results = $DB->select($sql);
+
+    $stats = [];
+    foreach ($results as $row) {
+        $date = $row['day_date'];
+        $state = intval($row['state']);
+        $count = intval($row['count']);
+
+        if (!isset($stats[$date])) {
+            $stats[$date] = [
+                'total' => 0,
+                'details' => [0 => 0, 1 => 0, 2 => 0, 3 => 0]
+            ];
+        }
+
+        if ($state != 3) {
+            $stats[$date]['total'] += $count;
+        }
+        $stats[$date]['details'][$state] = $count;
+    }
+
+    echo json_encode([
+        'bookings' => $stats,
+        'settings' => $doctor_settings
+    ]);
+}
+
+function get_calendar_stats($DB)
+{
+    $start_date = $_POST['start'] ?? date('Y-m-01');
+    $end_date = $_POST['end'] ?? date('Y-m-t');
+    $doctor_id = $_POST['doctor_id'] ?? '';
+
+    $where_clause = "rdv.deleted = 0 AND rdv.date BETWEEN '$start_date' AND '$end_date'";
+
+    if ($_SESSION['user']['role'] === 'doctor' || $_SESSION['user']['role'] === 'nurse') {
+        $where_clause .= " AND rdv.doctor_id = " . $_SESSION['user']['id'];
+    } elseif (!empty($doctor_id)) {
+        $where_clause .= " AND rdv.doctor_id = " . intval($doctor_id);
+    } elseif (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND rdv.cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+    }
+
+    $sql = "SELECT state, COUNT(*) as count FROM rdv WHERE $where_clause GROUP BY state";
+    $results = $DB->select($sql);
+
+    $stats = [
+        'total' => 0,
+        'created' => 0,
+        'confirmed' => 0,
+        'completed' => 0,
+        'canceled' => 0
+    ];
+
+    foreach ($results as $row) {
+        $count = intval($row['count']);
+        $stats['total'] += $count;
+
+        switch ($row['state']) {
+            case 0:
+                $stats['created'] = $count;
+                break;
+            case 1:
+                $stats['confirmed'] = $count;
+                break;
+            case 2:
+                $stats['completed'] = $count;
+                break;
+            case 3:
+                $stats['canceled'] = $count;
+                break;
+        }
+    }
+
+    echo json_encode($stats);
+}
+?>

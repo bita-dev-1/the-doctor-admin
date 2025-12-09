@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Reeducation Form Styles
+   ========================================================================== */
+
+/* --- 1. Base Card & Section Styles --- */
+.card-modern {
+  border: none;
+  box-shadow: 0 4px 24px 0 rgba(34, 41, 47, 0.05);
+  border-radius: 0.75rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.card-modern:hover {
+  box-shadow: 0 6px 30px 0 rgba(34, 41, 47, 0.1);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #ebe9f1;
+  padding-bottom: 0.75rem;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(115, 103, 240, 0.12);
+  color: #7367f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #5e5873;
+  margin: 0;
+}
+
+/* --- 2. Pricing Display --- */
+.price-display-box {
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  border: 1px dashed #d8d6de;
+}
+
+.price-amount {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #28c76f;
+  display: block;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #5e5873;
+}
+
+.planning-calendar-wrapper {
+  background: #fff;
+  border: 1px solid #ebe9f1;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+/* --- 3. Calendar General Tweaks --- */
+.fc-toolbar-title {
+  font-size: 1rem !important;
+}
+.fc-button {
+  padding: 0.2rem 0.5rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* --- 4. Day Cell & Stats Styling (The Fix) --- */
+
+/* تكبير مساحة الخلية لاستيعاب الشريط */
+.fc-daygrid-day-frame {
+  min-height: 100px !important; /* ارتفاع أكبر */
+  padding-bottom: 35px !important; /* مساحة سفلية للشريط */
+  position: relative !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* الحاوية الرئيسية للشريط */
+.slots-stats-container {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none; /* السماح بالنقر من خلالها */
+  padding: 0 6px; /* هامش جانبي */
+}
+
+/* تصميم الكبسولة العريضة */
+.stats-capsule {
+  display: flex;
+  width: 100%; /* ملء العرض المتاح */
+  max-width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  font-size: 0.85rem; /* خط أكبر وأوضح */
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: help;
+  pointer-events: auto; /* تفعيل التلميح */
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* تنسيق الأقسام (توزيع متساوي) */
+.stat-segment {
+  flex: 1; /* يجعل القسمين متساويين في العرض */
+  text-align: center;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* الجزء الأيسر (المحجوز - أحمر) */
+.stat-segment.booked {
+  background-color: #ffe0e0;
+  color: #d32f2f;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* الجزء الأيمن (المتاح - أخضر) */
+.stat-segment.free {
+  background-color: #d4f8db;
+  color: #28c76f;
+}
+
+/* --- 5. Calendar States (Selection, Full, Disabled) --- */
+
+/* Selected Day */
+td.fc-daygrid-day.fc-day-selected {
+  background-color: #7367f0 !important;
+}
+td.fc-daygrid-day.fc-day-selected .fc-daygrid-day-number {
+  color: white !important;
+}
+
+/* Full Day (No slots) */
+.fc-day-full {
+  background-color: #ffedeb !important;
+  color: #ea5455 !important;
+  cursor: not-allowed;
+}
+
+/* Non-Working Day Pattern */
+.fc-non-working-day {
+  background-color: #f6f6f6 !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    #e0e0e0 5px,
+    #e0e0e0 6px
+  );
+}
+
+/* ==========================================================================
+   DARK MODE SUPPORT (html.dark-layout)
+   ========================================================================== */
+
+html.dark-layout .card-modern {
+  background-color: #283046;
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.24);
+}
+html.dark-layout .section-header {
+  border-bottom-color: #3b4253;
+}
+html.dark-layout .section-title,
+html.dark-layout .form-label {
+  color: #d0d2d6;
+}
+html.dark-layout .price-display-box {
+  background-color: #161d31;
+  border-color: #3b4253;
+}
+html.dark-layout .price-amount input {
+  color: #28c76f !important;
+}
+html.dark-layout .planning-calendar-wrapper {
+  background-color: #283046;
+  border-color: #3b4253;
+}
+
+/* Dark Mode Calendar Overrides */
+html.dark-layout .fc-theme-standard td,
+html.dark-layout .fc-theme-standard th {
+  border-color: #3b4253;
+}
+html.dark-layout .fc-toolbar-title {
+  color: #d0d2d6;
+}
+html.dark-layout .fc-daygrid-day-number {
+  color: #b4b7bd;
+}
+html.dark-layout .fc-col-header-cell-cushion {
+  color: #d0d2d6;
+}
+html.dark-layout .fc-button-primary {
+  background-color: #7367f0;
+  border-color: #7367f0;
+}
+html.dark-layout .fc-day-full {
+  background-color: #462e2e !important;
+  color: #ff6b6b !important;
+}
+
+html.dark-layout .fc-non-working-day {
+  background-color: #161d31 !important;
+  opacity: 0.4;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    #283046 5px,
+    #283046 6px
+  );
+}
+
+html.dark-layout .form-control,
+html.dark-layout .form-select {
+  background-color: #283046;
+  border-color: #3b4253;
+  color: #d0d2d6;
+}
+html.dark-layout .form-control:focus {
+  background-color: #283046;
+  border-color: #7367f0;
+}
+html.dark-layout .input-group-text {
+  background-color: #3b4253;
+  border-color: #3b4253;
+  color: #d0d2d6;
+}
+
+/* Dark Mode Capsule */
+html.dark-layout .stat-segment.booked {
+  background-color: #5e3030;
+  color: #ff8f8f;
+  border-right-color: #3b4253;
+}
+html.dark-layout .stat-segment.free {
+  background-color: #224230;
+  color: #48da89;
+}
+html.dark-layout .stats-capsule {
+  border-color: #3b4253;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}

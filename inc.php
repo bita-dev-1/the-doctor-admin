@@ -24,6 +24,10 @@ try {
 } catch (\Dotenv\Exception\InvalidPathException $e) {
     // die("Could not find .env file. Please create one in the root directory.");
     // تم التعليق لتجنب توقف الموقع في حال عدم وجود الملف، الاعتماد على القيم الافتراضية
+} catch (\Dotenv\Exception\InvalidFileException $e) {
+    // Catch syntax errors in .env file (e.g., lines not following KEY=VALUE format)
+    // This prevents the Fatal Error: Uncaught Dotenv\Exception\InvalidFileException
+    error_log("Dotenv Syntax Error: " . $e->getMessage());
 }
 
 // --- Auto-detect Environment and Paths ---
