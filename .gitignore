@@ -23,3 +23,5 @@
 
 # Composer dependencies
 /vendor/
+
+/database_backup
