@@ -24,7 +24,12 @@ function moveUploadedFile($maxFileSize, $valid_extensions)
                 $path_final = $path . strtolower($final_image);
                 if (move_uploaded_file($tmp, $path_final)) {
                     $upfile['old'] = $img;
-                    $upfile['new'] = SITE_URI . $path_final;
+
+                    // --- التعديل هنا ---
+                    // تم إزالة SITE_URI ليتم تخزين المسار النسبي فقط (مثلاً: uploads/image.jpg)
+                    $upfile['new'] = $path_final;
+                    // ------------------
+
                     $movedFile[] = $upfile;
                 }
             }

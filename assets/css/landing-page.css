@@ -1,0 +1,574 @@
+/* =========================================
+   1. المتغيرات وإعدادات الصفحة (Variables & Reset)
+   ========================================= */
+:root {
+  /* لوحة الألوان - Color Palette */
+  --primary: #0ea5e9; /* أزرق سماوي - للنشاط */
+  --primary-dark: #0284c7; /* أزرق أغمق - للتفاعل */
+  --secondary: #0f172a; /* كحلي داكن - للنصوص والعناوين */
+  --text-main: #334155; /* رمادي غامق - للنصوص */
+  --text-muted: #64748b; /* رمادي فاتح - للتفاصيل */
+  --bg-body: #f8fafc; /* خلفية الصفحة */
+  --bg-card: #ffffff; /* خلفية البطاقات */
+
+  /* الظلال - Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-color: 0 10px 25px -5px rgba(14, 165, 233, 0.25); /* ظل ملون */
+
+  /* المسافات والحواف */
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --container-width: 1200px;
+  --font-main: "Plus Jakarta Sans", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  transition: 0.3s;
+}
+ul {
+  list-style: none;
+}
+
+/* =========================================
+   2. المكونات العامة (Utility Classes)
+   ========================================= */
+.container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* الأزرار المخصصة */
+.btn-primary-custom {
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary-custom:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-color);
+}
+
+.btn-outline-custom {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid #cbd5e1;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-outline-custom:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f0f9ff;
+}
+
+/* Social Buttons */
+.social-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: 0.3s;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: var(--text-muted);
+}
+.social-btn:hover {
+  transform: translateY(-3px);
+  border-color: transparent;
+  color: white;
+}
+.btn-fb:hover {
+  background: #1877f2;
+  box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
+}
+.btn-insta:hover {
+  background: #e1306c;
+  box-shadow: 0 4px 10px rgba(225, 48, 108, 0.3);
+}
+
+/* =========================================
+   3. الشريط العلوي (Navbar)
+   ========================================= */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85); /* شبه شفاف */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 15px 0;
+  transition: 0.3s;
+}
+
+.nav-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand i {
+  color: var(--primary);
+}
+
+/* =========================================
+   4. قسم الهيرو (Hero Section)
+   ========================================= */
+.hero {
+  padding-top: 120px; /* مسافة للناف بار */
+  padding-bottom: 60px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.hero-content {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+
+.specialty-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e0f2fe;
+  color: var(--primary-dark);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.hero h1 {
+  font-size: 3.5rem;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--secondary);
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.location-text {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-img-box {
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  background: white;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+}
+
+.hero-img {
+  width: 100%;
+  height: 450px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.status-badge {
+  position: absolute;
+  bottom: 30px;
+  right: -20px;
+  background: white;
+  padding: 15px 25px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* =========================================
+   5. الإحصائيات (Stats)
+   ========================================= */
+.stats-section {
+  margin-bottom: 60px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  background: white;
+  padding: 30px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid #f1f5f9;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 10px;
+  border-right: 1px solid #f1f5f9;
+}
+.stat-item:last-child {
+  border-right: none;
+}
+
+.stat-item h3 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--secondary);
+  margin-bottom: 5px;
+}
+
+.stat-item p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-icon {
+  color: var(--primary);
+}
+
+/* زر اللايك المتفاعل */
+.recommend-btn:active {
+  transform: scale(0.95);
+}
+.recommend-btn.liked .fa-heart {
+  color: #ef4444;
+  animation: heartBeat 0.5s;
+}
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================================
+   6. المحتوى الرئيسي (Main Grid)
+   ========================================= */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* المحتوى يأخذ الثلثين، القائمة الجانبية الثلث */
+  gap: 30px;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f1f5f9;
+  transition: 0.3s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* بطاقة الحجز الجانبية */
+.booking-widget {
+  background: linear-gradient(135deg, var(--secondary) 0%, #1e293b 100%);
+  color: white;
+  position: sticky;
+  top: 100px; /* لتبقى ثابتة عند النزول */
+  border: none;
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-book-white {
+  width: 100%;
+  background: white;
+  color: var(--secondary);
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.btn-book-white:hover {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+}
+
+/* جهات الاتصال */
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-icon {
+  width: 50px;
+  height: 50px;
+  background: #f0f9ff;
+  color: var(--primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* جدول الأوقات */
+.schedule-table tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+.schedule-table td {
+  padding: 12px 0;
+  font-size: 0.95rem;
+}
+.today-row td {
+  color: var(--primary);
+}
+
+/* =========================================
+   7. الفوتر (Footer)
+   ========================================= */
+.footer {
+  background: var(--secondary);
+  color: white;
+  padding: 60px 0 30px;
+  margin-top: auto;
+}
+.footer a {
+  color: #cbd5e1;
+}
+.footer a:hover {
+  color: white;
+}
+
+/* =========================================
+   8. الموبايل (Mobile Sticky Bar)
+   ========================================= */
+.mobile-sticky-bar {
+  display: none; /* مخفي على الكمبيوتر */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  padding: 15px 20px;
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+  z-index: 999;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* =========================================
+   9. المودال (Modals)
+   ========================================= */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6); /* خلفية داكنة مع ضبابية */
+  backdrop-filter: blur(5px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-content-box {
+  background: white;
+  width: 100%;
+  max-width: 550px;
+  border-radius: 24px;
+  padding: 40px;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* سلوتات الحجز */
+.time-slot-btn {
+  padding: 12px 5px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: 0.2s;
+  font-size: 0.9rem;
+}
+.time-slot-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.time-slot-btn.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* =========================================
+   10. التجاوب (Responsive Media Queries)
+   ========================================= */
+@media (max-width: 992px) {
+  .container {
+    width: 100%;
+  }
+  .hero-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-img-box {
+    display: none; /* أو يمكن إظهارها بشكل أصغر */
+  }
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat-item {
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 20px;
+  }
+  .mobile-hidden {
+    display: none !important;
+  }
+  .booking-widget {
+    display: none; /* إخفاء الودجت الجانبي على الموبايل لأن لدينا الشريط السفلي */
+  }
+  .mobile-sticky-bar {
+    display: flex;
+  }
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+  .location-text {
+    justify-content: center;
+  }
+  .desktop-actions {
+    justify-content: center;
+  }
+  body {
+    padding-bottom: 80px; /* مسافة للشريط السفلي */
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero h1 {
+    font-size: 2rem;
+  }
+  .navbar {
+    padding: 10px 0;
+  }
+  .brand span {
+    font-size: 1.1rem;
+  }
+}

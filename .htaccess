@@ -1,11 +1,14 @@
 RewriteEngine On
+
+# General Route (Dashboard & API)
+# هذا يوجه الطلبات لـ index.php فقط إذا لم يكن الملف موجوداً فعلياً
+# بما أن landing_loader.php ملف موجود، سيتم فتحه مباشرة دون تدخل هذا الكود
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !(\.png|\.ico|\.txt|\.flv|\.ppt|\.doc|\.pdf|\.xls|\.csv|\.jpg|\.webp|\.gif|\.jpeg|\.jfif|\.mp4|\.mov|\.docx|\.mpeg|\.mpg|\.mkv|\.mp3|\.m4a|\.zip|\.css|\.svg|\.js|\.map|\.json)$
-RewriteRule (.\*) index.php [QSA,L]
+RewriteRule (.*) index.php [QSA,L]
 
 # php -- BEGIN cPanel-generated handler, do not edit
-
-# Set the “ea-php81” package as the default “PHP” programming language.
-
 <IfModule mime_module>
   AddHandler application/x-httpd-ea-php81 .php .php8 .phtml
 </IfModule>
