@@ -1,1 +1,0 @@
-csrf|s:100:"89e908cacfee013fa2ab27f881fb4c77699dd3cf6b5a76a3d5826e7bd2f4b5e9364a4dfdcc47813f9066b773314035de1f9a";user|a:8:{s:2:"id";i:512;s:4:"role";s:5:"admin";s:10:"cabinet_id";i:5;s:10:"first_name";s:4:"deep";s:9:"last_name";s:7:"valoper";s:6:"image1";s:43:"http://localhost:8001/uploads/624175077.png";s:20:"must_change_password";i:0;s:12:"kine_enabled";i:1;}

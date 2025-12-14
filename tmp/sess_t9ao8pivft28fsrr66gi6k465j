@@ -1,1 +1,0 @@
-csrf|s:100:"faf1b8c168db6ddd6d79648a40d0db0d4f14906507841f682f563f446783692fa7001ea53f70629f7bc372b8de1eb2304754";user|a:8:{s:2:"id";i:509;s:4:"role";s:6:"doctor";s:10:"cabinet_id";i:5;s:10:"first_name";s:5:"ADDAR";s:9:"last_name";s:13:"MOHAMED AKRAM";s:6:"image1";s:44:"http://localhost:8001/uploads/280535034.jfif";s:20:"must_change_password";i:0;s:12:"kine_enabled";i:1;}
