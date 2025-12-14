@@ -1,197 +1,200 @@
 <?php
-
 class DB
 {
-
-    private $host = 'localhost';
-    private $db_name = 'the_doctor_db1';
-    private $username = 'root';
-    private $password = '';
-
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $pdo;
-
     public $table;
-    public $data = [];
+    public $data;
     public $where;
-    public $column = 'id';
+    public $column;
     public $multi = false;
+    public $field;
+    public $value;
 
     public function __construct()
     {
-        if (isset($_ENV['DB_HOST']))
-            $this->host = $_ENV['DB_HOST'];
-        if (isset($_ENV['DB_NAME']))
-            $this->db_name = $_ENV['DB_NAME'];
-        if (isset($_ENV['DB_USER']))
-            $this->username = $_ENV['DB_USER'];
-        if (isset($_ENV['DB_PASS']))
-            $this->password = $_ENV['DB_PASS'];
+        // 1. محاولة جلب البيانات من متغيرات البيئة (التي حملها inc.php)
+        // نستخدم $_ENV كخيار أول، ثم getenv كخيار ثانٍ
+        $this->host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'localhost';
+        $this->db_name = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'the_doctor_db';
+        $this->username = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'root';
+        $this->password = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
+
+        // التحقق من وجود البيانات (للتصحيح فقط)
+        if (empty($this->db_name) || empty($this->username)) {
+            // محاولة تحميل inc.php يدوياً إذا لم يتم تحميله (حالة نادرة)
+            if (file_exists(__DIR__ . '/../../inc.php')) {
+                require_once(__DIR__ . '/../../inc.php');
+                $this->host = $_ENV['DB_HOST'] ?? 'localhost';
+                $this->db_name = $_ENV['DB_NAME'] ?? '';
+                $this->username = $_ENV['DB_USER'] ?? 'root';
+                $this->password = $_ENV['DB_PASS'] ?? '';
+            }
+        }
+
+        $this->connect();
+    }
+
+    public function connect()
+    {
+        $this->pdo = null;
 
         try {
             $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
 
-            $options = array(
+            $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                // التعديل: تفعيل المحاكاة قد يساعد في تمرير الحزم الكبيرة في بعض البيئات
-                PDO::ATTR_EMULATE_PREPARES => true,
-                PDO::ATTR_PERSISTENT => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
-                PDO::ATTR_TIMEOUT => 300
-            );
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ];
 
             $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
 
-            // محاولة فرض زيادة الحجم المسموح به عالمياً وللجلسة
-            try {
-                $this->pdo->exec("SET NAMES 'utf8mb4'");
-                $this->pdo->exec("SET SESSION wait_timeout=28800");
-                $this->pdo->exec("SET SESSION max_allowed_packet=67108864"); // 64MB Session
-                // محاولة تغيير الإعداد العالمي (يتطلب صلاحيات root)
-                $this->pdo->exec("SET GLOBAL max_allowed_packet=67108864");
-            } catch (Exception $e) {
-                // تجاهل الخطأ إذا لم تكن هناك صلاحيات
-            }
+        } catch (PDOException $exception) {
+            // تسجيل الخطأ في ملف اللوج بدلاً من عرضه للمستخدم
+            error_log("DB Connection Error: " . $exception->getMessage());
 
-        } catch (PDOException $e) {
-            die("Connection failed: " . $e->getMessage());
+            // إرجاع رسالة JSON نظيفة
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                "state" => "false",
+                "message" => "Database Connection Failed. Check server logs."
+            ]);
+            exit();
         }
+
+        return $this->pdo;
     }
 
-    public function select($sql, $params = [])
+    // ... (باقي دوال الكلاس: select, insert, update, delete تبقى كما هي) ...
+
+    public function select($sql)
     {
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute();
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            die("Select Error: " . $e->getMessage());
+            error_log("SQL Error: " . $e->getMessage() . " in Query: " . $sql);
+            return [];
         }
     }
 
-    public function insert()
-    {
-        if (empty($this->data))
-            return false;
-
-        try {
-            if ($this->multi) {
-                $firstRow = reset($this->data);
-                $keys = array_keys($firstRow);
-                $fields = "`" . implode("`, `", $keys) . "`";
-
-                $values = [];
-                $allParams = [];
-
-                foreach ($this->data as $row) {
-                    $placeholders = [];
-                    foreach ($row as $value) {
-                        $placeholders[] = "?";
-                        $allParams[] = $value;
-                    }
-                    $values[] = "(" . implode(", ", $placeholders) . ")";
-                }
-
-                $sql = "INSERT INTO `$this->table` ($fields) VALUES " . implode(", ", $values);
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute($allParams);
-
-                return $this->pdo->lastInsertId();
-
-            } else {
-                $keys = array_keys($this->data);
-                $fields = "`" . implode("`, `", $keys) . "`";
-                $placeholders = ":" . implode(", :", $keys);
-
-                $sql = "INSERT INTO `$this->table` ($fields) VALUES ($placeholders)";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute($this->data);
-
-                return $this->pdo->lastInsertId();
-            }
-        } catch (PDOException $e) {
-            error_log("Insert Error: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    public function update()
-    {
-        if (empty($this->data) || empty($this->where))
-            return false;
-
-        try {
-            $setPart = [];
-            foreach ($this->data as $key => $value) {
-                $setPart[] = "`$key` = :$key";
-            }
-
-            $sql = "UPDATE `$this->table` SET " . implode(', ', $setPart) . " WHERE $this->where";
-            $stmt = $this->pdo->prepare($sql);
-
-            return $stmt->execute($this->data);
-        } catch (PDOException $e) {
-            // إذا انقطع الاتصال، نحاول إعادة الاتصال مرة واحدة (Re-connect logic could be added here)
-            if ($e->errorInfo[1] == 2006) {
-                // Log critical error
-                error_log("CRITICAL: MySQL server gone away. Packet size too large?");
-            }
-            throw $e;
-        }
-    }
-
-    public function Delete()
-    {
-        try {
-            if ($this->multi) {
-                if (empty($this->data))
-                    return false;
-                $ids = implode(',', array_map('intval', $this->data));
-                $sql = "DELETE FROM `$this->table` WHERE `$this->column` IN ($ids)";
-                return $this->pdo->exec($sql);
-            } else {
-                if (empty($this->where))
-                    return false;
-                $sql = "DELETE FROM `$this->table` WHERE $this->where";
-                return $this->pdo->exec($sql);
-            }
-        } catch (PDOException $e) {
-            error_log("Delete Error: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    public function prepare($sql)
-    {
-        return $this->pdo->prepare($sql);
-    }
-
-    public function rowsCount($sql, $params = [])
+    public function rowsCount($sql)
     {
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute();
             return $stmt->rowCount();
         } catch (PDOException $e) {
             return 0;
         }
     }
 
-    public function validateField()
+    public function insert()
     {
-        try {
-            $sql = "SELECT id FROM `$this->table` WHERE `$this->field` = :value LIMIT 1";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':value' => $this->value]);
-            return $stmt->fetchColumn();
-        } catch (PDOException $e) {
-            return false;
+        if (!empty($this->data) && !empty($this->table)) {
+            try {
+                if ($this->multi) {
+                    // Multi insert logic
+                    $columns = implode(", ", array_keys($this->data[0]));
+                    $values = array();
+                    $params = array();
+
+                    foreach ($this->data as $row) {
+                        $row_placeholders = [];
+                        foreach ($row as $key => $val) {
+                            $row_placeholders[] = "?";
+                            $params[] = $val;
+                        }
+                        $values[] = "(" . implode(", ", $row_placeholders) . ")";
+                    }
+
+                    $sql = "INSERT INTO $this->table ($columns) VALUES " . implode(", ", $values);
+                    $stmt = $this->pdo->prepare($sql);
+                    return $stmt->execute($params);
+
+                } else {
+                    // Single insert logic
+                    $columns = implode(", ", array_keys($this->data));
+                    $placeholders = ":" . implode(", :", array_keys($this->data));
+
+                    $sql = "INSERT INTO $this->table ($columns) VALUES ($placeholders)";
+                    $stmt = $this->pdo->prepare($sql);
+
+                    if ($stmt->execute($this->data)) {
+                        return $this->pdo->lastInsertId();
+                    }
+                }
+            } catch (PDOException $e) {
+                error_log("Insert Error: " . $e->getMessage());
+                return false;
+            }
         }
+        return false;
     }
 
-    public function close()
+    public function update()
     {
-        $this->pdo = null;
+        if (!empty($this->data) && !empty($this->table) && !empty($this->where)) {
+            try {
+                $fields = "";
+                foreach ($this->data as $key => $value) {
+                    $fields .= "$key = :$key, ";
+                }
+                $fields = rtrim($fields, ", ");
+
+                $sql = "UPDATE $this->table SET $fields WHERE $this->where";
+                $stmt = $this->pdo->prepare($sql);
+                return $stmt->execute($this->data);
+            } catch (PDOException $e) {
+                error_log("Update Error: " . $e->getMessage());
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public function Delete()
+    {
+        if (!empty($this->table)) {
+            try {
+                if ($this->multi && !empty($this->data) && !empty($this->column)) {
+                    $ids = implode(",", array_map('intval', $this->data));
+                    $sql = "DELETE FROM $this->table WHERE $this->column IN ($ids)";
+                } else if (!empty($this->where)) {
+                    $sql = "DELETE FROM $this->table WHERE $this->where";
+                } else {
+                    return false;
+                }
+
+                $stmt = $this->pdo->prepare($sql);
+                return $stmt->execute();
+            } catch (PDOException $e) {
+                error_log("Delete Error: " . $e->getMessage());
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public function validateField()
+    {
+        // Used for checking uniqueness
+        $sql = "SELECT * FROM $this->table WHERE $this->field = :value";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':value' => $this->value]);
+        return $stmt->rowCount() > 0;
+    }
+
+    // Helper for direct PDO access if needed
+    public function prepare($sql)
+    {
+        return $this->pdo->prepare($sql);
     }
 }
 ?>
