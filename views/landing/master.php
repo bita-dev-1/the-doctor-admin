@@ -351,14 +351,14 @@
 
                     <div style="margin-bottom: 35px; display: flex; gap: 12px; justify-content: inherit;">
                         <?php if (!empty($doctor['facebook'])): ?>
-                                <a href="<?= htmlspecialchars($doctor['facebook']) ?>" target="_blank" class="social-btn btn-fb">
-                                    <i class="fab fa-facebook-f"></i>
-                                </a>
+                                        <a href="<?= htmlspecialchars($doctor['facebook']) ?>" target="_blank" class="social-btn btn-fb">
+                                            <i class="fab fa-facebook-f"></i>
+                                        </a>
                         <?php endif; ?>
                         <?php if (!empty($doctor['instagram'])): ?>
-                                <a href="<?= htmlspecialchars($doctor['instagram']) ?>" target="_blank" class="social-btn btn-insta">
-                                    <i class="fab fa-instagram"></i>
-                                </a>
+                                        <a href="<?= htmlspecialchars($doctor['instagram']) ?>" target="_blank" class="social-btn btn-insta">
+                                            <i class="fab fa-instagram"></i>
+                                        </a>
                         <?php endif; ?>
                     </div>
 
@@ -375,13 +375,13 @@
                 <div class="hero-img-box">
                     <img src="<?= $doctor['image1'] ?>" alt="Dr. <?= htmlspecialchars($doctor['last_name']) ?>" class="hero-img">
                     <?php if ($doctor['is_opened']): ?>
-                            <div class="status-badge">
-                                <div style="width: 12px; height: 12px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);"></div>
-                                <div>
-                                    <strong style="color: var(--secondary); display: block; line-height: 1; font-size: 0.95rem;">Ouvert</strong>
-                                    <small style="color: var(--text-muted); font-size: 0.8rem;">Aujourd'hui</small>
-                                </div>
-                            </div>
+                                    <div class="status-badge">
+                                        <div style="width: 12px; height: 12px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);"></div>
+                                        <div>
+                                            <strong style="color: var(--secondary); display: block; line-height: 1; font-size: 0.95rem;">Ouvert</strong>
+                                            <small style="color: var(--text-muted); font-size: 0.8rem;">Aujourd'hui</small>
+                                        </div>
+                                    </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -425,17 +425,17 @@
                     </div>
 
                     <?php if (!empty($doctor['image2']) || !empty($doctor['image3'])): ?>
-                            <div class="card gallery-section">
-                                <h3 class="card-title">Galerie du Cabinet</h3>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
-                                    <?php if (!empty($doctor['image2'])): ?>
-                                            <img src="<?= $doctor['image2'] ?>" style="width:100%; height:220px; object-fit:cover; border-radius:16px; cursor:pointer; box-shadow: var(--shadow-sm); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" alt="Cabinet 1">
-                                    <?php endif; ?>
-                                    <?php if (!empty($doctor['image3'])): ?>
-                                            <img src="<?= $doctor['image3'] ?>" style="width:100%; height:220px; object-fit:cover; border-radius:16px; cursor:pointer; box-shadow: var(--shadow-sm); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" alt="Cabinet 2">
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                                    <div class="card gallery-section">
+                                        <h3 class="card-title">Galerie du Cabinet</h3>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                                            <?php if (!empty($doctor['image2'])): ?>
+                                                            <img src="<?= $doctor['image2'] ?>" style="width:100%; height:220px; object-fit:cover; border-radius:16px; cursor:pointer; box-shadow: var(--shadow-sm); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" alt="Cabinet 1">
+                                            <?php endif; ?>
+                                            <?php if (!empty($doctor['image3'])): ?>
+                                                            <img src="<?= $doctor['image3'] ?>" style="width:100%; height:220px; object-fit:cover; border-radius:16px; cursor:pointer; box-shadow: var(--shadow-sm); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" alt="Cabinet 2">
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
                     <?php endif; ?>
 
                     <div class="card" id="contact">
@@ -451,13 +451,13 @@
                             </div>
 
                             <?php if (!empty($doctor['cabinet_phone'])): ?>
-                                    <div class="contact-item">
-                                        <div class="contact-icon"><i class="fas fa-clinic-medical"></i></div>
-                                        <div>
-                                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Fixe Cabinet</span><br>
-                                            <a href="tel:<?= htmlspecialchars($doctor['cabinet_phone']) ?>" style="color: var(--secondary); font-weight: 700; font-size: 1.1rem; text-decoration: none;"><?= htmlspecialchars($doctor['cabinet_phone']) ?></a>
-                                        </div>
-                                    </div>
+                                            <div class="contact-item">
+                                                <div class="contact-icon"><i class="fas fa-clinic-medical"></i></div>
+                                                <div>
+                                                    <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Fixe Cabinet</span><br>
+                                                    <a href="tel:<?= htmlspecialchars($doctor['cabinet_phone']) ?>" style="color: var(--secondary); font-weight: 700; font-size: 1.1rem; text-decoration: none;"><?= htmlspecialchars($doctor['cabinet_phone']) ?></a>
+                                                </div>
+                                            </div>
                             <?php endif; ?>
                         </div>
 
@@ -473,11 +473,11 @@
                         </div>
 
                         <?php if (!empty($doctor['lat']) && !empty($doctor['lng'])): ?>
-                                <div style="margin-top: 30px;">
-                                    <a href="https://www.google.com/maps/dir/?api=1&destination=<?= $doctor['lat'] ?>,<?= $doctor['lng'] ?>" target="_blank" class="btn-outline-custom" style="width: 100%; justify-content: center; background: #f8fafc; display: flex; align-items: center; gap: 10px; padding: 14px;">
-                                        <i class="fas fa-location-arrow"></i> Ouvrir dans Google Maps
-                                    </a>
-                                </div>
+                                        <div style="margin-top: 30px;">
+                                            <a href="https://www.google.com/maps/dir/?api=1&destination=<?= $doctor['lat'] ?>,<?= $doctor['lng'] ?>" target="_blank" class="btn-outline-custom" style="width: 100%; justify-content: center; background: #f8fafc; display: flex; align-items: center; gap: 10px; padding: 14px;">
+                                                <i class="fas fa-location-arrow"></i> Ouvrir dans Google Maps
+                                            </a>
+                                        </div>
                         <?php endif; ?>
                     </div>
 
@@ -506,21 +506,21 @@
                                 $is_today = ($db_keys_map[$day_fr] == $today_day);
                                 $hours = isset($doctor['schedule'][$day_fr]) ? $doctor['schedule'][$day_fr] : (isset($doctor['schedule'][$db_keys_map[$day_fr]]) ? $doctor['schedule'][$db_keys_map[$day_fr]] : null);
                                 ?>
-                                    <tr class="<?= $is_today ? 'today-row' : '' ?>">
-                                        <td class="day" style="font-weight: 600; color: var(--secondary);">
-                                            <?= $day_fr ?>
-                                            <?php if ($is_today): ?><i class="fas fa-clock" style="margin-left:5px; font-size:0.7rem; color: var(--primary);"></i><?php endif; ?>
-                                        </td>
-                                        <td class="hours" style="text-align: right;">
-                                            <?php if (!empty($hours['from']) && !empty($hours['to'])): ?>
-                                                    <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text-main);">
-                                                        <?= htmlspecialchars($hours['from']) ?> - <?= htmlspecialchars($hours['to']) ?>
-                                                    </span>
-                                            <?php else: ?>
-                                                    <span style="color: #ef4444; font-size: 0.85rem; font-weight: 600; background: #fef2f2; padding: 2px 8px; border-radius: 4px;">Fermé</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
+                                            <tr class="<?= $is_today ? 'today-row' : '' ?>">
+                                                <td class="day" style="font-weight: 600; color: var(--secondary);">
+                                                    <?= $day_fr ?>
+                                                    <?php if ($is_today): ?><i class="fas fa-clock" style="margin-left:5px; font-size:0.7rem; color: var(--primary);"></i><?php endif; ?>
+                                                </td>
+                                                <td class="hours" style="text-align: right;">
+                                                    <?php if (!empty($hours['from']) && !empty($hours['to'])): ?>
+                                                                    <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text-main);">
+                                                                        <?= htmlspecialchars($hours['from']) ?> - <?= htmlspecialchars($hours['to']) ?>
+                                                                    </span>
+                                                    <?php else: ?>
+                                                                    <span style="color: #ef4444; font-size: 0.85rem; font-weight: 600; background: #fef2f2; padding: 2px 8px; border-radius: 4px;">Fermé</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
                             <?php endforeach; ?>
                         </table>
                     </div>
