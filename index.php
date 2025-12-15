@@ -1,10 +1,12 @@
 <?php
 require_once("inc.php");
 require_once("router/router.php");
+require_once 'controllers/custom/core/GoogleAuth.php';
 
 // Public Routes
 get(SITE_URL . '/login', 'views/login.php');
-
+get(SITE_URL . '/login/google', 'google_login_redirect');
+get(SITE_URL . '/login/google/callback', 'google_login_callback');
 // Protected Routes (Require Auth)
 get(SITE_URL . '/', 'views/dashboard.php', ['auth']);
 get(SITE_URL . '/force_change_password', 'views/force_change_password.php', ['auth']);

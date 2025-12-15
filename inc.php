@@ -61,4 +61,9 @@ define('MAIL_PASSWORD', $_ENV['MAIL_PASSWORD'] ?? '');
 define('MAIL_ENCRYPTION', $_ENV['MAIL_ENCRYPTION'] ?? 'tls');
 define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? 'from@example.com');
 define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'Example');
+
+// --- Google Auth Configuration ---
+define('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID_HERE'); // ضع ID client هنا
+define('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE'); // ضع Code secret هنا
+define('GOOGLE_REDIRECT_URI', SITE_URL . '/login/google/callback');
 ?>
