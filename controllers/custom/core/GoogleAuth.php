@@ -2,6 +2,9 @@
 
 require_once PROJECT_ROOT . '/vendor/autoload.php';
 
+/**
+ * Redirects the user to Google's OAuth 2.0 server.
+ */
 function google_login_redirect()
 {
     $client = new Google\Client();
@@ -21,6 +24,9 @@ function google_login_redirect()
     exit();
 }
 
+/**
+ * Handles the callback from Google after authentication.
+ */
 function google_login_callback()
 {
     $client = new Google\Client();
@@ -30,7 +36,7 @@ function google_login_callback()
 
     if (isset($_GET['code'])) {
         try {
-            // Exchange code for token
+            // 1. Exchange code for access token
             $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
 
             if (isset($token['error'])) {
@@ -39,7 +45,7 @@ function google_login_callback()
 
             $client->setAccessToken($token['access_token']);
 
-            // Get User Info
+            // 2. Get User Profile Info
             $google_oauth = new Google\Service\Oauth2($client);
             $google_account_info = $google_oauth->userinfo->get();
 
@@ -48,38 +54,68 @@ function google_login_callback()
             $google_id = $google_account_info->id;
             $picture = $google_account_info->picture;
 
-            // Split name
+            // Split name into First and Last
             $parts = explode(" ", $name);
             $last_name = array_pop($parts);
             $first_name = implode(" ", $parts);
             if (empty($first_name))
                 $first_name = $last_name;
 
-            // Database Connection
+            // 3. Database Connection
+            if (!class_exists('DB')) {
+                require_once PROJECT_ROOT . '/config/DB.php';
+            }
             $db = new DB();
 
-            // Check if user exists
+            // 4. Check if user exists (by Email OR Google ID)
             $sql = "SELECT * FROM users WHERE email = '$email' OR google_id = '$google_id' LIMIT 1";
             $user = $db->select($sql);
 
             if (!empty($user)) {
-                // User exists - Login
+                // --- CASE A: User Exists (Login & Link) ---
                 $userData = $user[0];
 
-                // Update Google ID if missing
-                if (empty($userData['google_id'])) {
-                    $db->table = 'users';
-                    $db->data = ['google_id' => $google_id];
-                    $db->where = "id = " . $userData['id'];
-                    $db->update();
+                // Security Check: Prevent login if deleted or inactive
+                if ($userData['deleted'] == 1 || $userData['status'] !== 'active') {
+                    $_SESSION['error'] = "Ce compte est désactivé ou supprimé.";
+                    header('Location: ' . SITE_URI . 'login');
+                    exit();
                 }
 
+                // Prepare data for update (Account Linking)
+                $updateData = [];
+
+                // Link Google ID if missing
+                if (empty($userData['google_id'])) {
+                    $updateData['google_id'] = $google_id;
+                }
+
+                // Update profile picture if it's the default one
+                if ((empty($userData['image1']) || strpos($userData['image1'], 'default_User.png') !== false) && !empty($picture)) {
+                    $updateData['image1'] = $picture;
+                }
+
+                // Perform DB Update if needed
+                if (!empty($updateData)) {
+                    $db->table = 'users';
+                    $db->data = $updateData;
+                    $db->where = "id = " . $userData['id'];
+                    $db->update();
+
+                    // Update local variable for session
+                    foreach ($updateData as $k => $v) {
+                        $userData[$k] = $v;
+                    }
+                }
+
+                // Set Session & Redirect
                 $_SESSION['user'] = $userData;
-                header('Location: ' . SITE_URL . '/');
+                session_regenerate_id(true); // Prevent Session Fixation
+                header('Location: ' . SITE_URI);
                 exit();
 
             } else {
-                // User does not exist - Register (Auto-create as Doctor)
+                // --- CASE B: New User (Register) ---
                 $db->table = 'users';
                 $db->data = [
                     'first_name' => $first_name,
@@ -87,9 +123,9 @@ function google_login_callback()
                     'email' => $email,
                     'google_id' => $google_id,
                     'image1' => $picture,
-                    'role' => 'doctor', // Default role
+                    'role' => 'doctor', // Default role for Google Sign-up
                     'status' => 'active',
-                    'password' => sha1(uniqid()), // Random password
+                    'password' => sha1(uniqid(rand(), true)), // Random secure password
                     'created_at' => date('Y-m-d H:i:s'),
                     'must_change_password' => 0
                 ];
@@ -97,25 +133,29 @@ function google_login_callback()
                 $inserted_id = $db->insert();
 
                 if ($inserted_id) {
-                    // Fetch the new user data
+                    // Fetch the new user data to ensure we have all fields
                     $newUser = $db->select("SELECT * FROM users WHERE id = $inserted_id");
                     $_SESSION['user'] = $newUser[0];
-                    header('Location: ' . SITE_URL . '/');
+                    session_regenerate_id(true);
+                    header('Location: ' . SITE_URI);
                     exit();
                 } else {
-                    $_SESSION['error'] = "Failed to create account.";
-                    header('Location: ' . SITE_URL . '/login');
+                    $_SESSION['error'] = "Failed to create account. Please try again.";
+                    header('Location: ' . SITE_URI . 'login');
                     exit();
                 }
             }
 
         } catch (Exception $e) {
-            $_SESSION['error'] = "Google Login Failed: " . $e->getMessage();
-            header('Location: ' . SITE_URL . '/login');
+            // Log error and redirect to login with message
+            error_log("Google Auth Error: " . $e->getMessage());
+            $_SESSION['error'] = "Google Login Failed. Please try again.";
+            header('Location: ' . SITE_URI . 'login');
             exit();
         }
     } else {
-        header('Location: ' . SITE_URL . '/login');
+        // No code returned, redirect to login
+        header('Location: ' . SITE_URI . 'login');
         exit();
     }
 }

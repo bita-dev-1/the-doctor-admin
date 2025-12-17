@@ -68,3 +68,5 @@
 /.exclude
 # Composer dependencies
 /vendor/
+
+/tmp

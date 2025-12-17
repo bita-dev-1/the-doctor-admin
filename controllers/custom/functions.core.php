@@ -120,9 +120,11 @@ function generateRandomPassword($length = 10)
 function getDoctorUrl($id, $firstName, $lastName)
 {
     // تنظيف الاسم ليكون URL Friendly
-    $slug = strtolower(trim($firstName . '-' . $lastName));
-    $slug = preg_replace('/[^a-z0-9-]/', '-', $slug); // إزالة الرموز الخاصة
-    $slug = preg_replace('/-+/', '-', $slug); // إزالة التكرار
+    $slug = strtolower(trim($lastName . '-' . $firstName)); // Lastname-Firstname
+    $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
+    $slug = preg_replace('/-+/', '-', $slug);
+    $slug = trim($slug, '-');
 
-    return SITE_URL . "/medecin/$id/dr-$slug";
+    // New Format: /dr/slug-id
+    return SITE_URL . "/dr/$slug-$id";
 }

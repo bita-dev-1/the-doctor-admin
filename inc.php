@@ -23,30 +23,26 @@ try {
     $dotenv->load();
 } catch (\Dotenv\Exception\InvalidPathException $e) {
     // die("Could not find .env file. Please create one in the root directory.");
-    // تم التعليق لتجنب توقف الموقع في حال عدم وجود الملف، الاعتماد على القيم الافتراضية
 } catch (\Dotenv\Exception\InvalidFileException $e) {
-    // Catch syntax errors in .env file (e.g., lines not following KEY=VALUE format)
-    // This prevents the Fatal Error: Uncaught Dotenv\Exception\InvalidFileException
     error_log("Dotenv Syntax Error: " . $e->getMessage());
 }
 
 // --- Auto-detect Environment and Paths ---
 
-// 1. Determine BASE_PATH (e.g., /the-doctor-admin or empty if at root)
+// 1. Determine BASE_PATH
 $base_path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-// If script is at root, dirname might return '/' or '\', so we make it empty
 if ($base_path === '/' || $base_path === '\\') {
     $base_path = '';
 }
 
-// This constant will be used for routing and form actions (e.g., /the-doctor-admin/data)
+// This constant will be used for routing and form actions
 define('SITE_URL', $base_path);
 
-// 2. Determine BASE_URI (the full URL for assets like CSS, JS, images)
+// 2. Determine BASE_URI
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
 $host = $_SERVER['HTTP_HOST'];
 
-// This constant will be used for linking assets (e.g., http://localhost/the-doctor-admin/assets/css/style.css)
+// This constant will be used for linking assets
 define('SITE_URI', $protocol . $host . $base_path . '/');
 
 // These can be moved to a .env file later for better security
@@ -63,7 +59,12 @@ define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? 'from@example.com');
 define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'Example');
 
 // --- Google Auth Configuration ---
-define('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID_HERE'); // ضع ID client هنا
-define('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE'); // ضع Code secret هنا
-define('GOOGLE_REDIRECT_URI', SITE_URL . '/login/google/callback');
+// ⚠️ هام جداً: يجب استبدال القيم أدناه بالمفاتيح الحقيقية التي ستحصل عليها من Google Cloud Console
+// يمكنك وضعها هنا مباشرة أو في ملف .env (وهو الأفضل)
+
+define('GOOGLE_CLIENT_ID', $_ENV['GOOGLE_CLIENT_ID'] ?? 'ضع_Client_ID_الخاص_بك_هنا');
+define('GOOGLE_CLIENT_SECRET', $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'ضع_Client_Secret_الخاص_بك_هنا');
+
+// FIX: Use SITE_URI (Absolute URL)
+define('GOOGLE_REDIRECT_URI', SITE_URI . 'login/google/callback');
 ?>
