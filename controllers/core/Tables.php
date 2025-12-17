@@ -64,6 +64,9 @@ function data_table($DB)
 
     if (!empty($_REQUEST['search']['value'])) {
         $search_value = $_REQUEST['search']['value'];
+        // Sanitize search value
+        $search_value = filter_var($search_value, FILTER_SANITIZE_ADD_SLASHES);
+
         if (!empty($search_cols)) {
             $base_query .= " AND CONCAT_WS(' ', " . implode(",", $search_cols) . ") LIKE '%" . $search_value . "%'";
         }
@@ -173,7 +176,9 @@ function data_table($DB)
                     $single_data[] = '<span class="badge badge-light-danger">Impayé</span>';
                 }
             } else {
-                $single_data[] = $value;
+                // --- SECURITY FIX: XSS Prevention ---
+                // Escape raw data coming from DB before rendering
+                $single_data[] = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
             }
         }
         $data[] = $single_data;
