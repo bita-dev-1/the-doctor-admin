@@ -1,0 +1,28 @@
+/* assets/css/pages/receipt.css */
+body {
+  font-family: sans-serif;
+  background-color: #fff;
+}
+
+.receipt-container {
+  max-width: 800px;
+  margin: 30px auto;
+  border: 1px solid #eee;
+  padding: 30px;
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none;
+  }
+
+  .receipt-container {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+}

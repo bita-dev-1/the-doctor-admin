@@ -32,28 +32,9 @@ if (!$receipt) {
     <meta charset="UTF-8">
     <title>Reçu de Paiement #<?= $receipt['id'] ?></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    <style>
-        body {
-            font-family: sans-serif;
-        }
 
-        .receipt-container {
-            max-width: 800px;
-            margin: 30px auto;
-            border: 1px solid #eee;
-            padding: 30px;
-        }
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/pages/receipt.css">
 
-        @media print {
-            body {
-                -webkit-print-color-adjust: exact;
-            }
-
-            .no-print {
-                display: none;
-            }
-        }
-    </style>
 </head>
 
 <body>

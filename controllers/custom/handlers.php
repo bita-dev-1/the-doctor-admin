@@ -24,6 +24,8 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
     include_once 'controllers/custom/core/UserController.php';
     include_once 'controllers/custom/core/ChatController.php';
     include_once 'controllers/custom/core/PatientController.php';
+    include_once 'controllers/core/Auth.php';
+
 
     global $db;
     $db = new DB();
@@ -162,6 +164,12 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
             break;
         case 'get_product':
             get_product();
+            break;
+        case 'checkFieldAvailability':
+            checkFieldAvailability($db);
+            break;
+        case 'completeGoogleRegistration':
+            completeGoogleRegistration($db);
             break;
     }
 }

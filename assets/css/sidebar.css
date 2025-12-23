@@ -1,0 +1,290 @@
+/* ==========================================================================
+   THE DOCTOR ADMIN - SIDEBAR (COMPACT PRO EDITION)
+   File: assets/css/sidebar.css
+   ========================================================================== */
+
+/* 1. CONTAINER */
+.main-menu {
+  background-color: var(--sidebar-bg, #ffffff) !important;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.03) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.03) !important;
+  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s ease;
+  z-index: 1031;
+}
+
+.main-menu-content {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.main-menu:hover .main-menu-content {
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+.main-menu-content::-webkit-scrollbar {
+  width: 3px;
+}
+.main-menu-content::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 10px;
+}
+.main-menu:hover .main-menu-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 2. HEADER AREA (Reduced Height) */
+.main-menu .navbar-header {
+  height: 65px; /* Reduced from 90px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.main-menu .navbar-header .brand-text {
+  font-family: "Quicksand", sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem; /* Smaller Font */
+  background: linear-gradient(135deg, #00d894 0%, #0071bc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.3px;
+}
+
+/* 3. NAVIGATION ITEMS (Tighter Spacing) */
+.main-menu .navigation {
+  padding: 0 10px;
+  margin: 0;
+  list-style: none;
+}
+.main-menu .navigation > li {
+  margin-bottom: 4px;
+  position: relative;
+} /* Reduced margin */
+
+/* Link Styling */
+.main-menu .navigation > li > a {
+  border-radius: 8px; /* Smaller radius */
+  padding: 9px 12px; /* Reduced padding */
+  color: #5e5873 !important;
+  font-weight: 600;
+  font-size: 0.85rem; /* Smaller font */
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+/* Icons (Smaller) */
+.main-menu .navigation > li > a i,
+.main-menu .navigation > li > a svg {
+  color: #b9b9c3;
+  margin-right: 10px;
+  width: 17px;
+  height: 17px; /* Reduced size */
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Hover State */
+.main-menu .navigation > li:not(.active) > a:hover {
+  background-color: rgba(0, 216, 148, 0.06);
+  color: #00d894 !important;
+  transform: translateX(3px);
+}
+.main-menu .navigation > li:not(.active) > a:hover i,
+.main-menu .navigation > li:not(.active) > a:hover svg {
+  color: #00d894;
+}
+
+/* Active State */
+.main-menu .navigation > li.active > a {
+  background: linear-gradient(45deg, #00d894, #00b078) !important;
+  box-shadow: 0 3px 10px rgba(0, 216, 148, 0.35) !important;
+  color: #fff !important;
+}
+.main-menu .navigation > li.active > a i,
+.main-menu .navigation > li.active > a svg {
+  color: #fff !important;
+}
+
+/* Arrow */
+.main-menu .navigation > li > a:after {
+  transition: transform 0.3s ease;
+  transform-origin: center;
+}
+.main-menu .navigation > li.open > a:after {
+  transform: rotate(90deg);
+}
+
+/* 4. SUBMENU (Tighter Thread) */
+.main-menu .navigation > li ul {
+  padding: 2px 0;
+  margin: 0;
+  display: none;
+  list-style: none;
+}
+.main-menu .navigation > li.open ul {
+  display: block;
+}
+.main-menu .navigation > li ul li {
+  margin: 0;
+  position: relative;
+}
+
+/* Thread Line */
+.main-menu .navigation > li > ul {
+  margin-left: 18px; /* Adjusted for smaller icon */
+  border-left: 1px solid #ebe9f1;
+}
+
+/* Submenu Link */
+.main-menu .navigation > li ul li a {
+  padding: 7px 10px 7px 20px; /* Reduced padding */
+  font-size: 0.82rem; /* Smaller font */
+  background: transparent;
+  color: #6e6b7b;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  margin-left: 6px;
+  position: relative;
+}
+
+/* Connector Dot */
+.main-menu .navigation > li ul li a::before {
+  content: "";
+  position: absolute;
+  left: -6.5px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  background-color: #fff;
+  border: 1px solid #b9b9c3;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  transition: all 0.2s;
+  z-index: 2;
+}
+
+/* Submenu Active */
+.main-menu .navigation > li ul .active > a {
+  color: #00d894 !important;
+  background-color: rgba(0, 216, 148, 0.06);
+  font-weight: 700;
+}
+.main-menu .navigation > li ul .active > a::before {
+  background-color: #00d894;
+  border-color: #00d894;
+  width: 7px;
+  height: 7px;
+  left: -7.5px;
+  box-shadow: 0 0 0 2px rgba(0, 216, 148, 0.2);
+}
+.main-menu .navigation > li ul li a:hover {
+  padding-left: 24px;
+  color: #00d894;
+}
+
+/* 5. SECTION HEADERS */
+.navigation-header {
+  margin: 15px 0 8px 18px; /* Reduced margins */
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b9b9c3;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+}
+.navigation-header span {
+  padding-right: 8px;
+  background: var(--sidebar-bg, #fff);
+  z-index: 1;
+}
+.navigation-header::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: #ebe9f1;
+  margin-right: 15px;
+}
+
+/* 6. DARK MODE */
+html.dark-layout .main-menu {
+  background-color: #283046 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+}
+html.dark-layout .main-menu .navigation > li > a {
+  color: #d0d2d6 !important;
+}
+html.dark-layout .main-menu .navigation > li:not(.active) > a:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #00d894 !important;
+}
+html.dark-layout .main-menu .navigation > li > a i {
+  color: #b4b7bd;
+}
+html.dark-layout .main-menu .navigation > li > ul {
+  border-left-color: #3b4253;
+}
+html.dark-layout .main-menu .navigation > li ul li a {
+  color: #b4b7bd;
+}
+html.dark-layout .main-menu .navigation > li ul li a::before {
+  background-color: #283046;
+  border-color: #4b4b4b;
+}
+html.dark-layout .main-menu .navigation > li ul .active > a::before {
+  background-color: #00d894;
+  border-color: #00d894;
+}
+html.dark-layout .navigation-header span {
+  background: #283046;
+  color: #676d7d;
+}
+html.dark-layout .navigation-header::after {
+  background: #3b4253;
+}
+
+/* 7. COLLAPSED STATE */
+body.menu-collapsed .main-menu {
+  width: 60px;
+} /* Smaller collapsed width */
+body.menu-collapsed .main-menu .navigation > li > a {
+  justify-content: center;
+  padding: 10px;
+}
+body.menu-collapsed .main-menu .navigation > li > a i {
+  margin-right: 0;
+}
+body.menu-collapsed .main-menu .navbar-header .brand-text,
+body.menu-collapsed .main-menu .navigation-header,
+body.menu-collapsed .main-menu .navigation > li > a > span,
+body.menu-collapsed .main-menu .navigation > li > ul {
+  display: none;
+}
+
+body.menu-collapsed .main-menu:hover {
+  width: 240px;
+} /* Smaller expanded hover */
+body.menu-collapsed .main-menu:hover .navbar-header .brand-text,
+body.menu-collapsed .main-menu:hover .navigation-header,
+body.menu-collapsed .main-menu:hover .navigation > li > a > span,
+body.menu-collapsed .main-menu:hover .navigation > li > ul {
+  display: block;
+}
+body.menu-collapsed .main-menu:hover .navigation-header {
+  display: flex;
+}
+body.menu-collapsed .main-menu:hover .navigation > li > a {
+  justify-content: flex-start;
+  padding: 9px 12px;
+}
+body.menu-collapsed .main-menu:hover .navigation > li > a i {
+  margin-right: 10px;
+}

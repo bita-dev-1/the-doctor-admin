@@ -1,0 +1,86 @@
+/* assets/css/pages/reports-print.css */
+@media print {
+  /* Hide unnecessary elements */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Hide structural elements */
+  .app-content,
+  .header-navbar,
+  .main-menu,
+  footer,
+  .btn,
+  .modal-footer,
+  .btn-close,
+  .modal-header .btn-close {
+    display: none !important;
+  }
+
+  /* Show only the modal content */
+  #techDetailsModal,
+  #techDetailsModal * {
+    visibility: visible;
+  }
+
+  /* Modal styling for print */
+  #techDetailsModal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: white;
+    overflow: visible !important;
+  }
+
+  .modal-dialog {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    width: 100%;
+    transform: none !important;
+  }
+
+  .modal-content {
+    border: none;
+    box-shadow: none;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  /* Show print header */
+  .d-print-block {
+    display: block !important;
+  }
+
+  /* Table styling */
+  .table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 12px;
+  }
+  .table th,
+  .table td {
+    border: 1px solid #ddd !important;
+    padding: 8px !important;
+    color: #000 !important;
+  }
+  .badge {
+    border: 1px solid #000;
+    color: #000 !important;
+    background: transparent !important;
+    padding: 2px 5px;
+  }
+
+  /* Hide colored alerts */
+  .alert {
+    border: 1px solid #000;
+    background: none !important;
+    color: #000 !important;
+  }
+}

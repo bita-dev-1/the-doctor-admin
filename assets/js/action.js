@@ -1,4 +1,5 @@
 jQuery(function ($) {
+  // Active Link Handling
   $("#main-menu-navigation li a")
     .click(function (e) {
       var link = $(this);
@@ -25,7 +26,70 @@ jQuery(function ($) {
       }
     });
 });
-//==========================================language=======================
+
+/* ==========================================================================
+   SIDEBAR TOGGLE LOGIC (SYNCED & PERSISTENT)
+   ========================================================================== */
+
+$(document).ready(function () {
+  // 1. Toggle Button Click Handler
+  $(document).on("click", ".modern-nav-toggle", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    var body = $("body");
+    var isCollapsed = false;
+
+    // Toggle logic
+    if (body.hasClass("menu-expanded")) {
+      body.removeClass("menu-expanded").addClass("menu-collapsed");
+      isCollapsed = true;
+    } else {
+      body.removeClass("menu-collapsed").addClass("menu-expanded");
+      isCollapsed = false;
+    }
+
+    // ✅ FORCE SYNC: Update both keys to resolve duplication conflict
+    var stateString = isCollapsed ? "true" : "false";
+    localStorage.setItem("menu-collapsed", stateString); // Our preferred key
+    localStorage.setItem("menuCollapsed", stateString); // Legacy/Template key
+
+    // Trigger Resize (Fixes ApexCharts width issues)
+    setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, 200);
+  });
+
+  // 2. Mobile Overlay & Menu Toggle
+  $(document).on("click", ".menu-toggle, .sidenav-overlay", function (e) {
+    e.preventDefault();
+    var body = $("body");
+
+    if (body.hasClass("menu-open")) {
+      body.removeClass("menu-open").addClass("menu-hide");
+      $(".sidenav-overlay").removeClass("show");
+    } else {
+      body.removeClass("menu-hide").addClass("menu-open");
+      $(".sidenav-overlay").addClass("show");
+    }
+  });
+
+  // 3. Expand on Hover (When Collapsed)
+  $(".main-menu").hover(
+    function () {
+      if ($("body").hasClass("menu-collapsed")) {
+        $("body").addClass("menu-collapsed-open");
+      }
+    },
+    function () {
+      if ($("body").hasClass("menu-collapsed")) {
+        $("body").removeClass("menu-collapsed-open");
+      }
+    }
+  );
+});
+
+//========================================== Language Cookies =======================
 
 function setCookie(name, value, days) {
   var expires = "";
@@ -62,6 +126,7 @@ $(document).on("click", ".language a", function () {
   location.reload();
 });
 
+// Forget Password Logic
 $("#forget_password").on("submit", function (e) {
   e.preventDefault();
   $.ajax({
@@ -70,7 +135,8 @@ $("#forget_password").on("submit", function (e) {
     data: { method: "forget_password", email: $("#forgot_email").val() },
     success: function (data) {
       Swal.fire({
-        title: "Change successfully",
+        title: "Success",
+        text: "Please check your email.",
         icon: "success",
         confirmButtonText: "back",
         customClass: {

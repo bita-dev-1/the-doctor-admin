@@ -1,0 +1,193 @@
+/* ==========================================================================
+   File: assets/css/pages/app-calendar-custom.css
+   Description: Custom styles for FullCalendar (Orange Restored for Waiting)
+   ========================================================================== */
+
+:root {
+  --fc-border-color: #ebe9f1;
+  --fc-button-text-color: #6e6b7b;
+  --fc-event-bg-opacity: 0.12;
+
+  /* Theme Colors */
+  --theme-primary: #00d894; /* Green (Completed) */
+  --theme-secondary: #0071bc; /* Blue (General/Accepted) */
+  --theme-danger: #ea5455; /* Red (Canceled) */
+  --theme-info: #00cfe8; /* Cyan (Accepted Alt) */
+  --theme-warning: #ff9f43; /* ORANGE (Waiting/Pending) */
+}
+
+/* 1. Main Container */
+.app-calendar {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px 0 rgba(34, 41, 47, 0.05);
+  border: none !important;
+  overflow: hidden;
+}
+
+.fc .fc-daygrid-day-frame {
+  min-height: 140px !important;
+  padding: 8px 8px 30px 8px;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.fc-day-today {
+  background-color: rgba(0, 216, 148, 0.04) !important;
+}
+
+/* 2. Events Styling */
+.fc-daygrid-event {
+  border-radius: 6px !important;
+  margin-bottom: 4px !important;
+  padding: 4px 8px !important;
+  border: none !important;
+  border-left-width: 4px !important; /* Thicker border for better visibility */
+  border-left-style: solid !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease;
+}
+
+.fc-daygrid-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* --- Event Colors Mapping --- */
+
+/* WAITING (En attente) -> ORANGE */
+.fc-event-warning {
+  background-color: rgba(255, 159, 67, 0.12) !important; /* Orange Tint */
+  border-left-color: var(--theme-warning) !important;
+  color: #ff9f43 !important; /* Strong Orange Text */
+}
+
+/* ACCEPTED -> BLUE */
+.fc-event-info {
+  background-color: rgba(0, 113, 188, 0.12) !important; /* Blue Tint */
+  border-left-color: var(--theme-secondary) !important;
+  color: var(--theme-secondary) !important;
+}
+
+/* COMPLETED -> GREEN */
+.fc-event-success {
+  background-color: rgba(0, 216, 148, 0.12) !important; /* Green Tint */
+  border-left-color: var(--theme-primary) !important;
+  color: var(--theme-primary) !important;
+}
+
+/* CANCELED -> RED */
+.fc-event-danger {
+  background-color: rgba(234, 84, 85, 0.12) !important; /* Red Tint */
+  border-left-color: var(--theme-danger) !important;
+  color: var(--theme-danger) !important;
+}
+
+/* 3. Capacity Ring */
+.day-capacity-ring {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 10px;
+  font-weight: bold;
+  color: #5e5873;
+  background: #f3f3f3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.day-capacity-ring::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  z-index: 1;
+}
+.day-capacity-ring span {
+  position: relative;
+  z-index: 2;
+}
+
+/* 4. Bottom Stats (Pills) */
+.unified-stats-bottom {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background-color: #f8f8f8;
+  border-radius: 12px;
+  padding: 0 5px;
+  z-index: 4;
+  border: 1px solid #f0f0f0;
+}
+
+.stat-pill {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-weight: bold;
+  color: #fff;
+  min-width: 15px;
+  text-align: center;
+}
+
+/* Pill Colors */
+.bg-waiting {
+  background-color: var(--theme-warning) !important;
+} /* Orange */
+.bg-accepted {
+  background-color: var(--theme-secondary) !important;
+} /* Blue */
+.bg-completed {
+  background-color: var(--theme-primary) !important;
+} /* Green */
+
+/* 5. Sidebar */
+.app-calendar-sidebar {
+  border-right: 1px solid var(--fc-border-color);
+  background-color: #fcfcfc;
+}
+
+/* --- DARK MODE ADJUSTMENTS --- */
+html.dark-layout .app-calendar {
+  background: #283046;
+  box-shadow: none;
+}
+html.dark-layout .app-calendar-sidebar {
+  background-color: #283046;
+  border-right-color: #3b4253;
+}
+html.dark-layout .fc-daygrid-day-frame {
+  border-color: #3b4253;
+}
+html.dark-layout .day-capacity-ring::before {
+  background-color: #283046;
+}
+html.dark-layout .day-capacity-ring span {
+  color: #d0d2d6;
+}
+html.dark-layout .unified-stats-bottom {
+  background-color: #343d55;
+  border-color: #3b4253;
+}
+
+/* Event Text Colors in Dark Mode */
+html.dark-layout .fc-event-warning {
+  color: #ff9f43 !important;
+} /* Bright Orange */
+html.dark-layout .fc-event-info {
+  color: #0071bc !important;
+}
+html.dark-layout .fc-event-success {
+  color: #00d894 !important;
+}

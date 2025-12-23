@@ -1,6 +1,12 @@
 <?php
 
-// 1. Handle CORS
+// 1. Error Handling (Crucial for API JSON responses)
+// Disable HTML error output to prevent breaking JSON syntax
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// 2. Handle CORS
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
@@ -11,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-// 2. Bootstrap (Load .env & Settings)
+// 3. Bootstrap (Load .env & Settings)
 $rootPath = dirname(__DIR__);
 
 if (file_exists($rootPath . '/inc.php')) {
@@ -20,29 +26,38 @@ if (file_exists($rootPath . '/inc.php')) {
     require_once('../inc.php');
 }
 
-// 3. Include Router
+// 4. Include Router
 require_once("router/router.php");
 
-// 4. Include DB Config
-if (file_exists('config/DB.php')) {
-    include_once('config/DB.php');
-} elseif (file_exists($rootPath . '/config/DB.php')) {
-    include_once($rootPath . '/config/DB.php');
-} else {
-    http_response_code(500);
-    echo json_encode(["state" => "false", "message" => "DB Config missing"]);
-    exit();
+// 5. Include DB Config (Safe Include)
+// Check if class exists to avoid "Cannot declare class DB" fatal error
+if (!class_exists('DB')) {
+    if (file_exists('config/DB.php')) {
+        include_once('config/DB.php');
+    } elseif (file_exists($rootPath . '/config/DB.php')) {
+        include_once($rootPath . '/config/DB.php');
+    } else {
+        http_response_code(500);
+        echo json_encode(["state" => "false", "message" => "DB Config missing"]);
+        exit();
+    }
 }
 
-// 5. Include Controller
+// 6. Include Controller
 include_once('controllers/api.controller.php');
 
-// 6. Initialize DB
+// 7. Initialize DB
 try {
     if (!class_exists('DB')) {
         throw new Exception("Class DB not found.");
     }
-    $db = new DB();
+
+    // Use the global connection if available (from local_router), otherwise create new
+    if (isset($GLOBALS['db']) && $GLOBALS['db'] instanceof DB) {
+        $db = $GLOBALS['db'];
+    } else {
+        $db = new DB();
+    }
 } catch (Exception $e) {
     error_log("API DB Error: " . $e->getMessage());
     http_response_code(500);
@@ -50,7 +65,7 @@ try {
     exit();
 }
 
-// 7. Define Routes (تأكد أن هذه المسارات موجودة)
+// 8. Define Routes
 
 // --- Protected Routes ---
 post('/api/v1/doctors', 'middleware/doctors.php');
@@ -62,7 +77,6 @@ post('/api/v1/upload', 'middleware/upload.php');
 post('/api/v1/endpoint', 'middleware/endpoint.php');
 
 // --- Public Routes (Landing Page) ---
-// هذه هي المسارات التي كانت مفقودة وتسبب 404
 any('/api/v1/doctor/landing', 'middleware/doctor_landing.php');
 any('/api/v1/public/availability', 'middleware/public_availability.php');
 post('/api/v1/public/book', 'middleware/public_booking.php');

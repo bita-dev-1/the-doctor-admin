@@ -1,29 +1,35 @@
 /* =========================================
-   1. المتغيرات وإعدادات الصفحة (Variables & Reset)
+   1. Variables & Reset & Fonts
    ========================================= */
 :root {
-  /* لوحة الألوان - Color Palette */
-  --primary: #0ea5e9; /* أزرق سماوي - للنشاط */
-  --primary-dark: #0284c7; /* أزرق أغمق - للتفاعل */
-  --secondary: #0f172a; /* كحلي داكن - للنصوص والعناوين */
-  --text-main: #334155; /* رمادي غامق - للنصوص */
-  --text-muted: #64748b; /* رمادي فاتح - للتفاصيل */
-  --bg-body: #f8fafc; /* خلفية الصفحة */
-  --bg-card: #ffffff; /* خلفية البطاقات */
+  /* Modern Medical Palette */
+  --primary: #0ea5e9; /* Sky Blue */
+  --primary-dark: #0284c7; /* Deep Sky */
+  --primary-light: #e0f2fe; /* Light Wash */
+  --secondary: #0f172a; /* Navy Black */
+  --accent: #38bdf8; /* Bright Accent */
 
-  /* الظلال - Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-color: 0 10px 25px -5px rgba(14, 165, 233, 0.25); /* ظل ملون */
+  --text-main: #334155; /* Slate 700 */
+  --text-muted: #64748b; /* Slate 500 */
 
-  /* المسافات والحواف */
-  --radius-lg: 20px;
-  --radius-md: 12px;
-  --container-width: 1200px;
-  --font-main: "Plus Jakarta Sans", sans-serif;
+  --bg-body: #f8fafc; /* Very Light Blue/Grey */
+  --bg-card: #ffffff;
+
+  /* Soft UI Shadows */
+  --shadow-sm: 0 2px 4px rgba(148, 163, 184, 0.1);
+  --shadow-md: 0 6px 12px -2px rgba(148, 163, 184, 0.15);
+  --shadow-lg: 0 20px 25px -5px rgba(148, 163, 184, 0.15),
+    0 8px 10px -6px rgba(148, 163, 184, 0.1);
+  --shadow-primary: 0 10px 20px -5px rgba(14, 165, 233, 0.4);
+
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+
+  --container-width: 1140px;
+  --font-main: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -31,62 +37,78 @@
   padding: 0;
   box-sizing: border-box;
 }
-
 html {
   scroll-behavior: smooth;
+  font-size: 16px;
 }
 
 body {
   font-family: var(--font-main);
   background-color: var(--bg-body);
   color: var(--text-main);
-  line-height: 1.6;
+  line-height: 1.7;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
   text-decoration: none;
-  transition: 0.3s;
+  transition: var(--transition);
 }
 ul {
   list-style: none;
 }
+button {
+  font-family: inherit;
+}
 
 /* =========================================
-   2. المكونات العامة (Utility Classes)
+   2. Utility Classes & Buttons
    ========================================= */
 .container {
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
 }
 
-/* الأزرار المخصصة */
+/* Primary Button with Gradient */
 .btn-primary-custom {
-  background: var(--primary);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   color: white;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
+  transition: var(--transition);
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: var(--shadow-primary);
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-primary-custom:hover {
-  background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-color);
+  box-shadow: 0 15px 30px -5px rgba(14, 165, 233, 0.5);
 }
 
+.btn-primary-custom:active {
+  transform: translateY(0);
+}
+
+/* Outline Button */
 .btn-outline-custom {
   background: transparent;
   color: var(--text-main);
-  border: 1px solid #cbd5e1;
+  border: 2px solid #e2e8f0;
   border-radius: 50px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -96,22 +118,23 @@ ul {
 .btn-outline-custom:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: #f0f9ff;
+  background: var(--primary-light);
 }
 
 /* Social Buttons */
 .social-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  transition: 0.3s;
+  font-size: 1.2rem;
+  transition: var(--transition);
   background: white;
   border: 1px solid #e2e8f0;
   color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
 }
 .social-btn:hover {
   transform: translateY(-3px);
@@ -120,30 +143,37 @@ ul {
 }
 .btn-fb:hover {
   background: #1877f2;
-  box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
+  box-shadow: 0 8px 16px rgba(24, 119, 242, 0.25);
 }
 .btn-insta:hover {
-  background: #e1306c;
-  box-shadow: 0 4px 10px rgba(225, 48, 108, 0.3);
+  background: linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  box-shadow: 0 8px 16px rgba(220, 39, 67, 0.25);
 }
 
 /* =========================================
-   3. الشريط العلوي (Navbar)
+   3. Navbar (Glassmorphism)
    ========================================= */
 .navbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.85); /* شبه شفاف */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 1000;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 15px 0;
-  transition: 0.3s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 16px 0;
+  transition: var(--transition);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
 }
-
 .nav-content {
   display: flex;
   justify-content: space-between;
@@ -151,58 +181,95 @@ ul {
 }
 
 .brand {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--secondary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+.brand div {
+  background: linear-gradient(135deg, var(--primary-light) 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--shadow-sm);
 }
 .brand i {
   color: var(--primary);
 }
 
 /* =========================================
-   4. قسم الهيرو (Hero Section)
+   4. Hero Section
    ========================================= */
 .hero {
-  padding-top: 120px; /* مسافة للناف بار */
-  padding-bottom: 60px;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  padding-top: 140px;
+  padding-bottom: 80px;
+  background: radial-gradient(
+    circle at top right,
+    #f0f9ff 0%,
+    #f8fafc 40%,
+    #ffffff 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative Blob */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  right: -5%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(
+    circle,
+    rgba(14, 165, 233, 0.08) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .hero-content {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 50px;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 60px;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .specialty-badge {
   display: inline-flex;
   align-items: center;
-  background: #e0f2fe;
+  background: white;
   color: var(--primary-dark);
-  padding: 8px 16px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 20px;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .hero h1 {
   font-size: 3.5rem;
-  line-height: 1.1;
+  line-height: 1.15;
   font-weight: 800;
   color: var(--secondary);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   letter-spacing: -1px;
 }
 
 .location-text {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   color: var(--text-muted);
-  margin-bottom: 25px;
+  font-weight: 500;
+  margin-bottom: 32px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -211,104 +278,118 @@ ul {
 .hero-img-box {
   position: relative;
   border-radius: var(--radius-lg);
-  padding: 10px;
+  padding: 12px;
   background: white;
   box-shadow: var(--shadow-lg);
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transform: rotate(2deg);
+  transition: var(--transition);
+}
+.hero-img-box:hover {
+  transform: rotate(0deg) scale(1.01);
 }
 
 .hero-img {
   width: 100%;
-  height: 450px;
+  height: 500px;
   object-fit: cover;
   border-radius: 16px;
+  filter: contrast(1.02);
 }
 
 .status-badge {
   position: absolute;
-  bottom: 30px;
-  right: -20px;
+  bottom: 40px;
+  right: -30px;
   background: white;
-  padding: 15px 25px;
+  padding: 12px 24px;
   border-radius: 16px;
   box-shadow: var(--shadow-lg);
   display: flex;
   align-items: center;
-  gap: 15px;
-  animation: float 3s ease-in-out infinite;
+  gap: 12px;
+  animation: float 4s ease-in-out infinite;
+  border: 1px solid #f1f5f9;
 }
-
 @keyframes float {
   0%,
   100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-12px);
   }
 }
 
 /* =========================================
-   5. الإحصائيات (Stats)
+   5. Stats Section
    ========================================= */
 .stats-section {
-  margin-bottom: 60px;
+  margin-bottom: 80px;
+  margin-top: -40px;
+  position: relative;
+  z-index: 2;
 }
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 30px;
   background: white;
-  padding: 30px;
+  padding: 40px;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   border: 1px solid #f1f5f9;
 }
-
 .stat-item {
   text-align: center;
-  padding: 10px;
+  padding: 0 10px;
   border-right: 1px solid #f1f5f9;
+  transition: var(--transition);
 }
 .stat-item:last-child {
   border-right: none;
 }
-
-.stat-item h3 {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--secondary);
-  margin-bottom: 5px;
+.stat-item:hover {
+  transform: translateY(-5px);
 }
 
+.stat-item h3 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--secondary);
+  margin-bottom: 4px;
+  background: linear-gradient(to right, var(--secondary), var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 .stat-item p {
   color: var(--text-muted);
   font-size: 0.95rem;
+  font-weight: 600;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
-
 .stat-icon {
   color: var(--primary);
+  font-size: 1.1rem;
 }
 
-/* زر اللايك المتفاعل */
-.recommend-btn:active {
-  transform: scale(0.95);
+/* Like Button Animation */
+.recommend-btn {
+  cursor: pointer;
 }
 .recommend-btn.liked .fa-heart {
   color: #ef4444;
-  animation: heartBeat 0.5s;
+  animation: heartBeat 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @keyframes heartBeat {
   0% {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.3);
+    transform: scale(1.4);
   }
   100% {
     transform: scale(1);
@@ -316,129 +397,156 @@ ul {
 }
 
 /* =========================================
-   6. المحتوى الرئيسي (Main Grid)
+   6. Main Content Grid
    ========================================= */
 .content-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr; /* المحتوى يأخذ الثلثين، القائمة الجانبية الثلث */
-  gap: 30px;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
 }
 
 .card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 30px;
-  margin-bottom: 30px;
+  padding: 32px;
+  margin-bottom: 32px;
   box-shadow: var(--shadow-sm);
   border: 1px solid #f1f5f9;
-  transition: 0.3s;
+  transition: var(--transition);
 }
-
 .card:hover {
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .card-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--secondary);
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f1f5f9;
+  position: relative;
+}
+.card-title::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--primary);
 }
 
-/* بطاقة الحجز الجانبية */
+/* Booking Widget (Sidebar) */
 .booking-widget {
-  background: linear-gradient(135deg, var(--secondary) 0%, #1e293b 100%);
+  background: linear-gradient(145deg, var(--secondary) 0%, #1e293b 100%);
   color: white;
   position: sticky;
-  top: 100px; /* لتبقى ثابتة عند النزول */
+  top: 110px;
   border: none;
   box-shadow: var(--shadow-lg);
+  padding: 40px 30px;
+  text-align: center;
 }
-
 .btn-book-white {
   width: 100%;
   background: white;
   color: var(--secondary);
   border: none;
-  padding: 16px;
-  border-radius: 12px;
+  padding: 18px;
+  border-radius: 16px;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
-  transition: 0.3s;
+  transition: var(--transition);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 .btn-book-white:hover {
   background: var(--primary);
   color: white;
-  box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
 }
 
-/* جهات الاتصال */
+/* Contact Items */
 .contact-item {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 15px 0;
-  border-bottom: 1px solid #f8fafc;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+  transition: var(--transition);
 }
-.contact-item:last-child {
-  border-bottom: none;
+.contact-item:hover {
+  background: white;
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .contact-icon {
-  width: 50px;
-  height: 50px;
-  background: #f0f9ff;
+  width: 56px;
+  height: 56px;
+  background: white;
   color: var(--primary);
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  box-shadow: var(--shadow-sm);
 }
 
-/* جدول الأوقات */
+/* Schedule Table */
 .schedule-table tr {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px dashed #e2e8f0;
+}
+.schedule-table tr:last-child {
+  border-bottom: none;
 }
 .schedule-table td {
-  padding: 12px 0;
+  padding: 14px 0;
   font-size: 0.95rem;
 }
 .today-row td {
   color: var(--primary);
+  font-weight: 700 !important;
 }
 
 /* =========================================
-   7. الفوتر (Footer)
+   7. Footer
    ========================================= */
 .footer {
   background: var(--secondary);
   color: white;
-  padding: 60px 0 30px;
+  padding: 80px 0 40px;
   margin-top: auto;
+  border-top: 4px solid var(--primary);
 }
 .footer a {
-  color: #cbd5e1;
+  color: #94a3b8;
+  transition: var(--transition);
 }
 .footer a:hover {
   color: white;
+  text-decoration: underline;
 }
 
 /* =========================================
-   8. الموبايل (Mobile Sticky Bar)
+   8. Mobile Sticky Bar
    ========================================= */
 .mobile-sticky-bar {
-  display: none; /* مخفي على الكمبيوتر */
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  background: white;
-  padding: 15px 20px;
-  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 16px 24px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
   z-index: 999;
   justify-content: space-between;
   align-items: center;
@@ -446,7 +554,7 @@ ul {
 }
 
 /* =========================================
-   9. المودال (Modals)
+   9. Modals & Date Picker
    ========================================= */
 .modal-overlay {
   display: none;
@@ -455,91 +563,119 @@ ul {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 23, 42, 0.6); /* خلفية داكنة مع ضبابية */
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
   z-index: 2000;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content-box {
   background: white;
   width: 100%;
-  max-width: 550px;
-  border-radius: 24px;
+  max-width: 500px;
+  border-radius: 28px;
   padding: 40px;
   position: relative;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.95);
+  animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   max-height: 90vh;
   overflow-y: auto;
 }
-
-@keyframes modalSlideUp {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
+@keyframes modalPop {
   to {
-    transform: translateY(0);
-    opacity: 1;
+    transform: scale(1);
   }
 }
 
-/* سلوتات الحجز */
-.time-slot-btn {
-  padding: 12px 5px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 10px;
-  cursor: pointer;
+/* Date Input */
+.date-input-wrapper {
+  position: relative;
+  margin-bottom: 25px;
+}
+#booking-date {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  font-family: var(--font-main);
+  font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-main);
-  transition: 0.2s;
-  font-size: 0.9rem;
+  color: var(--secondary);
+  width: 100%;
+  transition: var(--transition);
+  cursor: pointer;
 }
-.time-slot-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+#booking-date:hover {
+  background-color: white;
+  border-color: #cbd5e1;
 }
-.time-slot-btn.selected {
-  background: var(--primary);
-  color: white;
+#booking-date:focus {
+  background-color: white;
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+  outline: none;
+}
+
+/* Slots Container (The Black Box Button) */
+#slots-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 25px;
 }
 
 /* =========================================
-   10. التجاوب (Responsive Media Queries)
+   10. Responsive Design
    ========================================= */
 @media (max-width: 992px) {
   .container {
     width: 100%;
+    padding: 0 20px;
+  }
+  .hero {
+    padding-top: 100px;
+    text-align: center;
   }
   .hero-content {
     grid-template-columns: 1fr;
-    text-align: center;
+    gap: 40px;
   }
   .hero-img-box {
-    display: none; /* أو يمكن إظهارها بشكل أصغر */
-  }
+    display: none;
+  } /* Hide image on tablet/mobile for cleaner look */
   .content-grid {
     grid-template-columns: 1fr;
   }
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 20px;
   }
   .stat-item {
     border: none;
     border-bottom: 1px solid #f1f5f9;
-    padding: 20px;
+    padding: 20px 0;
+  }
+  .stat-item:nth-last-child(-n + 2) {
+    border-bottom: none;
   }
   .mobile-hidden {
     display: none !important;
   }
   .booking-widget {
-    display: none; /* إخفاء الودجت الجانبي على الموبايل لأن لدينا الشريط السفلي */
+    display: none;
   }
   .mobile-sticky-bar {
     display: flex;
@@ -550,11 +686,8 @@ ul {
   .location-text {
     justify-content: center;
   }
-  .desktop-actions {
-    justify-content: center;
-  }
   body {
-    padding-bottom: 80px; /* مسافة للشريط السفلي */
+    padding-bottom: 90px;
   }
 }
 
@@ -562,13 +695,22 @@ ul {
   .stats-grid {
     grid-template-columns: 1fr;
   }
+  .stat-item {
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .stat-item:last-child {
+    border-bottom: none;
+  }
   .hero h1 {
     font-size: 2rem;
   }
   .navbar {
-    padding: 10px 0;
+    padding: 12px 0;
   }
   .brand span {
     font-size: 1.1rem;
+  }
+  .modal-content-box {
+    padding: 25px;
   }
 }

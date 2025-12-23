@@ -12,6 +12,9 @@ $table = 'rdv';
 // روابط ملفات CSS الخاصة بالتقويم
 $calendarCSS = SITE_URL . '/app-assets/vendors/css/calendars/fullcalendar.min.css';
 $appCalendarCSS = SITE_URL . '/app-assets/css/pages/app-calendar.css';
+// الرابط الجديد للملف المخصص
+$customCalendarCSS = SITE_URL . '/assets/css/pages/app-calendar-custom.css?v=2.0';
+
 $btn_text = 'Ajouter';
 
 // تحديد معرف الطبيب للتقويم (للمستخدم العادي) أو فارغ (للأدمن)
@@ -20,239 +23,8 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
 
 <link rel="stylesheet" type="text/css" href="<?= $calendarCSS ?>">
 <link rel="stylesheet" type="text/css" href="<?= $appCalendarCSS ?>">
-
-<style>
-    /* ==========================================================================
-       MODERN CALENDAR STYLING (2025 Design)
-       ========================================================================== */
-
-    :root {
-        --fc-border-color: #ebe9f1;
-        --fc-button-text-color: #6e6b7b;
-        --fc-event-bg-opacity: 0.12;
-    }
-
-    /* 1. الحاوية الرئيسية والشبكة */
-    .app-calendar {
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 4px 24px 0 rgba(34, 41, 47, 0.1);
-        border: none !important;
-        overflow: hidden;
-    }
-
-    .fc .fc-daygrid-day-frame {
-        min-height: 140px !important;
-        padding: 8px 8px 30px 8px;
-        /* مساحة سفلية للشريط */
-        position: relative;
-        transition: background-color 0.2s;
-    }
-
-    .fc-day-today {
-        background-color: rgba(115, 103, 240, 0.02) !important;
-    }
-
-    /* 2. تصميم الأحداث (Events) - Soft UI Style */
-    .fc-daygrid-event {
-        border-radius: 4px !important;
-        margin-bottom: 4px !important;
-        padding: 4px 8px !important;
-        border: none !important;
-        border-left-width: 3px !important;
-        border-left-style: solid !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        line-height: 1.4 !important;
-        box-shadow: none !important;
-        transition: all 0.2s ease;
-    }
-
-    .fc-daygrid-event:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* الألوان بأسلوب الباستيل مع حدود واضحة */
-    .fc-event-warning {
-        /* Créé */
-        background-color: rgba(255, 159, 67, 0.12) !important;
-        border-left-color: #ff9f43 !important;
-        color: #ff9f43 !important;
-    }
-
-    .fc-event-info {
-        /* Accepté */
-        background-color: rgba(0, 207, 232, 0.12) !important;
-        border-left-color: #00cfe8 !important;
-        color: #00cfe8 !important;
-    }
-
-    .fc-event-success {
-        /* Complété */
-        background-color: rgba(40, 199, 111, 0.12) !important;
-        border-left-color: #28c76f !important;
-        color: #28c76f !important;
-    }
-
-    .fc-event-danger {
-        /* Annulé */
-        background-color: rgba(234, 84, 85, 0.12) !important;
-        border-left-color: #ea5455 !important;
-        color: #ea5455 !important;
-    }
-
-    /* تغميق النص داخل الحدث للقراءة */
-    .fc-daygrid-event .fc-event-title {
-        font-weight: 700;
-    }
-
-    /* 3. دائرة السعة (Capacity Ring) - تصميم عصري */
-    .fc-daygrid-day-top {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 5px;
-    }
-
-    .day-capacity-ring {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        font-size: 10px;
-        font-weight: bold;
-        color: #5e5873;
-        background: #f3f3f3;
-        /* لون الخلفية للدائرة */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    /* القناع الداخلي لعمل شكل الحلقة */
-    .day-capacity-ring::before {
-        content: "";
-        position: absolute;
-        inset: 3px;
-        /* سمك الحلقة */
-        background-color: #fff;
-        border-radius: 50%;
-        z-index: 1;
-    }
-
-    .day-capacity-ring span {
-        position: relative;
-        z-index: 2;
-    }
-
-    /* 4. شريط الإحصائيات السفلي (Bottom Stats Widget) */
-    .unified-stats-bottom {
-        position: absolute;
-        bottom: 4px;
-        left: 4px;
-        right: 4px;
-        height: 22px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        background-color: #f8f8f8;
-        border-radius: 12px;
-        padding: 0 5px;
-        z-index: 4;
-        border: 1px solid #f0f0f0;
-    }
-
-    .stat-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .stat-pill {
-        font-size: 9px;
-        padding: 1px 5px;
-        border-radius: 6px;
-        font-weight: bold;
-        color: #fff;
-        min-width: 15px;
-        text-align: center;
-    }
-
-    .bg-waiting {
-        background-color: #ff9f43;
-    }
-
-    .bg-accepted {
-        background-color: #00cfe8;
-    }
-
-    .bg-completed {
-        background-color: #28c76f;
-    }
-
-    /* 5. الشريط الجانبي (Sidebar) */
-    .app-calendar-sidebar {
-        border-right: 1px solid var(--fc-border-color);
-        background-color: #fcfcfc;
-    }
-
-    .filter-section-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #b9b9c3;
-        margin-bottom: 1rem;
-    }
-
-    /* ==========================================================================
-       DARK MODE ADJUSTMENTS
-       ========================================================================== */
-    html.dark-layout .app-calendar {
-        background: #283046;
-        box-shadow: none;
-    }
-
-    html.dark-layout .app-calendar-sidebar {
-        background-color: #283046;
-        border-right-color: #3b4253;
-    }
-
-    html.dark-layout .fc-daygrid-day-frame {
-        border-color: #3b4253;
-    }
-
-    html.dark-layout .day-capacity-ring::before {
-        background-color: #283046;
-        /* لون خلفية الداكن */
-    }
-
-    html.dark-layout .day-capacity-ring span {
-        color: #d0d2d6;
-    }
-
-    html.dark-layout .unified-stats-bottom {
-        background-color: #343d55;
-        border-color: #3b4253;
-    }
-
-    /* جعل النصوص أفتح في الأحداث */
-    html.dark-layout .fc-event-warning {
-        color: #ff9f43 !important;
-    }
-
-    html.dark-layout .fc-event-info {
-        color: #00cfe8 !important;
-    }
-
-    html.dark-layout .fc-event-success {
-        color: #28c76f !important;
-    }
-</style>
+<!-- استدعاء ملف التنسيق الجديد -->
+<link rel="stylesheet" type="text/css" href="<?= $customCalendarCSS ?>">
 
 <div class="app-content content">
     <div class="content-overlay"></div>
@@ -263,6 +35,7 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
             <section>
                 <div class="app-calendar overflow-hidden border">
                     <div class="row g-0">
+                        <!-- Sidebar -->
                         <div class="col app-calendar-sidebar flex-grow-0 overflow-hidden d-flex flex-column"
                             id="app-calendar-sidebar">
                             <div class="sidebar-wrapper">
@@ -275,30 +48,30 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                 </div>
                                 <div class="card-body pb-0">
                                     <?php if ($_SESSION['user']['role'] === 'admin'): ?>
-                                        <div class="mb-2">
-                                            <span class="filter-section-title">Médecin</span>
-                                            <div class="mt-1">
-                                                <?php
-                                                $doctor_where_clause = "role = 'doctor' AND deleted = 0";
-                                                if (!empty($_SESSION['user']['cabinet_id'])) {
-                                                    $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
-                                                }
-                                                $input = array(
-                                                    "label" => "",
-                                                    "name_id" => "calendar_doctor_filter",
-                                                    "placeholder" => "Tous les médecins",
-                                                    "class" => "form-select",
-                                                    "serverSide" => array(
-                                                        "table" => "users",
-                                                        "value" => "id",
-                                                        "text" => array("first_name", "last_name"),
-                                                        "where" => $doctor_where_clause
-                                                    )
-                                                );
-                                                draw_select($input);
-                                                ?>
+                                            <div class="mb-2">
+                                                <span class="filter-section-title">Médecin</span>
+                                                <div class="mt-1">
+                                                    <?php
+                                                    $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                        $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                    }
+                                                    $input = array(
+                                                        "label" => "",
+                                                        "name_id" => "calendar_doctor_filter",
+                                                        "placeholder" => "Tous les médecins",
+                                                        "class" => "form-select",
+                                                        "serverSide" => array(
+                                                            "table" => "users",
+                                                            "value" => "id",
+                                                            "text" => array("first_name", "last_name"),
+                                                            "where" => $doctor_where_clause
+                                                        )
+                                                    );
+                                                    draw_select($input);
+                                                    ?>
+                                                </div>
                                             </div>
-                                        </div>
                                     <?php endif; ?>
 
                                     <span class="filter-section-title">Filtres</span>
@@ -309,10 +82,11 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                             <label class="form-check-label fw-bold" for="select-all">Voir Tout</label>
                                         </div>
                                         <div class="calendar-events-filter">
+                                            <!-- تم تغيير الكلاسات هنا لتعكس الألوان الجديدة دلالياً -->
                                             <div class="form-check form-check-warning mb-1">
                                                 <input type="checkbox" class="form-check-input input-filter"
                                                     id="Waiting" data-value="0" checked />
-                                                <label class="form-check-label" for="Waiting">Créé</label>
+                                                <label class="form-check-label" for="Waiting">Créé (En attente)</label>
                                             </div>
                                             <div class="form-check form-check-info mb-1">
                                                 <input type="checkbox" class="form-check-input input-filter"
@@ -334,6 +108,7 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                 </div>
                             </div>
                         </div>
+                        <!-- Calendar -->
                         <div class="col position-relative">
                             <div class="card shadow-none border-0 mb-0 rounded-0">
                                 <div class="card-body pb-0">
@@ -346,6 +121,7 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                     </div>
                 </div>
 
+                <!-- Add RDV Modal -->
                 <div class="modal fade" id="addRdvModal" tabindex="-1" aria-labelledby="addRdvModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -360,26 +136,26 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                     <?php set_csrf() ?>
                                     <div class="row gy-1">
                                         <?php if ($_SESSION['user']['role'] == 'admin') { ?>
-                                            <div class="col-md-6 col-12">
-                                                <label class="form-label">Médecin</label>
-                                                <?php
-                                                $doctor_where_clause = "role = 'doctor' AND deleted = 0";
-                                                if (!empty($_SESSION['user']['cabinet_id'])) {
-                                                    $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
-                                                }
-                                                draw_select([
-                                                    "label" => "",
-                                                    "name_id" => "doctor_id",
-                                                    "placeholder" => "Sélectionner Médecin",
-                                                    "serverSide" => [
-                                                        "table" => "users",
-                                                        "value" => "id",
-                                                        "text" => ["first_name", "last_name"],
-                                                        "where" => $doctor_where_clause
-                                                    ]
-                                                ]);
-                                                ?>
-                                            </div>
+                                                <div class="col-md-6 col-12">
+                                                    <label class="form-label">Médecin</label>
+                                                    <?php
+                                                    $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                        $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                    }
+                                                    draw_select([
+                                                        "label" => "",
+                                                        "name_id" => "doctor_id",
+                                                        "placeholder" => "Sélectionner Médecin",
+                                                        "serverSide" => [
+                                                            "table" => "users",
+                                                            "value" => "id",
+                                                            "text" => ["first_name", "last_name"],
+                                                            "where" => $doctor_where_clause
+                                                        ]
+                                                    ]);
+                                                    ?>
+                                                </div>
                                         <?php } else {
                                             draw_input(["type" => "hidden", "name_id" => "doctor_id", "value" => $_SESSION['user']['id']]);
                                         } ?>
@@ -434,6 +210,7 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                     </div>
                 </div>
 
+                <!-- Edit RDV Sidebar -->
                 <div class="modal modal-slide-in event-sidebar fade" id="add-new-sidebar">
                     <div class="modal-dialog sidebar-lg">
                         <div class="modal-content p-0">
@@ -560,9 +337,9 @@ $handlerURL = SITE_URL . '/handlers';
                                 var percentage = (count / limit) * 100;
 
                                 // Determine color based on occupancy
-                                var color = '#28c76f'; // Green (Safe)
+                                var color = '#00D894'; // Green (Safe)
                                 if (percentage >= 100) color = '#ea5455'; // Red (Full)
-                                else if (percentage >= 75) color = '#ff9f43'; // Orange (Almost Full)
+                                else if (percentage >= 75) color = '#0071BC'; // Blue (Almost Full) - Was Orange
 
                                 // Conic Gradient for the Donut Chart effect
                                 var gradient = `conic-gradient(${color} ${percentage}%, ${trackColor} 0)`;
@@ -671,20 +448,11 @@ $handlerURL = SITE_URL . '/handlers';
                 var addRdvModal = new bootstrap.Modal(document.getElementById('addRdvModal'));
                 $('#addRdvModal form')[0].reset();
                 $('#addRdvModal .select2').val(null).trigger('change');
-
-                // 1. تعيين التاريخ في الحقل
                 $('#addRdvModal #date').val(info.dateStr);
-
-                // 2. تفعيل قائمة التذاكر يدوياً لأننا قمنا بتعيين التاريخ
                 $('#addRdvModal #rdv_num').prop('disabled', false);
-
-                // 3. إذا كان الطبيب محدداً مسبقاً (في حالة الأدمن)، نقوم بتحديث القائمة
                 if ($('#addRdvModal #doctor_id').val()) {
-                    // لا نحتاج لعمل trigger change هنا لأن Select2 سيجلب البيانات عند الفتح
-                    // ولكن يمكننا تصفير القيمة للتأكد
                     $('#addRdvModal #rdv_num').val(null).trigger('change');
                 }
-
                 addRdvModal.show();
             },
 
@@ -736,10 +504,7 @@ $handlerURL = SITE_URL . '/handlers';
         $(eventForm).on('submit', function (e) {
             e.preventDefault();
             if (eventForm.valid()) {
-                // جلب التوكن
                 var csrfToken = $('input[name="csrf"]').val();
-
-                // تجهيز البيانات مع البادئة الصحيحة rdv__
                 var formDataArray = [
                     { name: 'rdv__state', value: eventLabel.val() },
                     { name: 'rdv__date', value: startDate.val() },
@@ -766,7 +531,6 @@ $handlerURL = SITE_URL . '/handlers';
                         }
                     },
                     error: function (xhr, status, error) {
-                        console.error(xhr.responseText);
                         Swal.fire({ icon: 'error', title: 'Erreur', text: 'Erreur serveur (Check Logs)' });
                     }
                 });
@@ -819,17 +583,15 @@ $handlerURL = SITE_URL . '/handlers';
     });
 
     // =================================================================================
-    //  Modal & Ticket Fetching Logic (Updated)
+    //  Modal & Ticket Fetching Logic
     // =================================================================================
     $(document).ready(function () {
         $('.rdvForm').validate({
             rules: { 'doctor_id': { required: true }, 'date': { required: true }, 'rdv_num': { required: true }, 'first_name': { required: true }, 'last_name': { required: true }, 'phone': { required: true } }
         });
 
-        // 1. تعريف متغير لحقل التذاكر
         var $rdvSelect = $('.rdv_num.select2');
 
-        // 2. تهيئة Select2 (مرة واحدة فقط)
         $rdvSelect.select2({
             dropdownParent: $rdvSelect.parent(),
             placeholder: "Sélectionner Ticket",
@@ -843,7 +605,6 @@ $handlerURL = SITE_URL . '/handlers';
                 url: "<?= $handlerURL ?>",
                 delay: 250,
                 data: function (params) {
-                    // قراءة القيم الحالية من المودال
                     return {
                         method: 'handleRdv_nbr',
                         date: $('#addRdvModal #date').val(),
@@ -857,10 +618,8 @@ $handlerURL = SITE_URL . '/handlers';
             }
         });
 
-        // 3. تعطيل القائمة افتراضياً
         $rdvSelect.prop('disabled', true);
 
-        // 4. دالة لتحديث حالة القائمة
         function updateRdvFieldState() {
             var selectedDate = $('#addRdvModal #date').val();
             if (selectedDate && selectedDate !== "") {
@@ -871,7 +630,6 @@ $handlerURL = SITE_URL . '/handlers';
             $rdvSelect.val(null).trigger('change');
         }
 
-        // 5. ربط حدث التغيير بمكتبة Flatpickr داخل المودال
         var dateElement = document.querySelector("#addRdvModal #date");
         if (dateElement && dateElement._flatpickr) {
             dateElement._flatpickr.config.onChange.push(function (selectedDates, dateStr, instance) {
@@ -880,17 +638,14 @@ $handlerURL = SITE_URL . '/handlers';
             });
         }
 
-        // 6. ربط حدث التغيير المباشر (للحالات الأخرى)
         $(document).on('change', '#addRdvModal #date', function () {
             updateRdvFieldState();
         });
 
-        // 7. عند تغيير الطبيب
         $(document).on('change', '#addRdvModal #doctor_id', function () {
             $rdvSelect.val(null).trigger('change');
         });
 
-        // Fetch Patient Details
         $(document).on('change', '#patient_id', function (e) {
             e.preventDefault();
             var self = $(this);
@@ -906,7 +661,6 @@ $handlerURL = SITE_URL . '/handlers';
             });
         });
 
-        // Submit New RDV
         $(document).on('submit', '.rdvForm', function (e) {
             e.preventDefault();
             var self = $(this);
@@ -947,7 +701,6 @@ $handlerURL = SITE_URL . '/handlers';
         $('#addRdvModal').on('hidden.bs.modal', function () {
             $(this).find('form.rdvForm')[0].reset();
             $(this).find('.select2').val(null).trigger('change');
-            // إعادة تعطيل القائمة عند الإغلاق
             $rdvSelect.prop('disabled', true);
         });
     });

@@ -1,23 +1,29 @@
 <?php
 
+
 function data_table($DB)
 {
+    // 1. تعريف الأيقونات (تم تحديث الألوان إلى الأزرق والأخضر)
     $icons = array(
         "view-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
-        "delete-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fd5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-        "edit-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4abb36" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
+        "delete-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fd5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+        "edit-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00D894" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', // Green
         "message-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-chat-text" viewBox="0 0 16 16"> <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/> <path d="M4 5.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8zm0 2.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/> </svg>',
-        "popup-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6258cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>'
+        "popup-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>' // Blue
     );
+
+    // 2. تحديث الشارات (Badges) - استبدال البرتقالي بالأزرق
     $badgeStates = array(
         -1 => '<span class="badge rounded-pill badge-light-danger">' . ($GLOBALS["language"]["canceled"] ?? "Annulé") . '</span>',
-        0 => '<span class="badge rounded-pill badge-light-warning">' . $GLOBALS["language"]["created"] . '</span>',
+        0 => '<span class="badge rounded-pill badge-light-info">' . $GLOBALS["language"]["created"] . '</span>', // Was Warning -> Now Info (Blue)
         1 => '<span class="badge rounded-pill badge-light-success">' . $GLOBALS["language"]["completed"] . '</span>'
     );
+
+    // 3. تحديث أزرار الحالة (Dropdowns)
     $rdvStates = array(
-        0 => '<a class="btn btn-outline-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["created"] . '</a>',
+        0 => '<a class="btn btn-outline-info dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["created"] . '</a>', // Was Secondary -> Now Info (Blue)
         1 => '<a class="btn btn-outline-success dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["accepted"] . '</a>',
-        2 => '<a class="btn btn-outline-info dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["completed"] . '</a>',
+        2 => '<a class="btn btn-outline-success dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["completed"] . '</a>', // Green
         3 => '<a class="btn btn-outline-danger dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["Canceled"] . '</a>',
     );
 
@@ -64,7 +70,6 @@ function data_table($DB)
 
     if (!empty($_REQUEST['search']['value'])) {
         $search_value = $_REQUEST['search']['value'];
-        // Sanitize search value
         $search_value = filter_var($search_value, FILTER_SANITIZE_ADD_SLASHES);
 
         if (!empty($search_cols)) {
@@ -124,7 +129,7 @@ function data_table($DB)
                                 "edit-icon" => $icons['edit-icon'],
                                 "delete-icon" => $icons['delete-icon'],
                                 "view-icon" => $icons['view-icon'],
-                                "reset_password-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'
+                                "reset_password-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>' // Blue
                             ];
                             $icon_to_use = isset($action['icon']) ? $action['icon'] : ($default_icons[$action['action'] . '-icon'] ?? '');
 
@@ -149,19 +154,23 @@ function data_table($DB)
             } else if (stripos($key, '__rdvstate') !== false) {
                 switch ($value) {
                     case 0:
-                        $single_data[] = '<span class="badge badge-light-secondary stateOrder px-1 py-75">' . $GLOBALS["language"]["created"] . ': </span>
+                        // Created -> Info (Blue)
+                        $single_data[] = '<span class="badge badge-light-info stateOrder px-1 py-75">' . $GLOBALS["language"]["created"] . ': </span>
 							<button type="button" class="btn btn-outline-success buttonstate px-1 py-75" data-value="1" data-id="' . $item_id . '">' . $GLOBALS["language"]["Accept"] . '</button>
 							<button type="button" class="btn btn-outline-danger buttonstate px-1 py-75" data-value="3" data-id="' . $item_id . '">' . $GLOBALS["language"]["Cancel"] . '</button>';
                         break;
                     case 1:
+                        // Accepted -> Success (Green)
                         $single_data[] = '<span class="badge badge-light-success stateOrder px-1 py-75">' . $GLOBALS["language"]["accepted"] . ': </span>
 							<button type="button" class="btn btn-outline-info buttonstate px-1 py-75" data-value="2" data-id="' . $item_id . '">' . $GLOBALS["language"]["Complete"] . '</button>
 							<button type="button" class="btn btn-outline-danger buttonstate px-1 py-75" data-value="3" data-id="' . $item_id . '">' . $GLOBALS["language"]["Cancel"] . '</button>';
                         break;
                     case 2:
-                        $single_data[] = '<button type="button" class="btn btn-outline-info px-1 py-75" data-value="2" data-id="' . $item_id . '" disabled style="background-color: #e2f7ff; opacity: 1;border: none !important;">' . $GLOBALS["language"]["completed"] . '</button>';
+                        // Completed -> Info/Success (Blue/Green)
+                        $single_data[] = '<button type="button" class="btn btn-outline-success px-1 py-75" data-value="2" data-id="' . $item_id . '" disabled style="background-color: #e2f7ff; opacity: 1;border: none !important;">' . $GLOBALS["language"]["completed"] . '</button>';
                         break;
                     case 3:
+                        // Canceled -> Danger (Red)
                         $single_data[] = '<button type="button" class="btn btn-outline-danger px-1 py-75" data-value="3" data-id="' . $item_id . '" disabled style="background-color: #ffe2e2; opacity: 1;border: none !important;">' . $GLOBALS["language"]["Canceled"] . '</button>';
                         break;
                 }
@@ -176,8 +185,6 @@ function data_table($DB)
                     $single_data[] = '<span class="badge badge-light-danger">Impayé</span>';
                 }
             } else {
-                // --- SECURITY FIX: XSS Prevention ---
-                // Escape raw data coming from DB before rendering
                 $single_data[] = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
             }
         }

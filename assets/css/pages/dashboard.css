@@ -1,0 +1,10 @@
+/* assets/css/pages/dashboard.css */
+.vr {
+  display: inline-block;
+  align-self: stretch;
+  width: 1px;
+  min-height: 1em;
+  background-color: #777;
+  opacity: 0.25;
+  margin: 0 10px;
+}

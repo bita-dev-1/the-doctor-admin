@@ -8,29 +8,22 @@ function getDoctorFullProfile($db, $id)
         return false;
     }
 
-    // ============================================================
-    // 1. Smart View Counter (زيادة عدد المشاهدات)
-    // ============================================================
+    // 1. Smart View Counter
     $viewKey = 'viewed_doctor_' . $id;
-    $cooldown = 3600; // ساعة واحدة
+    $cooldown = 3600;
 
     if (!isset($_SESSION[$viewKey]) || (time() - $_SESSION[$viewKey] > $cooldown)) {
         try {
-            // نستخدم وضع الصمت لتجنب توقف الصفحة في حال حدوث خطأ بسيط في التحديث
             $db->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
             $db->pdo->exec("UPDATE users SET views = views + 1 WHERE id = $id");
             $db->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $_SESSION[$viewKey] = time();
         } catch (Exception $e) {
-            // تجاهل أخطاء العداد
+            // Ignore
         }
     }
 
-    // ============================================================
-    // 2. Fetch Data (جلب البيانات)
-    // ============================================================
-
-    // استخدام LEFT JOIN لضمان جلب الطبيب حتى لو كانت البيانات المرتبطة ناقصة
+    // 2. Fetch Data
     $query = "SELECT 
                 u.id,
                 u.first_name,
@@ -74,12 +67,14 @@ function getDoctorFullProfile($db, $id)
     if (!empty($result)) {
         $doctor = $result[0];
 
-        // التحقق من أن المستخدم طبيب ونشط وغير محذوف
-        if ($doctor['role'] !== 'doctor' || $doctor['status'] !== 'active' || $doctor['deleted'] != 0) {
+        // --- FIX: Allow 'admin' role (Doctor Owner) to have a landing page ---
+        // Old code: if ($doctor['role'] !== 'doctor' ...
+        if (!in_array($doctor['role'], ['doctor', 'admin']) || $doctor['status'] !== 'active' || $doctor['deleted'] != 0) {
             return false;
         }
+        // ---------------------------------------------------------------------
 
-        // معالجة مسارات الصور
+        // Fix Image Paths
         $fixPath = function ($path) {
             if (empty($path))
                 return null;
@@ -92,12 +87,12 @@ function getDoctorFullProfile($db, $id)
         $doctor['image2'] = $fixPath($doctor['image2']);
         $doctor['image3'] = $fixPath($doctor['image3']);
 
-        // معالجة ساعات العمل (JSON)
+        // Schedule
         $schedule = json_decode($doctor['travel_hours'] ?? '[]', true);
         $doctor['schedule'] = is_array($schedule) ? $schedule : [];
         unset($doctor['travel_hours']);
 
-        // قيم افتراضية للحقول التي قد تكون فارغة بسبب LEFT JOIN
+        // Defaults
         $doctor['specialty_fr'] = $doctor['specialty_fr'] ?? 'Médecin';
         $doctor['commune'] = $doctor['commune'] ?? '';
         $doctor['willaya'] = $doctor['willaya'] ?? '';

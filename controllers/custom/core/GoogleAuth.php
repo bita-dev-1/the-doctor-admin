@@ -67,55 +67,44 @@ function google_login_callback()
             }
             $db = new DB();
 
-            // 4. Check if user exists (by Email OR Google ID)
+            // 4. Check if user exists
             $sql = "SELECT * FROM users WHERE email = '$email' OR google_id = '$google_id' LIMIT 1";
             $user = $db->select($sql);
 
             if (!empty($user)) {
-                // --- CASE A: User Exists (Login & Link) ---
+                // --- CASE A: User Exists ---
                 $userData = $user[0];
 
-                // Security Check: Prevent login if deleted or inactive
                 if ($userData['deleted'] == 1 || $userData['status'] !== 'active') {
                     $_SESSION['error'] = "Ce compte est désactivé ou supprimé.";
                     header('Location: ' . SITE_URI . 'login');
                     exit();
                 }
 
-                // Prepare data for update (Account Linking)
+                // Update Google ID/Image if needed
                 $updateData = [];
-
-                // Link Google ID if missing
                 if (empty($userData['google_id'])) {
                     $updateData['google_id'] = $google_id;
                 }
-
-                // Update profile picture if it's the default one
                 if ((empty($userData['image1']) || strpos($userData['image1'], 'default_User.png') !== false) && !empty($picture)) {
                     $updateData['image1'] = $picture;
                 }
 
-                // Perform DB Update if needed
                 if (!empty($updateData)) {
                     $db->table = 'users';
                     $db->data = $updateData;
                     $db->where = "id = " . $userData['id'];
                     $db->update();
 
-                    // Update local variable for session
-                    foreach ($updateData as $k => $v) {
+                    // Update local variable
+                    foreach ($updateData as $k => $v)
                         $userData[$k] = $v;
-                    }
                 }
 
-                // Set Session & Redirect
                 $_SESSION['user'] = $userData;
-                session_regenerate_id(true); // Prevent Session Fixation
-                header('Location: ' . SITE_URI);
-                exit();
 
             } else {
-                // --- CASE B: New User (Register) ---
+                // --- CASE B: New User ---
                 $db->table = 'users';
                 $db->data = [
                     'first_name' => $first_name,
@@ -123,22 +112,19 @@ function google_login_callback()
                     'email' => $email,
                     'google_id' => $google_id,
                     'image1' => $picture,
-                    'role' => 'doctor', // Default role for Google Sign-up
+                    'role' => 'admin', // Default role for Google Sign-up (Admin of their future cabinet)
                     'status' => 'active',
-                    'password' => sha1(uniqid(rand(), true)), // Random secure password
+                    'password' => sha1(uniqid(rand(), true)),
                     'created_at' => date('Y-m-d H:i:s'),
-                    'must_change_password' => 0
+                    'must_change_password' => 0,
+                    'cabinet_id' => null // Important: No cabinet yet
                 ];
 
                 $inserted_id = $db->insert();
 
                 if ($inserted_id) {
-                    // Fetch the new user data to ensure we have all fields
                     $newUser = $db->select("SELECT * FROM users WHERE id = $inserted_id");
                     $_SESSION['user'] = $newUser[0];
-                    session_regenerate_id(true);
-                    header('Location: ' . SITE_URI);
-                    exit();
                 } else {
                     $_SESSION['error'] = "Failed to create account. Please try again.";
                     header('Location: ' . SITE_URI . 'login');
@@ -146,15 +132,22 @@ function google_login_callback()
                 }
             }
 
+            // 5. Redirect Logic
+            // If user has no cabinet, force them to complete profile
+            if (empty($_SESSION['user']['cabinet_id'])) {
+                header('Location: ' . SITE_URI . 'complete-profile');
+            } else {
+                header('Location: ' . SITE_URI);
+            }
+            exit();
+
         } catch (Exception $e) {
-            // Log error and redirect to login with message
             error_log("Google Auth Error: " . $e->getMessage());
             $_SESSION['error'] = "Google Login Failed. Please try again.";
             header('Location: ' . SITE_URI . 'login');
             exit();
         }
     } else {
-        // No code returned, redirect to login
         header('Location: ' . SITE_URI . 'login');
         exit();
     }

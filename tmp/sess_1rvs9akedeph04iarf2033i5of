@@ -1,0 +1,1 @@
+csrf|s:100:"5ee164c5842d0ec8ab78bbfc5f54b23a9430f6e1122a2b371ff99c8e62629dfcee0364369aedf5beb8d1ca8e25102359df0a";user|a:8:{s:2:"id";i:509;s:4:"role";s:6:"doctor";s:10:"cabinet_id";i:5;s:10:"first_name";s:5:"ADDAR";s:9:"last_name";s:13:"MOHAMED AKRAM";s:6:"image1";s:21:"uploads/687968271.jpg";s:20:"must_change_password";i:0;s:12:"kine_enabled";i:1;}

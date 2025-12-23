@@ -1,439 +1,605 @@
-/* vietnamese */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
-    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+/* ==========================================================================
+   THE DOCTOR ADMIN - MASTER STYLE (PREMIUM COMPACT EDITION)
+   File: assets/css/custom.css
+   Description: Core styles, Layout, Navbar, Cards, Forms, Tables & Dark Mode.
+   ========================================================================== */
+
+/* 1. GLOBAL VARIABLES & TYPOGRAPHY */
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap");
+
+:root {
+  /* --- BRAND PALETTE --- */
+
+  /* Primary Color (Action/Success) -> GREEN */
+  --primary: #00d894;
+  --primary-dark: #00b078;
+  --primary-light: rgba(0, 216, 148, 0.15);
+  --primary-gradient: linear-gradient(135deg, #00d894 0%, #00b078 100%);
+
+  /* Secondary Color (Info/General) -> BLUE */
+  --secondary-brand: #0071bc;
+  --secondary-dark: #005a96;
+  --secondary-light: rgba(0, 113, 188, 0.15);
+
+  /* Special Status Colors */
+  --color-warning: #ff9f43; /* Kept ONLY for 'Waiting' status */
+  --color-danger: #ea5455;
+
+  /* --- UI COLORS --- */
+  --bg-body: #f4f6f8; /* Soft Gray-Blue */
+  --bg-card: #ffffff;
+  --text-main: #4b4b4b;
+  --text-muted: #b9b9c3;
+  --border-color: #ebe9f1;
+  --input-bg: #ffffff;
+
+  /* --- SHADOWS --- */
+  --shadow-card: 0 4px 18px 0 rgba(34, 41, 47, 0.04);
+  --shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.07);
+  --shadow-primary: 0 4px 15px rgba(0, 216, 148, 0.3);
+
+  /* --- TRANSITIONS --- */
+  --transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
-/* latin-ext */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
-    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
-    format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-    U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
-    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
-    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
-    format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-    U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
-    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
-    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
-    format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-    U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJFQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
-    U+01AF-01B0, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hJVQNcOM.woff2)
-    format("woff2");
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
-    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: "Quicksand";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url(https://fonts.gstatic.com/s/quicksand/v30/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
-    format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-    U+FEFF, U+FFFD;
-}
-* {
-  font-family: "Quicksand";
-}
+
 body {
-  font-family: "Quicksand" !important;
+  font-family: "Quicksand", sans-serif !important;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  /* Reduced font size for "Zoom Out" effect */
+  font-size: 0.9rem !important;
+  line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-.navigation,
-.header-navbar {
-  font-family: "Quicksand";
-}
-.view-record,
-.edit-record,
-.delete-record {
-  margin: 0 5px;
-}
-table.dataTable td {
-  direction: ltr;
-  text-align: left;
-}
-.avatar-upload {
-  position: relative;
-  max-width: 192px;
-  margin: auto;
-}
-.avatar-upload .avatar-edit {
-  position: absolute;
-  right: calc(50% - 19px);
-  z-index: 1;
-  bottom: -15px;
-}
-.avatar-upload .avatar-edit input {
-  opacity: 0;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-.avatar-upload .avatar-edit label {
-  display: inline-block;
-  width: 34px;
-  height: 34px;
-  margin-bottom: 0;
-  border-radius: 100%;
-  background: #ffffff;
-  border: 1px solid transparent;
-  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
-  cursor: pointer;
-  font-weight: normal;
-  transition: all 0.2s ease-in-out;
-  position: relative;
-}
-.avatar-upload .avatar-edit label:hover {
-  background: #f1f1f1;
-  border-color: #d6d6d6;
-}
-.avatar-upload .avatar-edit label svg {
-  width: 20px;
-  height: 20px;
-  position: absolute;
-  top: calc(50% - 10px);
-  left: calc(50% - 10px);
-}
-.avatar-upload .avatar-preview {
-  width: 192px;
-  height: 192px;
-  position: relative;
-  border-radius: 100%;
-  border: 6px solid #f8f8f8;
-  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
-}
-.avatar-upload .avatar-preview > div {
-  width: 100%;
-  height: 100%;
-  border-radius: 100%;
-  background-image: url("../../assets/images/default_image.png");
-  background-size: auto;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-color: #fff;
-}
-.avatar-upload .avatar-preview .drop-zoon__preview-image {
-  border-radius: 50%;
-  z-index: 0;
-}
-.upload-area__drop-zoon {
-  position: relative;
-  min-height: 50px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  border: 2px dashed #000;
-  border-radius: 15px;
-  cursor: pointer;
-  transition: border-color 300ms ease-in-out;
-  background-color: #fff;
-  padding: 20px;
-}
-.drop-zoon__paragraph {
-  font-size: 14px;
-  color: #777;
-  margin: 10px 0;
-  transition: opacity 300ms ease-in-out;
-}
-.drop-zoon:hover .drop-zoon__icon,
-.drop-zoon:hover .drop-zoon__paragraph {
-  opacity: 0.7;
-}
-.drop-zoon__icon svg {
-  fill: none;
-  width: 60px;
-  height: 60px;
-}
-.drop-zoon__icon svg path {
-  stroke: #000;
+
+/* Icon Global Tweaks */
+.feather,
+[data-feather] {
+  stroke-width: 2px !important; /* Thicker strokes */
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.3;
 }
-.drop-zoon__loading-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: none;
-  color: #000;
-  z-index: 10;
+
+/* Selection Highlight */
+::selection {
+  background: var(--primary);
+  color: #fff;
 }
-.drop-zoon__preview-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 0.3125rem;
-  border-radius: 10px;
-  display: none;
-  z-index: 1000;
-  transition: opacity 300ms ease-in-out;
-  background-color: #fff;
+
+/* ==========================================================================
+   2. COLOR UTILITIES & OVERRIDES
+   ========================================================================== */
+
+/* Links */
+a {
+  color: var(--secondary-brand);
+  transition: var(--transition);
+  text-decoration: none;
 }
-.drop-zoon:hover .drop-zoon__preview-image {
-  opacity: 0.8;
+a:hover {
+  color: var(--primary);
 }
-.drop-zoon__file-input {
-  opacity: 0;
-  position: absolute;
-  width: 100%;
-  height: 100%;
+
+/* Text Utilities */
+.text-primary {
+  color: var(--primary) !important;
+}
+.text-secondary {
+  color: var(--secondary-brand) !important;
+}
+.text-warning {
+  color: var(--color-warning) !important;
+} /* Orange for Waiting */
+
+/* Backgrounds */
+.bg-warning {
+  background-color: var(--color-warning) !important;
+  color: #fff !important;
+}
+.border-warning {
+  border-color: var(--color-warning) !important;
+}
+
+/* Buttons (Compact & Modern) */
+.btn {
+  border-radius: 8px;
+  padding: 0.55rem 1.2rem; /* Compact padding */
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: none !important;
+  transition: var(--transition);
+}
+
+.btn-primary {
+  background: var(--primary-gradient) !important;
+  border: none !important;
+  box-shadow: var(--shadow-primary) !important;
+  color: #fff !important;
+}
+.btn-primary:hover {
+  background-color: var(--primary-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 216, 148, 0.4) !important;
+}
+
+/* Warning Button -> Blue (Replaced per request) */
+.btn-warning {
+  background-color: var(--secondary-brand) !important;
+  color: #fff !important;
+  border-color: var(--secondary-brand) !important;
+}
+.btn-warning:hover {
+  background-color: var(--secondary-dark) !important;
+  border-color: var(--secondary-dark) !important;
+  transform: translateY(-2px);
+}
+
+/* Badges (Compact) */
+.badge {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+}
+
+.badge.badge-light-primary {
+  background-color: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+
+/* Warning Badge (Kept Orange for Status) */
+.badge.badge-light-warning {
+  background-color: rgba(255, 159, 67, 0.12) !important;
+  color: var(--color-warning) !important;
+}
+
+/* Separators */
+hr {
+  background-color: var(--border-color) !important;
+  opacity: 1;
+  border: none;
+  height: 1px;
+}
+
+/* ==========================================================================
+   3. HEADER & NAVBAR (COMPACT GLASS)
+   ========================================================================== */
+.header-navbar {
+  min-height: 62px !important; /* Compact height */
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+  border-radius: 0 0 20px 20px;
+  margin-bottom: 1.5rem !important;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
   z-index: 1001;
 }
-.upload-area .error {
-  display: flex;
-  justify-content: center;
-  margin: 5px auto;
+
+/* User Info */
+.user-nav .user-name {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  margin-bottom: 0;
 }
-.drop-zoon--over {
-  border-color: rgb(63, 134, 255);
+.user-nav .user-status {
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 700;
+  background: var(--primary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
-.drop-zoon--over .drop-zoon__icon,
-.drop-zoon--over .drop-zoon__paragraph {
-  opacity: 0.7;
+
+/* Smart Avatar */
+.avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  margin-left: 10px;
 }
-.drop-zoon--Uploaded .drop-zoon__icon,
-.drop-zoon--Uploaded .drop-zoon__paragraph {
-  display: none;
+.avatar-wrapper:hover {
+  transform: scale(1.05);
 }
-.upload-area__file-details {
-  height: 0;
-  visibility: hidden;
-  opacity: 0;
-  text-align: left;
-  transition: none 500ms ease-in-out;
-  transition-property: opacity, visibility;
-  transition-delay: 500ms;
+
+.avatar-content-box {
+  width: 38px;
+  height: 38px; /* Compact Size */
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
-.file-details--open {
-  height: auto;
-  visibility: visible;
-  opacity: 1;
-}
-.uploaded-file {
+.avatar-initials {
   display: flex;
   align-items: center;
-  padding: 0.625rem 0;
-  visibility: hidden;
-  opacity: 0;
-  transition: none 500ms ease-in-out;
-  transition-property: visibility, opacity;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary-brand));
+  color: #fff;
+  text-transform: uppercase;
 }
-.uploaded-file--open {
-  visibility: visible;
-  opacity: 1;
+.avatar-status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background-color: #28c76f;
+  border: 2px solid #fff;
+  border-radius: 50%;
 }
-.uploaded-file__icon-container {
-  position: relative;
-  margin-right: 0.3125rem;
+
+/* Dropdown */
+.dropdown-user .dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+  border: none;
+  padding: 6px;
+  margin-top: 10px !important;
+  animation: slideUpFade 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
-.uploaded-file__icon {
-  font-size: 3.4375rem;
-  color: rgb(63, 134, 255);
+.dropdown-user .dropdown-item {
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-main);
 }
-.uploaded-file__info {
-  position: relative;
-  top: -0.3125rem;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
+.dropdown-user .dropdown-item:hover {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  transform: translateX(3px);
 }
-.uploaded-file__name {
-  width: 100%;
-  max-width: 180px;
-  display: inline-block;
-  font-size: 1rem;
-  white-space: nowrap;
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   4. DASHBOARD CARDS (FLOATING)
+   ========================================================================== */
+.card {
+  background-color: var(--bg-card);
+  border: none;
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+  margin-bottom: 1.5rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: right;
-  direction: ltr;
 }
-.modal .modal-content {
-  padding: 10px;
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
 }
-.disabled .form-control,
-.disabled .select2 {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+
+.card .card-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.2rem;
+}
+.card .card-header .card-title,
+.content-header-title {
+  font-weight: 800;
+  color: var(--secondary-brand);
+  font-size: 1.05rem;
+  letter-spacing: -0.5px;
+}
+.content-header-title {
+  border-right-color: var(--secondary-brand) !important;
+}
+
+/* Stat Cards */
+.card-statistics .avatar {
+  background-color: rgba(243, 244, 246, 1);
+  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+}
+.card-statistics h4.fw-bolder {
+  font-size: 1.5rem;
+  color: #2c2c2c;
+  margin-bottom: 0.2rem;
+  letter-spacing: -0.5px;
+}
+.card-statistics .card-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* PREMIUM WELCOME CARD (Bienvenue) */
+.card-congratulation-medal {
+  /* Rich Gradient: Deep Blue to Cyan to Green */
+  background: linear-gradient(
+    135deg,
+    #005a96 0%,
+    #0071bc 50%,
+    #00d894 100%
+  ) !important;
+  position: relative;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 10px 30px -5px rgba(0, 113, 188, 0.4) !important;
+  color: #fff;
+}
+
+/* Decorative Circles */
+.card-congratulation-medal::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+}
+.card-congratulation-medal::after {
+  content: "";
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
   pointer-events: none;
 }
 
-.card .card-header {
-  background-color: #f59300;
-  border-radius: 0.25rem;
-  padding: 20px;
-  margin-bottom: 20px;
-  color: white;
+/* Text */
+.card-congratulation-medal h5 {
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
-.dashboard .col-lg-2 img {
-  width: 65% !important;
-}
-.card .card-header {
-  background-color: transparent;
-  color: white;
-}
-.card .card-header .card-title {
-  color: #777;
-  font-family: "Quicksand";
-}
-
-#chart {
-  max-width: 100%;
-  margin: 35px auto;
-  opacity: 0.9;
-  padding-bottom: 25px;
-}
-#chart1 {
-  max-width: 100%;
-  height: 398px;
-  margin: 35px auto;
-  opacity: 0.9;
-}
-
-#chart3 {
-  max-width: 100ù;
-  margin: 35px auto;
-}
-
-#chart3,
-.chart-box {
-  padding-bottom: 25px;
-  padding-top: 20px;
-  padding-left: 10px;
-  background: #fff;
-  border: 1px solid #ddd;
-  box-shadow: 0 22px 35px -16px rgb(0 0 0 / 10%);
-}
-.seller_rating span {
-  color: #fabf35;
-  font-size: 21px;
+.card-congratulation-medal .card-text {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.9rem !important;
   font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
 }
-.seller_rating svg {
-  width: 25px;
-  height: 23px;
-}
-
-#div-bill {
-  padding: 10px;
-}
-
-.title-pdf {
-  text-align: center;
-}
-.title-pdf h2 {
-  padding-top: 40px;
+.card-congratulation-medal h3 a {
+  color: #fff !important;
+  font-size: 2.2rem;
+  font-weight: 900;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  display: inline-block;
+  margin-top: 5px;
 }
 
-.container-fluid {
-  background-color: white !important;
+/* Button inside Card */
+.card-congratulation-medal .btn-primary {
+  background-color: #fff !important;
+  color: #0071bc !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  font-weight: 700;
+  margin-top: 15px;
+}
+.card-congratulation-medal .btn-primary:hover {
+  background-color: #f8f9fa !important;
+  transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   5. FORMS & INPUTS (COMPACT)
+   ========================================================================== */
+.form-control,
+.form-select,
+.input-group-text {
+  background-color: var(--input-bg);
+  border: 1px solid #d8d6de;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  min-height: 38px;
+}
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  background-color: #fff;
+}
+.form-label {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Checkbox */
+.form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ==========================================================================
+   6. TABLES & DATATABLES
+   ========================================================================== */
+.table {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.table thead th {
+  background-color: #fafbfc;
+  color: var(--secondary-brand) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  padding: 0.8rem 1rem;
+  border: none;
+}
+
+.table tbody tr {
+  background-color: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease;
+}
+
+.table tbody td {
+  padding: 0.8rem 1rem;
+  vertical-align: middle;
+  border: none;
+  font-weight: 500;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.table tbody tr:first-child td:first-child {
+  border-top-left-radius: 8px;
+}
+.table tbody tr:first-child td:last-child {
+  border-top-right-radius: 8px;
+}
+.table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+.table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+.table-hover tbody tr:hover {
+  transform: scale(1.002);
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 2;
+  position: relative;
+}
+
+/* Pagination */
+.page-item .page-link {
+  border-radius: 50%;
+  margin: 0 3px;
+  border: none;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.page-item.active .page-link {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  box-shadow: var(--shadow-primary);
+  color: #fff !important;
+}
+
+/* ==========================================================================
+   7. DARK MODE OVERRIDES (FULL SUITE)
+   ========================================================================== */
+html.dark-layout body {
+  background-color: #161d31;
+  color: #d0d2d6;
+}
+
+/* Navbar */
+html.dark-layout .header-navbar {
+  background: rgba(40, 48, 70, 0.85) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+html.dark-layout .avatar-status-dot {
+  border-color: #283046;
+}
+
+/* Cards */
+html.dark-layout .card {
+  background-color: #283046;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+}
+html.dark-layout .card .card-header {
+  border-bottom-color: #3b4253;
+}
+html.dark-layout .card .card-title {
+  color: #d0d2d6 !important;
+}
+html.dark-layout .card-statistics h4.fw-bolder {
+  color: #e6e6e6;
+}
+
+/* Forms */
+html.dark-layout .form-control,
+html.dark-layout .form-select,
+html.dark-layout .input-group-text {
+  background-color: #283046;
+  border-color: #3b4253;
+  color: #d0d2d6;
+}
+html.dark-layout .form-control:focus {
+  border-color: var(--primary);
+  background-color: #161d31;
+}
+html.dark-layout .form-label {
+  color: #b4b7bd;
+}
+
+/* Tables */
+html.dark-layout .table tbody tr {
+  background-color: #283046;
+}
+html.dark-layout .table thead th {
+  background-color: #343d55;
+  color: #b4b7bd !important;
+}
+html.dark-layout .table-hover tbody tr:hover {
+  background-color: #343d55;
+}
+
+/* Dropdowns & Modals */
+html.dark-layout .modal-content,
+html.dark-layout .dropdown-menu {
+  background-color: #283046;
+  border: 1px solid #3b4253;
+}
+html.dark-layout .dropdown-item {
+  color: #d0d2d6;
+}
+html.dark-layout .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+html.dark-layout .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Colors Override */
+html.dark-layout .text-warning {
+  color: #ff9f43 !important;
+}
+html.dark-layout .badge.badge-light-warning {
+  background-color: rgba(255, 159, 67, 0.15) !important;
+  color: #ff9f43 !important;
+}
+
+/* Scrollbars */
+html.dark-layout ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+html.dark-layout ::-webkit-scrollbar-track {
+  background: transparent;
 }

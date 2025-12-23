@@ -1,0 +1,7 @@
+/* assets/css/pages/form-users.css */
+.tickets label,
+.work_hours label {
+  font-size: 15px;
+  font-weight: 900;
+  min-width: 40%;
+}

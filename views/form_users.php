@@ -96,14 +96,9 @@ if ($is_session_super_admin) {
 }
 ?>
 
-<style>
-    .tickets label,
-    .work_hours label {
-        font-size: 15px;
-        font-weight: 900;
-        min-width: 40%;
-    }
-</style>
+
+<link rel="stylesheet" type="text/css" href="<?= SITE_URL ?>/assets/css/pages/form-users.css">
+
 
 <div class="app-content content ">
     <div class="content-wrapper p-0">

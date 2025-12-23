@@ -1,4 +1,3 @@
-// Bug fix: Check if $result exists before accessing its keys for dropdowns
 <?php
 // MODIFIED: Corrected security check to allow all admin roles and doctors/nurses
 if (!isset($_SESSION['user']['id'])) {

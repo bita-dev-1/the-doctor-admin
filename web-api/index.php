@@ -1,21 +1,32 @@
 <?php
 
-    require_once("router/router.php");
+require_once("router/router.php");
 
+// --- FIX: Check if class DB exists before including ---
+if (!class_exists('DB')) {
     include_once('config/DB.php');
-    include_once('controllers/api.controller.php');
+}
+// -----------------------------------------------------
 
+include_once('controllers/api.controller.php');
+
+// Use global DB if exists (from local_router)
+if (isset($GLOBALS['db']) && $GLOBALS['db'] instanceof DB) {
+    $db = $GLOBALS['db'];
+} else {
     $db = new DB();
-    
-    post('/web-api/v1/doctors', 'middleware/doctors.php');
-    post('/web-api/v1/rdv', 'middleware/rdv.php');
-    post('/web-api/v1/rdv/me', 'middleware/rdv.php');
-    any('/web-api/v1/notifications', 'middleware/notifications.php');
+}
 
-    post('/web-api/v1/upload', 'middleware/upload.php');
-    post('/web-api/v1/endpoint', 'middleware/endpoint.php');
-    any('/web-api/v2/endpoint', 'middleware/endpointBeta.php');
+post('/web-api/v1/doctors', 'middleware/doctors.php');
+post('/web-api/v1/rdv', 'middleware/rdv.php');
+post('/web-api/v1/rdv/me', 'middleware/rdv.php');
+any('/web-api/v1/notifications', 'middleware/notifications.php');
 
-    any('/404','middleware/404.php');
+post('/web-api/v1/upload', 'middleware/upload.php');
+post('/web-api/v1/endpoint', 'middleware/endpoint.php');
+any('/web-api/v2/endpoint', 'middleware/endpointBeta.php');
 
-    $db = null;
+any('/404', 'middleware/404.php');
+
+$db = null;
+?>

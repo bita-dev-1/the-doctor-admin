@@ -1,200 +1,212 @@
 <?php
-class DB
-{
-    private $host;
-    private $db_name;
-    private $username;
-    private $password;
-    public $pdo;
-    public $table;
-    public $data;
-    public $where;
-    public $column;
-    public $multi = false;
-    public $field;
-    public $value;
 
-    public function __construct()
+// --- FIX: Check if class exists to prevent Fatal Error ---
+if (!class_exists('DB')) {
+
+    class DB extends PDO
     {
-        // 1. محاولة جلب البيانات من متغيرات البيئة (التي حملها inc.php)
-        // نستخدم $_ENV كخيار أول، ثم getenv كخيار ثانٍ
-        $this->host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'localhost';
-        $this->db_name = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'the_doctor_db';
-        $this->username = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'root';
-        $this->password = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
 
-        // التحقق من وجود البيانات (للتصحيح فقط)
-        if (empty($this->db_name) || empty($this->username)) {
-            // محاولة تحميل inc.php يدوياً إذا لم يتم تحميله (حالة نادرة)
-            if (file_exists(__DIR__ . '/../../inc.php')) {
-                require_once(__DIR__ . '/../../inc.php');
-                $this->host = $_ENV['DB_HOST'] ?? 'localhost';
-                $this->db_name = $_ENV['DB_NAME'] ?? '';
-                $this->username = $_ENV['DB_USER'] ?? 'root';
-                $this->password = $_ENV['DB_PASS'] ?? '';
+        private $DB_TYPE;
+        private $DB_HOST;
+        private $DB_NAME;
+        private $DB_USER;
+        private $DB_PASS;
+
+        public $table;
+        public $data;
+        public $where;
+        public $column;
+        public $value;
+        public $field;
+        public $multi = false;
+        public $_errorLog = false;
+
+        public function __construct()
+        {
+
+            // Load from Environment Variables with Fallback
+            $this->DB_TYPE = $_ENV['DB_CONNECTION'] ?? 'mysql';
+            $this->DB_HOST = $_ENV['DB_HOST'] ?? 'localhost';
+            $this->DB_NAME = $_ENV['DB_NAME'] ?? 'cloud-doctor1';
+            $this->DB_USER = $_ENV['DB_USER'] ?? 'root';
+            $this->DB_PASS = $_ENV['DB_PASS'] ?? '';
+
+            try {
+                parent::__construct($this->DB_TYPE . ':host=' . $this->DB_HOST . ';dbname=' . $this->DB_NAME . ';charset=utf8', $this->DB_USER, $this->DB_PASS);
+                $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+            } catch (PDOException $e) {
+                die("Database Connection Error: " . $e->getMessage());
             }
         }
 
-        $this->connect();
-    }
-
-    public function connect()
-    {
-        $this->pdo = null;
-
-        try {
-            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
-
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-
-            $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
-
-        } catch (PDOException $exception) {
-            // تسجيل الخطأ في ملف اللوج بدلاً من عرضه للمستخدم
-            error_log("DB Connection Error: " . $exception->getMessage());
-
-            // إرجاع رسالة JSON نظيفة
-            header('Content-Type: application/json');
-            http_response_code(500);
-            echo json_encode([
-                "state" => "false",
-                "message" => "Database Connection Failed. Check server logs."
-            ]);
-            exit();
+        public function select($sql, $fetchMode = PDO::FETCH_ASSOC)
+        {
+            $sth = $this->prepare($sql);
+            if (!$sth->execute())
+                $this->handleError();
+            else
+                return $sth->fetchAll($fetchMode);
         }
 
-        return $this->pdo;
-    }
-
-    // ... (باقي دوال الكلاس: select, insert, update, delete تبقى كما هي) ...
-
-    public function select($sql)
-    {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute();
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            error_log("SQL Error: " . $e->getMessage() . " in Query: " . $sql);
-            return [];
+        public function rowsCount($sql)
+        {
+            $sth = $this->prepare($sql);
+            $sth->execute();
+            return $sth->rowCount();
         }
-    }
 
-    public function rowsCount($sql)
-    {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute();
-            return $stmt->rowCount();
-        } catch (PDOException $e) {
-            return 0;
-        }
-    }
-
-    public function insert()
-    {
-        if (!empty($this->data) && !empty($this->table)) {
+        public function insert()
+        {
             try {
-                if ($this->multi) {
-                    // Multi insert logic
-                    $columns = implode(", ", array_keys($this->data[0]));
-                    $values = array();
-                    $params = array();
-
-                    foreach ($this->data as $row) {
-                        $row_placeholders = [];
-                        foreach ($row as $key => $val) {
-                            $row_placeholders[] = "?";
-                            $params[] = $val;
+                ksort($this->data);
+                if (!isset($this->multi) || $this->multi === false) {
+                    $fieldNames = implode('`, `', array_keys($this->data));
+                    $fieldValues = ':' . implode(', :', array_keys($this->data));
+                    $sth = $this->prepare("INSERT INTO $this->table (`$fieldNames`) VALUES ($fieldValues)");
+                    foreach ($this->data as $key => $value) {
+                        $sth->bindValue(":$key", $value);
+                    }
+                    $resul = $sth->execute();
+                } else {
+                    $data = $this->data;
+                    if (count($data)) {
+                        $fieldNames = implode('`, `', array_keys((array) $data[0]));
+                        $fieldValues = array();
+                        $fieldBinding = array();
+                        foreach ($data as $object) {
+                            $object = is_array($object) ? $object : (array) $object;
+                            $fieldBinding[] = '(' . $this->bindingValues(sizeof($object)) . ' )';
+                            $fieldValues = array_merge($fieldValues, array_values($object));
                         }
-                        $values[] = "(" . implode(", ", $row_placeholders) . ")";
                     }
+                    $sql = "INSERT INTO $this->table (`$fieldNames`) VALUES " . implode(',', $fieldBinding);
+                    $sth = $this->prepare($sql);
+                    $resul = $sth->execute($fieldValues);
+                }
 
-                    $sql = "INSERT INTO $this->table ($columns) VALUES " . implode(", ", $values);
-                    $stmt = $this->pdo->prepare($sql);
-                    return $stmt->execute($params);
+                if ($resul) {
+                    $resul = $this->lastInsertId() ? $this->lastInsertId() : $resul;
+                    return $resul;
+                } else
+                    return 0;
 
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                return 0;
+            }
+        }
+
+        public function bindingValues($count = 0, $text = '?', $separator = ",")
+        {
+            $result = array();
+            if ($count > 0) {
+                for ($x = 0; $x < $count; $x++) {
+                    $result[] = $text;
+                }
+            }
+            return implode($separator, $result);
+        }
+
+        public function validateField()
+        {
+            $sth = $this->prepare("SELECT * FROM  $this->table WHERE $this->field = :$this->field");
+            $sth->bindValue(":$this->field", $this->value);
+            $sth->execute();
+            return $sth->rowCount();
+        }
+
+        public function update()
+        {
+            $fieldDetails = NULL;
+            foreach ($this->data as $key => $value) {
+                $fieldDetails .= "`$key`=:$key,";
+            }
+            $fieldDetails = rtrim($fieldDetails, ',');
+            $sth = $this->prepare("UPDATE $this->table SET $fieldDetails WHERE $this->where");
+            foreach ($this->data as $key => $value) {
+                $sth->bindValue(":$key", $value);
+            }
+            return $sth->execute();
+        }
+
+        public function Delete()
+        {
+            try {
+                if (!isset($this->where)) {
+                    $sth = $this->prepare("DELETE FROM $this->table WHERE $this->column =:$this->column");
+                    $sth->bindValue(":$this->column", $this->value, PDO::PARAM_INT);
                 } else {
-                    // Single insert logic
-                    $columns = implode(", ", array_keys($this->data));
-                    $placeholders = ":" . implode(", :", array_keys($this->data));
-
-                    $sql = "INSERT INTO $this->table ($columns) VALUES ($placeholders)";
-                    $stmt = $this->pdo->prepare($sql);
-
-                    if ($stmt->execute($this->data)) {
-                        return $this->pdo->lastInsertId();
+                    $where = NULL;
+                    if (is_array($this->where)) {
+                        foreach ($this->where as $key => $value) {
+                            $where .= "`$key`=:$key AND ";
+                        }
+                        $where = implode('AND', array_slice(explode('AND', $where), 0, -1));
+                        $sth = $this->prepare("DELETE FROM $this->table WHERE $where");
+                        foreach ($this->where as $key => $value) {
+                            $sth->bindValue(":$key", $value);
+                        }
+                    } else {
+                        $sth = $this->prepare("DELETE FROM $this->table WHERE $this->where");
                     }
                 }
-            } catch (PDOException $e) {
-                error_log("Insert Error: " . $e->getMessage());
-                return false;
+                return $sth->execute() ? 1 : 0;
+            } catch (\Throwable $th) {
+                error_log($th->getMessage());
+                return 0;
             }
         }
-        return false;
-    }
 
-    public function update()
-    {
-        if (!empty($this->data) && !empty($this->table) && !empty($this->where)) {
-            try {
-                $fields = "";
-                foreach ($this->data as $key => $value) {
-                    $fields .= "$key = :$key, ";
-                }
-                $fields = rtrim($fields, ", ");
+        public function execSql($sql)
+        {
+            $sth = $this->prepare($sql);
+            return $sth->execute();
+        }
 
-                $sql = "UPDATE $this->table SET $fields WHERE $this->where";
-                $stmt = $this->pdo->prepare($sql);
-                return $stmt->execute($this->data);
-            } catch (PDOException $e) {
-                error_log("Update Error: " . $e->getMessage());
-                return false;
+        private function handleError()
+        {
+            if ($this->errorCode() != '00000') {
+                if ($this->_errorLog == true)
+                    error_log(json_encode($this->errorInfo()));
+                throw new Exception("Database Error");
             }
         }
-        return false;
-    }
 
-    public function Delete()
-    {
-        if (!empty($this->table)) {
-            try {
-                if ($this->multi && !empty($this->data) && !empty($this->column)) {
-                    $ids = implode(",", array_map('intval', $this->data));
-                    $sql = "DELETE FROM $this->table WHERE $this->column IN ($ids)";
-                } else if (!empty($this->where)) {
-                    $sql = "DELETE FROM $this->table WHERE $this->where";
-                } else {
-                    return false;
-                }
-
-                $stmt = $this->pdo->prepare($sql);
-                return $stmt->execute();
-            } catch (PDOException $e) {
-                error_log("Delete Error: " . $e->getMessage());
-                return false;
-            }
+        public function dateformat($format = "Y-m-d H:i:s")
+        {
+            return date($format);
         }
-        return false;
-    }
 
-    public function validateField()
-    {
-        // Used for checking uniqueness
-        $sql = "SELECT * FROM $this->table WHERE $this->field = :value";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':value' => $this->value]);
-        return $stmt->rowCount() > 0;
-    }
+        public function checkTable($table)
+        {
+            $query = "SELECT table_name FROM information_schema.tables WHERE table_type = 'base table' AND table_schema = :dbname AND table_name = :tablename";
+            $sth = $this->prepare($query);
+            $sth->bindValue(':dbname', $this->DB_NAME);
+            $sth->bindValue(':tablename', trim($table));
+            if (!$sth->execute()) {
+                $this->handleError();
+                return 0;
+            }
+            return $sth->rowCount() > 0 ? 1 : 0;
+        }
 
-    // Helper for direct PDO access if needed
-    public function prepare($sql)
-    {
-        return $this->pdo->prepare($sql);
+        public function checkColumn($table)
+        {
+            $query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :dbname AND TABLE_NAME = 'users'";
+            $sth = $this->prepare($query);
+            $sth->bindValue(':dbname', $this->DB_NAME);
+            if (!$sth->execute()) {
+                $this->handleError();
+                return 0;
+            }
+            $data = $sth->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($table as $col) {
+                if (!in_array(trim($col), $data))
+                    return 0;
+            }
+            return 1;
+        }
     }
 }
 ?>

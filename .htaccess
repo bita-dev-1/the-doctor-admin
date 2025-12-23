@@ -1,9 +1,20 @@
+Options -MultiViews
 RewriteEngine On
+RewriteBase /
 
-# 1. قاعدة صفحة الطبيب (يجب أن تكون قبل القاعدة العامة)
-RewriteRule ^medecin/([0-9]+)/?(.*)$ landing_loader.php?id=$1 [QSA,L]
+# توجيه API
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
 
-# 2. القاعدة العامة (Dashboard & API)
+# توجيه Web-API
+RewriteCond %{REQUEST_URI} ^/web-api/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^web-api/(.*)$ web-api/index.php [QSA,L]
+
+# توجيه الموقع الرئيسي
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]

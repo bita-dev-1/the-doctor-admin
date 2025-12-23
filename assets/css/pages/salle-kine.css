@@ -1,0 +1,150 @@
+/* assets/css/pages/salle-kine.css */
+
+/* --- Styles du Cockpit (Layout Base) --- */
+.cockpit-wrapper {
+  height: calc(100vh - 170px);
+  overflow: hidden;
+  border: 1px solid #ebe9f1;
+  border-radius: 0.428rem;
+  background-color: #fff;
+}
+
+.patient-queue {
+  height: 100%;
+  background: #fff;
+  border-right: 1px solid #ebe9f1;
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.patient-card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border-left: 4px solid transparent;
+  position: relative;
+  padding: 15px;
+  border-bottom: 1px solid #ebe9f1;
+}
+
+.patient-card:hover {
+  background-color: #f8f9fa;
+}
+
+.patient-card.active {
+  background-color: rgba(0, 113, 188, 0.1); /* Blue Light */
+  border-left: 4px solid #0071bc; /* Blue */
+}
+
+.patient-card h6 {
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+  color: #5e5873;
+}
+
+.workspace-area {
+  height: 100%;
+  overflow-y: auto;
+  background: #f8f8f8;
+  padding: 0;
+  position: relative;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #b9b9c3;
+  text-align: center;
+}
+
+.queue-tabs .nav-link {
+  padding: 12px 10px;
+  font-weight: 600;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6e6b7b;
+}
+
+.queue-tabs .nav-link.active {
+  border-bottom: 2px solid #00d894; /* Green */
+  color: #00d894; /* Green */
+}
+
+.time-badge {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.5rem;
+}
+
+/* ==========================================================================
+   DARK MODE SUPPORT (html.dark-layout)
+   ========================================================================== */
+
+html.dark-layout .cockpit-wrapper {
+  background-color: #283046;
+  border-color: #3b4253;
+}
+
+html.dark-layout .patient-queue {
+  background-color: #283046;
+  border-right-color: #3b4253;
+}
+
+html.dark-layout .queue-content .sticky-top {
+  background-color: #283046 !important;
+  border-bottom-color: #3b4253 !important;
+}
+
+html.dark-layout .patient-card {
+  border-bottom-color: #3b4253;
+}
+
+html.dark-layout .patient-card:hover {
+  background-color: #343d55;
+}
+
+html.dark-layout .patient-card.active {
+  background-color: rgba(0, 113, 188, 0.15) !important;
+  border-left-color: #0071bc;
+}
+
+html.dark-layout .patient-card h6 {
+  color: #d0d2d6;
+}
+
+html.dark-layout .workspace-area {
+  background-color: #161d31;
+}
+
+html.dark-layout .queue-tabs .nav-link {
+  color: #b4b7bd;
+}
+
+html.dark-layout .queue-tabs .nav-link.active {
+  color: #00d894;
+  border-bottom-color: #00d894;
+}
+
+html.dark-layout .input-group-text {
+  background-color: #3b4253;
+  border-color: #3b4253;
+  color: #b4b7bd;
+}
+
+html.dark-layout .form-control {
+  background-color: #283046;
+  border-color: #3b4253;
+  color: #d0d2d6;
+}
+
+html.dark-layout .form-control:focus {
+  background-color: #283046;
+  border-color: #00d894;
+}

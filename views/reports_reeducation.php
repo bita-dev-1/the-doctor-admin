@@ -14,7 +14,7 @@ $technician_filter = isset($_GET['technician_id']) && !empty($_GET['technician_i
 // فلتر العيادة (Multi-tenant)
 $cabinet_filter_sql = "";
 $users_cabinet_sql = "";
-$service_join_condition = "1=1"; 
+$service_join_condition = "1=1";
 
 if (!empty($_SESSION['user']['cabinet_id'])) {
     $cabinet_id = intval($_SESSION['user']['cabinet_id']);
@@ -129,86 +129,7 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
-<!-- START: CSS FOR PRINTING -->
-<style>
-    @media print {
-        /* إخفاء جميع العناصر غير الضرورية */
-        body * {
-            visibility: hidden;
-        }
-        
-        /* إخفاء العناصر الهيكلية للقالب */
-        .app-content, .header-navbar, .main-menu, footer, .btn, .modal-footer, .btn-close, .modal-header .btn-close {
-            display: none !important;
-        }
-        
-        /* إظهار المودال ومحتوياته فقط */
-        #techDetailsModal, #techDetailsModal * {
-            visibility: visible;
-        }
-
-        /* تنسيق المودال ليملأ الصفحة */
-        #techDetailsModal {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: auto;
-            margin: 0;
-            padding: 0;
-            background: white;
-            overflow: visible !important;
-        }
-
-        .modal-dialog {
-            margin: 0;
-            padding: 0;
-            max-width: 100%;
-            width: 100%;
-            transform: none !important;
-        }
-
-        .modal-content {
-            border: none;
-            box-shadow: none;
-        }
-
-        .modal-body {
-            padding: 20px;
-        }
-
-        /* إظهار الترويسة الخاصة بالطباعة */
-        .d-print-block {
-            display: block !important;
-        }
-        
-        /* تحسين مظهر الجدول */
-        .table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            font-size: 12px;
-        }
-        .table th, .table td {
-            border: 1px solid #ddd !important;
-            padding: 8px !important;
-            color: #000 !important;
-        }
-        .badge {
-            border: 1px solid #000;
-            color: #000 !important;
-            background: transparent !important;
-            padding: 2px 5px;
-        }
-        
-        /* إخفاء التنبيهات اللونية */
-        .alert {
-            border: 1px solid #000;
-            background: none !important;
-            color: #000 !important;
-        }
-    }
-</style>
-<!-- END: CSS FOR PRINTING -->
+<link rel="stylesheet" type="text/css" href="<?= SITE_URL ?>/assets/css/pages/reports-print.css">
 
 <div class="app-content content">
     <div class="content-wrapper p-0">
@@ -299,7 +220,8 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
                         <div class="card-header">
                             <div>
                                 <h2 class="fw-bolder mb-0 text-warning">
-                                    <?= number_format($kpi_data['tech_commission'], 0) ?> DA</h2>
+                                    <?= number_format($kpi_data['tech_commission'], 0) ?> DA
+                                </h2>
                                 <p class="card-text">Salaires / Commissions</p>
                             </div>
                             <div class="avatar bg-light-warning p-50 m-0">
@@ -407,9 +329,11 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
                                                         <?= $absent_rate ?>%</small>
                                                 </td>
                                                 <td class="text-center fw-bold">
-                                                    <?= number_format($row['generated_revenue'], 2) ?> DA</td>
+                                                    <?= number_format($row['generated_revenue'], 2) ?> DA
+                                                </td>
                                                 <td class="text-center text-success fw-bolder fs-5">
-                                                    <?= number_format($row['tech_share'], 2) ?> DA</td>
+                                                    <?= number_format($row['tech_share'], 2) ?> DA
+                                                </td>
                                                 <td class="text-center">
                                                     <?php if ($row['avg_pain'] !== null): ?>
                                                         <span class="fw-bold"><?= round($row['avg_pain'], 1) ?>/10</span>
@@ -453,7 +377,8 @@ $tech_stats = $stmt_tech->fetchAll(PDO::FETCH_ASSOC);
                 <div class="d-none d-print-block text-center mb-4">
                     <h3>Fiche de Paie / Rapport d'Activité</h3>
                     <h4 id="print-tech-name"></h4>
-                    <p>Période du <?= date('d/m/Y', strtotime($date_from)) ?> au <?= date('d/m/Y', strtotime($date_to)) ?></p>
+                    <p>Période du <?= date('d/m/Y', strtotime($date_from)) ?> au
+                        <?= date('d/m/Y', strtotime($date_to)) ?></p>
                     <hr>
                 </div>
 
