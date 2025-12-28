@@ -96,8 +96,17 @@ function data_table($DB)
     }
 
     $base_query .= " ORDER BY " . $order_column . "   " . $_REQUEST['order'][0]['dir'] . "  LIMIT " . $_REQUEST['start'] . "  ," . $_REQUEST['length'] . "  ";
-    $results = $DB->select($base_query);
-
+    try {
+        $results = $DB->select($base_query);
+    } catch (Exception $e) {
+        die(json_encode([
+            "draw" => 1,
+            "recordsTotal" => 0,
+            "recordsFiltered" => 0,
+            "data" => [],
+            "error" => "SQL ERROR: " . $e->getMessage()
+        ]));
+    }
     $DB = null;
     $data = array();
     foreach ($results as $result) {

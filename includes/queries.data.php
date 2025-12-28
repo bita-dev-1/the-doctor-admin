@@ -57,7 +57,21 @@ if (isset($_SESSION['user'])) {
 
         "qr_specialities_table" => "SELECT specialty.id, specialty.image as _photo, specialty.namefr, specialty.namear, specialty.id as __action FROM `specialty` WHERE specialty.deleted = 0 ",
 
-        "qr_rdv_table" => "SELECT rdv.id, CONCAT_WS(' ', users.first_name, users.last_name) as doctor, CONCAT_WS(' ', rdv.first_name, rdv.last_name) as patient, rdv.phone, rdv.rdv_num, rdv.date, rdv.id as _stateId, rdv.state as __rdvstate FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN users ON users.id = rdv.doctor_id WHERE rdv.deleted = 0 $rdv_cabinet_condition",
+        "qr_rdv_table" => "SELECT 
+            rdv.id, 
+            CONCAT_WS(' ', users.first_name, users.last_name) as doctor, 
+            CONCAT_WS(' ', patient.first_name, patient.last_name) as patient, 
+            rdv.phone, 
+            IFNULL(doctor_motifs.title, '') as motif, 
+            rdv.rdv_num, 
+            rdv.date, 
+            rdv.id as _stateId, 
+            rdv.state as __rdvstate 
+            FROM rdv 
+            LEFT JOIN patient ON patient.id = rdv.patient_id 
+            LEFT JOIN users ON users.id = rdv.doctor_id 
+            LEFT JOIN doctor_motifs ON rdv.motif_id = doctor_motifs.id 
+            WHERE rdv.deleted = 0 $rdv_cabinet_condition",
 
         "qr_waitingList_table" => "SELECT rdv.id, CONCAT_WS(' ', users.first_name, users.last_name) as doctor, CONCAT_WS(' ', rdv.first_name, rdv.last_name) as patient, rdv.phone, rdv.rdv_num, rdv.date, rdv.id as _stateId, rdv.state as __rdvstate FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN users ON users.id = rdv.doctor_id WHERE rdv.deleted = 0 AND rdv.state > 0 AND rdv.date = '" . date("Y-m-d") . "' $rdv_cabinet_condition",
 

@@ -27,13 +27,15 @@ if (isset($id) && !empty($id)) {
                 <div class="row breadcrumbs-top">
                     <div class="col-12">
                         <h2 class="content-header-title float-start mb-0">
-                            <?= $breadcrumb . ' ' . $GLOBALS['language']['rdv']; ?></h2>
+                            <?= $breadcrumb . ' ' . $GLOBALS['language']['rdv']; ?>
+                        </h2>
                         <div class="breadcrumb-wrapper">
                             <ol class="breadcrumb">
                                 <li class="breadcrumb-item"><a
                                         href="<?= SITE_URL; ?>/"><?= $GLOBALS['language']['Home']; ?></a></li>
                                 <li class="breadcrumb-item active">
-                                    <a><?= $breadcrumb . ' ' . $GLOBALS['language']['rdv']; ?></a></li>
+                                    <a><?= $breadcrumb . ' ' . $GLOBALS['language']['rdv']; ?></a>
+                                </li>
                             </ol>
                         </div>
                     </div>
@@ -60,7 +62,7 @@ if (isset($id) && !empty($id)) {
                                             $input = array(
                                                 "label" => $GLOBALS['language']['doctor'],
                                                 "name_id" => "doctor_id",
-                                                "placeholder" => $GLOBALS['language']['doctor'],
+                                                "placeholder" => "Sélectionner Médecin",
                                                 "class" => "",
                                                 "his_parent" => "",
                                                 "serverSide" => array(
@@ -75,7 +77,7 @@ if (isset($id) && !empty($id)) {
                                             draw_select($input);
                                             ?>
                                         </div>
-                                    <?php
+                                        <?php
                                     } else {
                                         $input = array(
                                             "label" => "",
@@ -147,6 +149,32 @@ if (isset($id) && !empty($id)) {
                                         draw_input($input);
                                         ?>
                                     </div>
+
+                                    <!-- START: Motif Field -->
+                                    <div class="col-lg-6 col-md-6 col-12 mb-1">
+                                        <?php
+                                        $motif_where = "deleted = 0";
+                                        if ($_SESSION['user']['role'] === 'doctor') {
+                                            $motif_where .= " AND doctor_id = " . $_SESSION['user']['id'];
+                                        }
+
+                                        draw_select([
+                                            "label" => "Motif de consultation",
+                                            "name_id" => "motif_id",
+                                            "placeholder" => "Sélectionner un motif",
+                                            "class" => "motif-select",
+                                            "serverSide" => [
+                                                "table" => "doctor_motifs",
+                                                "value" => "id",
+                                                "text" => ["title"],
+                                                "selected" => $result['motif_id'] ?? null,
+                                                "where" => $motif_where
+                                            ]
+                                        ]);
+                                        ?>
+                                    </div>
+                                    <!-- END: Motif Field -->
+
                                     <div class="col-lg-6 col-md-6 col-12 mb-1">
                                         <?php
                                         $input = array(
@@ -309,6 +337,7 @@ if (isset($id) && !empty($id)) {
         $(document).on('change', '#doctor_id', function () {
             console.log("👨‍⚕️ [DEBUG] Doctor Changed. Resetting #rdv_num");
             $rdvSelect.val(null).trigger('change');
+            // يمكن إضافة منطق هنا لتحديث قائمة الموتيف إذا لزم الأمر
         });
 
         // --- منطق الملء التلقائي للمريض ---
@@ -367,6 +396,7 @@ if (isset($id) && !empty($id)) {
                 doctor: $('#doctor_id').val(),
                 rdv_num: $('#rdv_num').val(),
                 date: $('#date').val(),
+                motif_id: $('#motif_id').val(), // إضافة الموتيف
                 first_name: $('#first_name').val(),
                 last_name: $('#last_name').val(),
                 phone: $('#phone').val(),

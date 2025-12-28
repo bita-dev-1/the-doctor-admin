@@ -48,30 +48,30 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                 </div>
                                 <div class="card-body pb-0">
                                     <?php if ($_SESSION['user']['role'] === 'admin'): ?>
-                                            <div class="mb-2">
-                                                <span class="filter-section-title">Médecin</span>
-                                                <div class="mt-1">
-                                                    <?php
-                                                    $doctor_where_clause = "role = 'doctor' AND deleted = 0";
-                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
-                                                        $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
-                                                    }
-                                                    $input = array(
-                                                        "label" => "",
-                                                        "name_id" => "calendar_doctor_filter",
-                                                        "placeholder" => "Tous les médecins",
-                                                        "class" => "form-select",
-                                                        "serverSide" => array(
-                                                            "table" => "users",
-                                                            "value" => "id",
-                                                            "text" => array("first_name", "last_name"),
-                                                            "where" => $doctor_where_clause
-                                                        )
-                                                    );
-                                                    draw_select($input);
-                                                    ?>
-                                                </div>
+                                        <div class="mb-2">
+                                            <span class="filter-section-title">Médecin</span>
+                                            <div class="mt-1">
+                                                <?php
+                                                $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                    $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                }
+                                                $input = array(
+                                                    "label" => "",
+                                                    "name_id" => "calendar_doctor_filter",
+                                                    "placeholder" => "Tous les médecins",
+                                                    "class" => "form-select",
+                                                    "serverSide" => array(
+                                                        "table" => "users",
+                                                        "value" => "id",
+                                                        "text" => array("first_name", "last_name"),
+                                                        "where" => $doctor_where_clause
+                                                    )
+                                                );
+                                                draw_select($input);
+                                                ?>
                                             </div>
+                                        </div>
                                     <?php endif; ?>
 
                                     <span class="filter-section-title">Filtres</span>
@@ -136,26 +136,26 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                     <?php set_csrf() ?>
                                     <div class="row gy-1">
                                         <?php if ($_SESSION['user']['role'] == 'admin') { ?>
-                                                <div class="col-md-6 col-12">
-                                                    <label class="form-label">Médecin</label>
-                                                    <?php
-                                                    $doctor_where_clause = "role = 'doctor' AND deleted = 0";
-                                                    if (!empty($_SESSION['user']['cabinet_id'])) {
-                                                        $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
-                                                    }
-                                                    draw_select([
-                                                        "label" => "",
-                                                        "name_id" => "doctor_id",
-                                                        "placeholder" => "Sélectionner Médecin",
-                                                        "serverSide" => [
-                                                            "table" => "users",
-                                                            "value" => "id",
-                                                            "text" => ["first_name", "last_name"],
-                                                            "where" => $doctor_where_clause
-                                                        ]
-                                                    ]);
-                                                    ?>
-                                                </div>
+                                            <div class="col-md-6 col-12">
+                                                <label class="form-label">Médecin</label>
+                                                <?php
+                                                $doctor_where_clause = "role = 'doctor' AND deleted = 0";
+                                                if (!empty($_SESSION['user']['cabinet_id'])) {
+                                                    $doctor_where_clause .= " AND cabinet_id = " . intval($_SESSION['user']['cabinet_id']);
+                                                }
+                                                draw_select([
+                                                    "label" => "",
+                                                    "name_id" => "doctor_id",
+                                                    "placeholder" => "Sélectionner Médecin",
+                                                    "serverSide" => [
+                                                        "table" => "users",
+                                                        "value" => "id",
+                                                        "text" => ["first_name", "last_name"],
+                                                        "where" => $doctor_where_clause
+                                                    ]
+                                                ]);
+                                                ?>
+                                            </div>
                                         <?php } else {
                                             draw_input(["type" => "hidden", "name_id" => "doctor_id", "value" => $_SESSION['user']['id']]);
                                         } ?>
@@ -190,6 +190,30 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                         <div class="col-md-4 col-12">
                                             <?php draw_input(["label" => $GLOBALS['language']['phone'], "type" => "text", "name_id" => "phone", "placeholder" => "0X XX XX XX XX"]); ?>
                                         </div>
+
+                                        <!-- START: Motif Field -->
+                                        <div class="col-md-6 col-12">
+                                            <label class="form-label">Motif</label>
+                                            <?php
+                                            $motif_where = "deleted = 0";
+                                            if ($_SESSION['user']['role'] === 'doctor') {
+                                                $motif_where .= " AND doctor_id = " . $_SESSION['user']['id'];
+                                            }
+                                            draw_select([
+                                                "label" => "",
+                                                "name_id" => "motif_id",
+                                                "placeholder" => "Sélectionner Motif",
+                                                "class" => "form-select",
+                                                "serverSide" => [
+                                                    "table" => "doctor_motifs",
+                                                    "value" => "id",
+                                                    "text" => ["title"],
+                                                    "where" => $motif_where
+                                                ]
+                                            ]);
+                                            ?>
+                                        </div>
+                                        <!-- END: Motif Field -->
 
                                         <div class="col-md-6 col-12">
                                             <?php draw_input(["label" => $GLOBALS['language']['date'], "type" => "text", "name_id" => "date", "placeholder" => "YYYY-MM-DD", "class" => "picker form-control"]); ?>
@@ -236,6 +260,26 @@ $doctor_id_for_calendar = ($_SESSION['user']['role'] !== 'admin') ? $_SESSION['u
                                                 id="event-num-rdv" readonly />
                                         </div>
                                     </div>
+
+                                    <!-- START: Sidebar Motif Field -->
+                                    <div class="mb-1">
+                                        <label for="event-motif" class="form-label">Motif</label>
+                                        <select class="select2 form-select w-100" id="event-motif" name="event-motif">
+                                            <option value="">Aucun</option>
+                                            <?php
+                                            // Pre-load motifs for the select list in sidebar
+                                            $m_where = "deleted = 0";
+                                            if ($_SESSION['user']['role'] === 'doctor')
+                                                $m_where .= " AND doctor_id = " . $_SESSION['user']['id'];
+                                            $motifs = $db->select("SELECT id, title FROM doctor_motifs WHERE $m_where");
+                                            foreach ($motifs as $m) {
+                                                echo "<option value='{$m['id']}'>{$m['title']}</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <!-- END: Sidebar Motif Field -->
+
                                     <div class="mb-1">
                                         <label for="select-label" class="form-label">État du RDV</label>
                                         <select class="select2 select-label form-select w-100" id="select-label"
@@ -460,10 +504,18 @@ $handlerURL = SITE_URL . '/handlers';
             eventClick: function (info) {
                 selectedEvent = info.event;
                 eventSidebar.modal('show');
-                eventTitle.val(info.event.title);
+
+                // Remove motif from title for display in input
+                var cleanTitle = info.event.title.split(' - ')[0];
+                eventTitle.val(cleanTitle);
+
                 start.setDate(info.event.start, true, 'Y-m-d');
                 eventPhone.val(info.event.extendedProps.phone || '');
                 eventNumRdv.val(info.event.extendedProps.num_rdv || '');
+
+                // Set Motif in Sidebar
+                var motifId = info.event.extendedProps.motif_id || '';
+                $('#event-motif').val(motifId).trigger('change');
 
                 if (info.event.extendedProps.state_id !== undefined) {
                     eventLabel.val(info.event.extendedProps.state_id).trigger('change');
@@ -508,6 +560,7 @@ $handlerURL = SITE_URL . '/handlers';
                 var formDataArray = [
                     { name: 'rdv__state', value: eventLabel.val() },
                     { name: 'rdv__date', value: startDate.val() },
+                    { name: 'rdv__motif_id', value: $('#event-motif').val() }, // Add Motif
                     { name: 'csrf', value: csrfToken }
                 ];
 
@@ -546,6 +599,7 @@ $handlerURL = SITE_URL . '/handlers';
             startDate.val('');
             eventPhone.val('');
             eventNumRdv.val('');
+            $('#event-motif').val('').trigger('change'); // Reset Motif
         });
 
         // Filters Logic
@@ -671,6 +725,7 @@ $handlerURL = SITE_URL . '/handlers';
                 doctor: self.find('#doctor_id').val(),
                 rdv_num: $('#rdv_num').val(),
                 date: self.find('#date').val(),
+                motif_id: self.find('#motif_id').val(), // Add Motif
                 first_name: $('#first_name').val(),
                 last_name: $('#last_name').val(),
                 phone: $('#phone').val(),

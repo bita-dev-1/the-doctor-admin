@@ -59,7 +59,7 @@ function postReeducationDossier($DB)
                     'doctor_id' => $tech_id,
                     'cabinet_id' => $cabinet_id,
                     'date' => $date_str,
-                    'state' => 0,
+                    'state' => 1, // MODIFIED: Set to 1 (Accepted) automatically
                     'created_by' => $_SESSION['user']['id'],
                 ];
                 $DB->table = 'rdv';
@@ -162,7 +162,7 @@ function generate_sessions_manual($DB)
                 'doctor_id' => $dossier['technician_id'],
                 'cabinet_id' => $cabinet_to_assign,
                 'date' => $date_str,
-                'state' => 0,
+                'state' => 1, // MODIFIED: Set to 1 (Accepted) automatically
                 'created_by' => $_SESSION['user']['id'],
             ];
             $DB->table = 'rdv';

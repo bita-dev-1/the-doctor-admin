@@ -1,11 +1,14 @@
 <?php
 
+
 function postRdv()
 {
     $patient_id = filter_var(($_POST['patient'] ?? null), FILTER_SANITIZE_NUMBER_INT);
     $first_name = filter_var(($_POST['first_name'] ?? ""), FILTER_SANITIZE_STRING);
     $last_name = filter_var(($_POST['last_name'] ?? ""), FILTER_SANITIZE_STRING);
     $phone = filter_var(($_POST['phone'] ?? ""), FILTER_SANITIZE_STRING);
+    // New Field
+    $motif_id = filter_var(($_POST['motif_id'] ?? null), FILTER_SANITIZE_NUMBER_INT);
 
     if (empty($patient_id)) {
         if (!empty($first_name) && !empty($last_name)) {
@@ -33,12 +36,13 @@ function postRdv()
     $data = [
         "doctor_id" => filter_var(($_POST['doctor'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
         "patient_id" => $patient_id,
+        "motif_id" => !empty($motif_id) ? $motif_id : null, // Save Motif
         "date" => filter_var(($_POST['date'] ?? date("Y-m-d")), FILTER_SANITIZE_STRING),
         "first_name" => $first_name,
         "last_name" => $last_name,
         "phone" => $phone,
         "rdv_num" => filter_var(($_POST['rdv_num'] ?? 0), FILTER_SANITIZE_NUMBER_INT),
-        "state" => 1, // الحالة 1 تعني مقبول تلقائياً
+        "state" => 1,
         "created_by" => $_SESSION['user']['id'],
         "cabinet_id" => $_SESSION['user']['cabinet_id'] ?? null
     ];
@@ -72,12 +76,15 @@ function get_RDV($id = NULL, $return = false)
 
     $filters = (isset($_POST['filters']) && !empty($_POST['filters']) ? " AND rdv.state IN (" . implode(', ', array_map('intval', $_POST['filters'])) . ")" : " AND rdv.state >= -1");
 
-    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone,
+    // Updated Query to include Motif Title and ID
+    $sql = "SELECT rdv.id, rdv.patient_id, rdv.date as Date_RDV, rdv.state, rdv.rdv_num, rdv.phone, rdv.motif_id,
             COALESCE(CONCAT_WS(' ', patient.first_name, patient.last_name), CONCAT_WS(' ', rdv.first_name, rdv.last_name)) AS patient_name,
-            rs.payment_status
+            rs.payment_status,
+            dm.title as motif_title
             FROM rdv 
             LEFT JOIN patient ON patient.id = rdv.patient_id
             LEFT JOIN reeducation_sessions rs ON rdv.reeducation_session_id = rs.id
+            LEFT JOIN doctor_motifs dm ON rdv.motif_id = dm.id
             WHERE rdv.deleted = 0 $where_clause $id_filter $filters";
 
     $res = $GLOBALS['db']->select($sql);
@@ -86,6 +93,12 @@ function get_RDV($id = NULL, $return = false)
     if (!empty($res)) {
         foreach ($res as $items) {
             $title = $items['patient_name'];
+
+            // Append Motif to title for Calendar Visibility
+            if (!empty($items['motif_title'])) {
+                $title .= ' - ' . $items['motif_title'];
+            }
+
             if ($items['payment_status'] === 'paid') {
                 $title .= ' (Payé ✔️)';
             } elseif ($items['payment_status'] === 'unpaid') {
@@ -106,6 +119,7 @@ function get_RDV($id = NULL, $return = false)
                     'state_id' => (int) $items['state'],
                     'phone' => ($items['phone'] ?? ''),
                     'num_rdv' => ($items['rdv_num'] ?? ''),
+                    'motif_id' => ($items['motif_id'] ?? ''), // Pass Motif ID for editing
                     'Client' => ["id" => $items['patient_id'], "name" => $items['patient_name']]
                 ]
             ];
@@ -131,6 +145,82 @@ function get_RDV($id = NULL, $return = false)
 
     echo json_encode($convertedData);
 }
+
+function updateEvent($DB)
+{
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
+
+        $table = 'rdv';
+        $unique_val = $_POST['id'];
+        $csrf = null;
+
+        $array_data = array();
+
+        if (isset($_POST['data']) && is_array($_POST['data'])) {
+            foreach ($_POST['data'] as $data) {
+                if (!isset($data['name']) || !isset($data['value']))
+                    continue;
+
+                if (strpos($data['name'], '__') !== false) {
+                    $parts = explode('__', $data['name']);
+                    $table_key = $parts[0];
+                    $column = $parts[1];
+
+                    if ($table_key === $table) {
+                        // Handle empty motif as NULL
+                        if ($column === 'motif_id' && empty($data['value'])) {
+                            $array_data[$column] = null;
+                        } else {
+                            $array_data[$column] = $data['value'];
+                        }
+                    }
+                } else if (stripos($data['name'], 'csrf') !== false) {
+                    $csrf = $data['value'];
+                }
+            }
+        }
+
+        // ... (CSRF Check remains same) ...
+        if (isset($csrf)) {
+            $decrypted_csrf = customDecrypt($csrf);
+            if (!is_csrf_valid($decrypted_csrf)) {
+                echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+                exit();
+            }
+        } else {
+            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
+            exit();
+        }
+
+        $array_data["modified_at"] = date('Y-m-d H:i:s');
+        $array_data["modified_by"] = $_SESSION['user']['id'] ?? 0;
+
+        $DB->table = $table;
+        $DB->data = $array_data;
+        $DB->where = 'id = ' . $unique_val;
+
+        try {
+            $updated = $DB->update();
+
+            if ($updated) {
+                if (function_exists('push_notificationRDV')) {
+                    push_notificationRDV($unique_val);
+                }
+                echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
+            } else {
+                echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour BDD"]);
+            }
+        } catch (Exception $e) {
+            echo json_encode(["state" => "false", "message" => "Exception: " . $e->getMessage()]);
+        }
+
+    } else {
+        echo json_encode(["state" => "false", "message" => "missing id"]);
+    }
+    $DB = null;
+}
+
+
 
 function handleRdv_nbr()
 {
@@ -252,78 +342,7 @@ function removeEvent($DB)
     $DB = null;
 }
 
-function updateEvent($DB)
-{
-    if (isset($_POST['id']) && !empty($_POST['id'])) {
 
-        $table = 'rdv';
-        $unique_val = $_POST['id'];
-        $csrf = null;
-
-        $array_data = array();
-
-        if (isset($_POST['data']) && is_array($_POST['data'])) {
-            foreach ($_POST['data'] as $data) {
-                if (!isset($data['name']) || !isset($data['value']))
-                    continue;
-
-                if (strpos($data['name'], '__') !== false) {
-                    $parts = explode('__', $data['name']);
-                    $table_key = $parts[0];
-                    $column = $parts[1];
-
-                    if ($table_key === $table) {
-                        $array_data[$column] = $data['value'];
-                    }
-                } else if (stripos($data['name'], 'csrf') !== false) {
-                    $csrf = $data['value'];
-                }
-            }
-        }
-
-        if (isset($csrf)) {
-            try {
-                $decrypted_csrf = customDecrypt($csrf);
-                if (!is_csrf_valid($decrypted_csrf)) {
-                    echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
-                    exit();
-                }
-            } catch (Exception $e) {
-                echo json_encode(["state" => "false", "message" => "CSRF Error"]);
-                exit();
-            }
-        } else {
-            echo json_encode(["state" => "false", "message" => $GLOBALS['language']['The form is forged']]);
-            exit();
-        }
-
-        $array_data["modified_at"] = date('Y-m-d H:i:s');
-        $array_data["modified_by"] = $_SESSION['user']['id'] ?? 0;
-
-        $DB->table = $table;
-        $DB->data = $array_data;
-        $DB->where = 'id = ' . $unique_val;
-
-        try {
-            $updated = $DB->update();
-
-            if ($updated) {
-                if (function_exists('push_notificationRDV')) {
-                    push_notificationRDV($unique_val);
-                }
-                echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
-            } else {
-                echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour BDD"]);
-            }
-        } catch (Exception $e) {
-            echo json_encode(["state" => "false", "message" => "Exception: " . $e->getMessage()]);
-        }
-
-    } else {
-        echo json_encode(["state" => "false", "message" => "missing id"]);
-    }
-    $DB = null;
-}
 
 function postEvent($DB)
 {
