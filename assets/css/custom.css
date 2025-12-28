@@ -603,3 +603,33 @@ html.dark-layout ::-webkit-scrollbar-thumb {
 html.dark-layout ::-webkit-scrollbar-track {
   background: transparent;
 }
+/* ==========================================================================
+   8. DROPDOWN FIX (CRITICAL)
+   ========================================================================== */
+
+/* 1. إجبار القائمة على الظهور عند وجود كلاس .show */
+.header-navbar .dropdown-menu.show {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+  top: 100% !important; /* التأكد من تموضعها تحت الزر */
+  pointer-events: auto !important; /* السماح بالنقر على الروابط */
+}
+
+/* 2. إلغاء تأثيرات الحركة التي قد تخفي القائمة */
+.header-navbar .dropdown-menu {
+  /* إلغاء أي حركة افتراضية قد تسبب الوميض */
+  transition: none !important;
+  margin-top: 10px !important; /* مسافة جمالية */
+}
+
+/* 3. منع القائمة من الظهور عند التحويم (Hover) فقط */
+/* هذا يمنع التعارض بين النقر والتحويم */
+.header-navbar .dropdown:hover .dropdown-menu {
+  display: none;
+}
+/* استثناء: إذا تم النقر عليها (لديها show) يجب أن تظهر */
+.header-navbar .dropdown:hover .dropdown-menu.show {
+  display: block !important;
+}

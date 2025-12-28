@@ -24,6 +24,8 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
     include_once 'controllers/custom/core/UserController.php';
     include_once 'controllers/custom/core/ChatController.php';
     include_once 'controllers/custom/core/PatientController.php';
+    include_once 'controllers/custom/core/DoctorController.php';
+
     include_once 'controllers/core/Auth.php';
 
 
@@ -171,6 +173,15 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
         case 'completeGoogleRegistration':
             completeGoogleRegistration($db);
             break;
+        case 'get_doctor_motifs':
+            get_doctor_motifs($db);
+            break;
+        case 'save_doctor_motif':
+            save_doctor_motif($db);
+            break;
+        case 'delete_doctor_motif':
+            delete_doctor_motif($db);
+            break;
     }
 }
 
@@ -178,4 +189,5 @@ function generate_sessions_auto($DB)
 {
     echo json_encode(["state" => "false", "message" => "Deprecated function."]);
 }
+
 ?>

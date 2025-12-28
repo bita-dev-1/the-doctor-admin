@@ -2,13 +2,14 @@
     <div class="container hero-content">
         <div class="hero-text">
             <span class="specialty-badge">
-                <i class="fas fa-certificate" style="margin-right:8px;"></i>
-                <?= htmlspecialchars($doctor['specialty_fr']) ?>
+                <i class="fas fa-certificate" style="margin-<?= $align == 'right' ? 'left' : 'right' ?>:8px;"></i>
+                <?= htmlspecialchars($lang_code == 'ar' && !empty($doctor['specialty_ar']) ? $doctor['specialty_ar'] : $doctor['specialty_fr']) ?>
             </span>
             <h1>Dr. <?= htmlspecialchars($doctor['first_name'] . ' ' . $doctor['last_name']) ?></h1>
 
             <div class="location-text">
-                <i class="fas fa-map-marker-alt" style="color: var(--primary);"></i>
+                <i class="fas fa-map-marker-alt"
+                    style="color: var(--primary); margin-<?= $align == 'right' ? 'left' : 'right' ?>: 10px;"></i>
                 <span><?= htmlspecialchars($doctor['cabinet_name']) ?> -
                     <?= htmlspecialchars($doctor['commune']) ?></span>
             </div>
@@ -27,11 +28,13 @@
             <div class="desktop-actions mobile-hidden" style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <button id="heroBookBtn" class="btn-primary-custom"
                     style="padding: 14px 32px; font-size: 1rem; border-radius: 12px;">
-                    <i class="far fa-calendar-check" style="margin-right: 8px;"></i> Prendre Rendez-vous
+                    <i class="far fa-calendar-check"
+                        style="margin-<?= $align == 'right' ? 'left' : 'right' ?>: 8px;"></i> <?= __t('book_btn') ?>
                 </button>
                 <a href="#contact" class="btn-outline-custom"
                     style="padding: 14px 32px; font-size: 1rem; text-decoration: none;">
-                    Voir Localisation
+                    <i class="fas fa-map-pin" style="margin-<?= $align == 'right' ? 'left' : 'right' ?>: 8px;"></i>
+                    <?= __t('coords') ?>
                 </a>
             </div>
         </div>
@@ -40,7 +43,7 @@
             <img src="<?= $doctor['image1'] ?>" alt="Dr. <?= htmlspecialchars($doctor['last_name']) ?>"
                 class="hero-img">
             <?php if ($doctor['is_opened']): ?>
-                <div class="status-badge">
+                <div class="status-badge" style="<?= $align == 'right' ? 'right: auto; left: -30px;' : 'right: -30px;' ?>">
                     <div
                         style="width: 12px; height: 12px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);">
                     </div>

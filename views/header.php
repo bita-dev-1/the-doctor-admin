@@ -18,12 +18,10 @@ $full_name = trim($first_name . ' ' . $last_name);
 
 // 3. Smart Avatar Logic
 $user_image_path = $_SESSION['user']['image1'] ?? '';
-// Check if image exists and is not the old default
 $has_valid_image = !empty($user_image_path)
     && (filter_var($user_image_path, FILTER_VALIDATE_URL) || file_exists(str_replace(SITE_URI, '', $user_image_path)))
     && strpos($user_image_path, 'default_User.png') === false;
 
-// Extract Initials (e.g. "Ahmed Mohamed" -> "AM")
 $initials = strtoupper(substr($first_name, 0, 1) . substr($last_name, 0, 1));
 
 // 4. Permission Checks
@@ -37,36 +35,23 @@ $show_kine_menu = ($is_super_admin || $kine_enabled_in_cabinet == 1);
 <body class="vertical-layout vertical-menu-modern navbar-floating footer-static <?= $rtl; ?>" data-open="click"
     data-menu="vertical-menu-modern" data-col="content-left-sidebar">
 
-    <!-- ✅ CRITICAL: Anti-Flicker Script (Syncs logic immediately) -->
+    <!-- Anti-Flicker Script -->
     <script>
         (function () {
             try {
-                // Check the primary key first
-                var savedState = localStorage.getItem('menu-collapsed');
-
-                // If primary key missing, check legacy key to be safe
-                if (savedState === null) {
-                    savedState = localStorage.getItem('menuCollapsed');
-                }
-
+                var savedState = localStorage.getItem('menu-collapsed') || localStorage.getItem('menuCollapsed');
                 var body = document.body;
-
-                // Strict check for string "true"
                 if (savedState === 'true') {
                     body.classList.remove('menu-expanded');
                     body.classList.add('menu-collapsed');
                 } else {
-                    // Default behavior (Expanded)
                     body.classList.remove('menu-collapsed');
                     body.classList.add('menu-expanded');
                 }
-            } catch (e) {
-                console.error("Sidebar State Error:", e);
-            }
+            } catch (e) { console.error("Sidebar State Error:", e); }
         })();
     </script>
 
-    <!-- Hidden Inputs for JS -->
     <input type="hidden" class="SITE_URL" value="<?= SITE_URL; ?>">
     <input type="hidden" class="API_URL" value="<?= API_URL; ?>">
 
@@ -92,15 +77,16 @@ $show_kine_menu = ($is_super_admin || $kine_enabled_in_cabinet == 1);
 
                 <!-- User Profile -->
                 <li class="nav-item dropdown dropdown-user">
-                    <a class="nav-link dropdown-toggle dropdown-user-link" id="dropdown-user" href="#"
-                        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <!-- FIX: Removed data-bs-toggle="dropdown" to prevent conflict -->
+                    <!-- FIX: Changed href to javascript:void(0) -->
+                    <a class="nav-link dropdown-toggle dropdown-user-link" id="dropdown-user" href="javascript:void(0);"
+                        aria-haspopup="true" aria-expanded="false">
 
                         <div class="user-nav d-sm-flex d-none">
                             <span class="user-name"><?= htmlspecialchars($full_name); ?></span>
                             <span class="user-status"><?= htmlspecialchars($user_display_role); ?></span>
                         </div>
 
-                        <!-- Smart Avatar Wrapper -->
                         <div class="avatar-wrapper">
                             <?php if ($has_valid_image): ?>
                                 <img class="avatar-content-box" src="<?= $user_image_path; ?>" alt="avatar">

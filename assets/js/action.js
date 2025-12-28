@@ -1,5 +1,6 @@
 jQuery(function ($) {
-  // Active Link Handling
+  // 1. Active Link Handling
+  // Highlights the current page in the sidebar
   $("#main-menu-navigation li a")
     .click(function (e) {
       var link = $(this);
@@ -32,7 +33,7 @@ jQuery(function ($) {
    ========================================================================== */
 
 $(document).ready(function () {
-  // 1. Toggle Button Click Handler
+  // 2. Toggle Button Click Handler (Desktop)
   $(document).on("click", ".modern-nav-toggle", function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -49,18 +50,18 @@ $(document).ready(function () {
       isCollapsed = false;
     }
 
-    // ✅ FORCE SYNC: Update both keys to resolve duplication conflict
+    // Force Sync: Update both keys to resolve duplication conflict
     var stateString = isCollapsed ? "true" : "false";
-    localStorage.setItem("menu-collapsed", stateString); // Our preferred key
-    localStorage.setItem("menuCollapsed", stateString); // Legacy/Template key
+    localStorage.setItem("menu-collapsed", stateString); // Preferred key
+    localStorage.setItem("menuCollapsed", stateString); // Legacy key
 
-    // Trigger Resize (Fixes ApexCharts width issues)
+    // Trigger Resize (Fixes ApexCharts width issues when toggling)
     setTimeout(function () {
       window.dispatchEvent(new Event("resize"));
     }, 200);
   });
 
-  // 2. Mobile Overlay & Menu Toggle
+  // 3. Mobile Overlay & Menu Toggle
   $(document).on("click", ".menu-toggle, .sidenav-overlay", function (e) {
     e.preventDefault();
     var body = $("body");
@@ -74,7 +75,7 @@ $(document).ready(function () {
     }
   });
 
-  // 3. Expand on Hover (When Collapsed)
+  // 4. Expand on Hover (When Collapsed)
   $(".main-menu").hover(
     function () {
       if ($("body").hasClass("menu-collapsed")) {
@@ -89,7 +90,9 @@ $(document).ready(function () {
   );
 });
 
-//========================================== Language Cookies =======================
+/* ==========================================================================
+   LANGUAGE COOKIES & SWITCHER
+   ========================================================================== */
 
 function setCookie(name, value, days) {
   var expires = "";
@@ -126,7 +129,9 @@ $(document).on("click", ".language a", function () {
   location.reload();
 });
 
-// Forget Password Logic
+/* ==========================================================================
+   FORGET PASSWORD LOGIC
+   ========================================================================== */
 $("#forget_password").on("submit", function (e) {
   e.preventDefault();
   $.ajax({
@@ -149,5 +154,41 @@ $("#forget_password").on("submit", function (e) {
         }
       });
     },
+  });
+});
+
+/* ==========================================================================
+   FIX: MANUAL DROPDOWN TOGGLE (User Profile)
+   Prevents the menu from closing immediately due to Bootstrap conflicts
+   ========================================================================== */
+$(document).ready(function () {
+  // Toggle dropdown on click
+  $(document).on("click", "#dropdown-user", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Find the menu associated with this toggle
+    var $menu = $(this).next(".dropdown-menu");
+
+    // Toggle the 'show' class
+    if ($menu.hasClass("show")) {
+      $menu.removeClass("show");
+      $(this).removeClass("show");
+    } else {
+      // Close other dropdowns first
+      $(".dropdown-menu").removeClass("show");
+      $(".dropdown-toggle").removeClass("show");
+
+      $menu.addClass("show");
+      $(this).addClass("show");
+    }
+  });
+
+  // Close dropdown when clicking outside
+  $(document).on("click", function (e) {
+    if (!$(e.target).closest(".dropdown-user").length) {
+      $(".dropdown-user .dropdown-menu").removeClass("show");
+      $("#dropdown-user").removeClass("show");
+    }
   });
 });

@@ -1,7 +1,285 @@
 /* assets/css/pages/form-users.css */
-.tickets label,
-.work_hours label {
-  font-size: 15px;
-  font-weight: 900;
-  min-width: 40%;
+
+/* --- 1. Profile Card Styling --- */
+.card-profile {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px 0 rgba(34, 41, 47, 0.1);
+  overflow: hidden;
+  text-align: center;
+  background: #fff;
+  position: relative;
+}
+
+.card-profile .card-header-img {
+  height: 120px;
+  background: linear-gradient(135deg, #00d894 0%, #0071bc 100%);
+  width: 100%;
+}
+
+.card-profile .profile-img {
+  width: 130px;
+  height: 130px;
+  margin: -65px auto 15px;
+  position: relative;
+  z-index: 2;
+}
+
+.avatar-upload .avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  background-color: #fff;
+  position: relative;
+}
+
+.avatar-upload .avatar-preview > div {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.avatar-upload .avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.avatar-upload .avatar-edit {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  z-index: 10;
+}
+
+.avatar-upload .avatar-edit input {
+  display: none;
+}
+
+.avatar-upload .avatar-edit label {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0;
+  border-radius: 100%;
+  background: #ffffff;
+  border: 1px solid transparent;
+  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-weight: normal;
+  transition: all 0.2s ease-in-out;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-edit-2'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.avatar-upload .avatar-edit label:hover {
+  background-color: #f1f1f1;
+}
+
+.card-profile .profile-body {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.card-profile h4 {
+  font-weight: 700;
+  color: #333;
+}
+
+/* --- 2. Tabs Styling --- */
+.nav-pills-custom .nav-link {
+  font-weight: 600;
+  color: #5e5873;
+  background-color: #fff;
+  padding: 1rem 1.2rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0.8rem;
+  border: 1px solid #ebe9f1;
+}
+
+.nav-pills-custom .nav-link:hover {
+  background-color: rgba(0, 216, 148, 0.05);
+  border-color: #00d894;
+  color: #00d894;
+  transform: translateX(5px);
+}
+
+.nav-pills-custom .nav-link.active {
+  background: linear-gradient(45deg, #00d894, #00b078);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(0, 216, 148, 0.4);
+}
+
+.nav-pills-custom .nav-link i,
+.nav-pills-custom .nav-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* --- 3. Content Cards --- */
+.card {
+  border: none;
+  box-shadow: 0 4px 24px 0 rgba(34, 41, 47, 0.05);
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: transparent;
+  border-bottom: 1px solid #ebe9f1;
+  padding: 1.5rem;
+}
+
+.card-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #0071bc;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #00d894;
+  box-shadow: 0 0 0 0.2rem rgba(0, 216, 148, 0.15);
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #5e5873;
+}
+
+/* --- 4. Gallery Grid --- */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 15px;
+}
+
+.gallery-upload-box {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px dashed #d8d6de;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s;
+  background: #f8f8f8;
+  cursor: pointer;
+}
+
+.gallery-upload-box:hover {
+  border-color: #00d894;
+  background: #fff;
+}
+
+.gallery-upload-box .avatar-upload {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+.gallery-upload-box .avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.gallery-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 4px;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+
+/* --- 5. Planning Table Styles (FIXED) --- */
+.planning-table thead th {
+  background-color: #f8f9fa;
+  color: #5e5873;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  border-bottom: 2px solid #ebe9f1;
+}
+.planning-table tbody td {
+  vertical-align: middle;
+  padding: 1rem 0.75rem;
+}
+.day-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.day-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #5e5873;
+  min-width: 90px;
+}
+
+/* Style for closed days */
+.schedule-row.closed-day {
+  background-color: #fafafc;
+  opacity: 0.6;
+}
+
+/* FIX: Only disable the inputs (text/number/time), NOT the switch */
+.schedule-row.closed-day .schedule-input {
+  background-color: #f0f0f0;
+  pointer-events: none; /* Disable interaction */
+  color: #b9b9c3;
+  border-color: #ebe9f1;
+}
+
+/* Ensure the switch remains clickable */
+.schedule-row.closed-day .day-switch {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.time-separator {
+  margin: 0 5px;
+  font-weight: bold;
+  color: #b9b9c3;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .schedule-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .time-inputs {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .card-profile .profile-img {
+    width: 100px;
+    height: 100px;
+    margin-top: -50px;
+  }
 }

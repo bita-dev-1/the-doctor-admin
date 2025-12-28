@@ -24,6 +24,7 @@ function getDoctorFullProfile($db, $id)
     }
 
     // 2. Fetch Data
+    // ADDED: u.image4, u.image5, u.image6 to the query
     $query = "SELECT 
                 u.id,
                 u.first_name,
@@ -35,12 +36,16 @@ function getDoctorFullProfile($db, $id)
                 u.image1,
                 u.image2,
                 u.image3,
+                u.image4,
+                u.image5,
+                u.image6,
                 u.facebook,
                 u.instagram,
                 u.travel_hours,
                 u.is_opened,
                 u.recomondation, 
                 u.views,
+                u.numero_ordre,
                 u.role,
                 u.status,
                 u.deleted,
@@ -67,14 +72,12 @@ function getDoctorFullProfile($db, $id)
     if (!empty($result)) {
         $doctor = $result[0];
 
-        // --- FIX: Allow 'admin' role (Doctor Owner) to have a landing page ---
-        // Old code: if ($doctor['role'] !== 'doctor' ...
+        // Allow 'admin' role (Doctor Owner) to have a landing page
         if (!in_array($doctor['role'], ['doctor', 'admin']) || $doctor['status'] !== 'active' || $doctor['deleted'] != 0) {
             return false;
         }
-        // ---------------------------------------------------------------------
 
-        // Fix Image Paths
+        // Fix Image Paths Helper
         $fixPath = function ($path) {
             if (empty($path))
                 return null;
@@ -83,9 +86,13 @@ function getDoctorFullProfile($db, $id)
             return SITE_URI . ltrim($path, '/');
         };
 
+        // Process ALL images (1 to 6)
         $doctor['image1'] = $fixPath($doctor['image1']) ?? SITE_URI . 'assets/images/default_User.png';
         $doctor['image2'] = $fixPath($doctor['image2']);
         $doctor['image3'] = $fixPath($doctor['image3']);
+        $doctor['image4'] = $fixPath($doctor['image4']);
+        $doctor['image5'] = $fixPath($doctor['image5']);
+        $doctor['image6'] = $fixPath($doctor['image6']);
 
         // Schedule
         $schedule = json_decode($doctor['travel_hours'] ?? '[]', true);

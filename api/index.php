@@ -82,6 +82,8 @@ any('/api/v1/public/availability', 'middleware/public_availability.php');
 post('/api/v1/public/book', 'middleware/public_booking.php');
 post('/api/v1/public/my-appointments', 'middleware/public_appointments.php');
 post('/api/v1/public/recommend', 'middleware/public_recommend.php');
+get('/api/v1/public/motifs', 'middleware/public_motifs.php');
+
 
 // --- Beta Routes ---
 any('/api/v2/endpoint', 'middleware/endpointBeta.php');

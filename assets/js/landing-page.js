@@ -1,6 +1,6 @@
 /**
  * Landing Page Logic - Full Refactor
- * Handles: Booking (Auto-assign), Availability, My Appointments, and Recommendations
+ * Handles: Booking (Auto-assign), Availability, My Appointments, Recommendations, and Dynamic Data
  */
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -35,6 +35,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const bookingForm = document.getElementById("booking-form");
   const errorMsg = document.getElementById("booking-error");
   const confirmBtn = document.getElementById("confirm-booking");
+
+  // New Fields Elements
+  const wilayaSelect = document.getElementById("p_wilaya");
+  const communeSelect = document.getElementById("p_commune");
+  const motifSelect = document.getElementById("p_motif");
 
   // Recommendation Elements
   const recBtn = document.getElementById("recommendBtn");
@@ -92,7 +97,91 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ============================================================
-  // 3. CORE FUNCTIONS (Render & Navigation)
+  // 3. DATA FETCHING (Wilayas, Communes, Motifs)
+  // ============================================================
+
+  // Fetch Wilayas
+  function fetchWilayas() {
+    if (!wilayaSelect) return;
+    // Using the generic endpoint to fetch willaya table
+    fetch(`${API_BASE.replace("/public", "")}/endpoint`, {
+      method: "POST",
+      body: JSON.stringify({ table: "willaya" }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data) {
+          let html = `<option value="">${LANG_TEXT.choose}</option>`;
+          data.data.forEach((w) => {
+            html += `<option value="${w.id}">${w.willaya}</option>`;
+          });
+          wilayaSelect.innerHTML = html;
+        }
+      });
+  }
+
+  // Fetch Communes
+  function fetchCommunes(wilayaId) {
+    if (!communeSelect) return;
+    communeSelect.innerHTML = `<option value="">${LANG_TEXT.loading}</option>`;
+    communeSelect.disabled = true;
+
+    fetch(`${API_BASE.replace("/public", "")}/endpoint`, {
+      method: "POST",
+      body: JSON.stringify({
+        table: "communes",
+        exact: { id_willaya: wilayaId },
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data) {
+          let html = `<option value="">${LANG_TEXT.choose}</option>`;
+          data.data.forEach((c) => {
+            html += `<option value="${c.id}">${c.name}</option>`;
+          });
+          communeSelect.innerHTML = html;
+          communeSelect.disabled = false;
+        }
+      });
+  }
+
+  // Fetch Doctor Motifs
+  function fetchMotifs() {
+    if (!motifSelect) return;
+    // Call the new specific endpoint
+    fetch(`${API_BASE}/motifs?doctor_id=${DOCTOR_ID}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.state === "true" && data.data.length > 0) {
+          let html = `<option value="">${LANG_TEXT.choose}</option>`;
+          data.data.forEach((m) => {
+            let priceTxt = m.price > 0 ? ` (${m.price} DA)` : "";
+            html += `<option value="${m.id}">${m.title}${priceTxt}</option>`;
+          });
+          motifSelect.innerHTML = html;
+        }
+      });
+  }
+
+  // Initialize Data
+  fetchWilayas();
+  fetchMotifs();
+
+  // Event Listener for Wilaya Change
+  if (wilayaSelect) {
+    wilayaSelect.addEventListener("change", function () {
+      if (this.value) {
+        fetchCommunes(this.value);
+      } else {
+        communeSelect.innerHTML = '<option value="">--</option>';
+        communeSelect.disabled = true;
+      }
+    });
+  }
+
+  // ============================================================
+  // 4. CORE FUNCTIONS (Render & Navigation)
   // ============================================================
 
   // الانتقال للخطوة الثانية (تأكيد المعلومات)
@@ -102,15 +191,22 @@ document.addEventListener("DOMContentLoaded", function () {
     // تحديث عرض التاريخ
     const dateDisplay = document.getElementById("selected-date-display");
     if (dateDisplay) {
-      // تنسيق التاريخ ليكون مقروءاً
       const dateObj = new Date(selectedDate);
+
+      // Determine locale based on LANG_TEXT content (Arabic or French)
+      const locale =
+        typeof LANG_TEXT !== "undefined" &&
+        LANG_TEXT.confirm_booking === "تأكيد الحجز"
+          ? "ar-DZ"
+          : "fr-FR";
+
       const options = {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
       };
-      dateDisplay.textContent = dateObj.toLocaleDateString("fr-FR", options);
+      dateDisplay.textContent = dateObj.toLocaleDateString(locale, options);
     }
 
     // إخفاء الخطوة 1 وإظهار الخطوة 2
@@ -137,8 +233,7 @@ document.addEventListener("DOMContentLoaded", function () {
       btn.style.marginTop = "15px";
       btn.style.cursor = "pointer";
 
-      btn.innerHTML =
-        '<i class="far fa-calendar-check" style="margin-right:10px"></i> Confirmer la réservation';
+      btn.innerHTML = `<i class="far fa-calendar-check" style="margin-right:10px; margin-left:10px;"></i> ${LANG_TEXT.confirm_booking}`;
 
       // عند النقر، ننتقل للخطوة التالية مع التذكرة رقم 0
       btn.onclick = function () {
@@ -150,8 +245,8 @@ document.addEventListener("DOMContentLoaded", function () {
       slotsContainer.innerHTML = `
               <div style="text-align:center; padding: 20px; color: #ea5455; background: #fef2f2; border-radius: 12px;">
                   <i class="fas fa-times-circle" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                  <p style="font-weight:bold; margin:0;">Complet</p>
-                  <small>Aucun rendez-vous disponible pour cette date.</small>
+                  <p style="font-weight:bold; margin:0;">${LANG_TEXT.full}</p>
+                  <small>${LANG_TEXT.no_slots}</small>
               </div>
             `;
     }
@@ -177,14 +272,13 @@ document.addEventListener("DOMContentLoaded", function () {
             renderSlots(data.slots);
           } else {
             if (msgBox)
-              msgBox.innerHTML =
-                '<span style="color:#ea5455; font-weight:bold;">Complet (Aucun ticket disponible)</span>';
+              msgBox.innerHTML = `<span style="color:#ea5455; font-weight:bold;">${LANG_TEXT.full}</span>`;
           }
         } else {
           let reason = "Non disponible";
-          if (data.reason === "Day off") reason = "Jour de repos (Fermé)";
+          if (data.reason === "Day off") reason = LANG_TEXT.day_off;
           if (data.reason === "No tickets configured")
-            reason = "Planning non configuré";
+            reason = LANG_TEXT.no_config;
 
           if (msgBox)
             msgBox.innerHTML = `<span style="color:#ea5455; font-weight:bold;">${reason}</span>`;
@@ -193,14 +287,13 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch((err) => {
         if (loadingSlots) loadingSlots.style.display = "none";
         if (msgBox)
-          msgBox.innerHTML =
-            '<span style="color:red">Erreur de connexion.</span>';
+          msgBox.innerHTML = `<span style="color:red">${LANG_TEXT.connection_error}</span>`;
         console.error(err);
       });
   }
 
   // ============================================================
-  // 4. EVENT LISTENERS
+  // 5. EVENT LISTENERS
   // ============================================================
 
   // Open Booking Modal
@@ -252,13 +345,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const lastName = document.getElementById("p_lastname").value;
       const phone = document.getElementById("p_phone").value;
 
+      // New Fields
+      const email = document.getElementById("p_email").value;
+      const communeId = document.getElementById("p_commune").value;
+      const motifId = document.getElementById("p_motif").value;
+      const description = document.getElementById("p_description").value;
+
       if (!firstName || !phone) {
-        showError("Veuillez remplir les champs obligatoires.");
+        showError(LANG_TEXT.fill_required);
         return;
       }
 
       confirmBtn.disabled = true;
-      confirmBtn.textContent = "Traitement...";
+      confirmBtn.textContent = LANG_TEXT.processing;
 
       const payload = {
         doctor_id: DOCTOR_ID,
@@ -267,6 +366,11 @@ document.addEventListener("DOMContentLoaded", function () {
         first_name: firstName,
         last_name: lastName,
         phone: phone,
+        // Add new fields to payload
+        email: email,
+        commune_id: communeId,
+        motif_id: motifId,
+        description: description,
       };
 
       fetch(`${API_BASE}/book`, {
@@ -277,7 +381,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((response) => response.json())
         .then((data) => {
           confirmBtn.disabled = false;
-          confirmBtn.textContent = "Confirmer";
+          confirmBtn.textContent = LANG_TEXT.confirm_booking;
 
           if (data.state === "true") {
             // Save to LocalStorage
@@ -297,19 +401,19 @@ document.addEventListener("DOMContentLoaded", function () {
             step2.style.display = "none";
             step3.style.display = "block";
           } else {
-            showError(data.message || "Erreur lors de la réservation.");
+            showError(data.message || "Erreur.");
           }
         })
         .catch((err) => {
           confirmBtn.disabled = false;
-          confirmBtn.textContent = "Confirmer";
-          showError("Erreur de connexion au serveur.");
+          confirmBtn.textContent = LANG_TEXT.confirm_booking;
+          showError(LANG_TEXT.connection_error);
         });
     });
   }
 
   // ============================================================
-  // 5. MY APPOINTMENTS LOGIC
+  // 6. MY APPOINTMENTS LOGIC
   // ============================================================
 
   if (myAppBtn) {
@@ -330,8 +434,7 @@ document.addEventListener("DOMContentLoaded", function () {
     appListContainer.innerHTML = "";
 
     if (apps.length === 0) {
-      appListContainer.innerHTML =
-        '<p style="text-align:center; color:#777;">Aucun rendez-vous enregistré sur cet appareil.</p>';
+      appListContainer.innerHTML = `<p style="text-align:center; color:#777;">${LANG_TEXT.no_rdv_device}</p>`;
       return;
     }
 
@@ -356,20 +459,16 @@ document.addEventListener("DOMContentLoaded", function () {
             let statusBadge = "";
             switch (parseInt(app.state)) {
               case 0:
-                statusBadge =
-                  '<span style="background:#fff3cd; color:#856404; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">En attente</span>';
+                statusBadge = `<span style="background:#fff3cd; color:#856404; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${LANG_TEXT.pending}</span>`;
                 break;
               case 1:
-                statusBadge =
-                  '<span style="background:#d1e7dd; color:#0f5132; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">Confirmé</span>';
+                statusBadge = `<span style="background:#d1e7dd; color:#0f5132; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${LANG_TEXT.confirmed}</span>`;
                 break;
               case 2:
-                statusBadge =
-                  '<span style="background:#cff4fc; color:#055160; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">Terminé</span>';
+                statusBadge = `<span style="background:#cff4fc; color:#055160; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${LANG_TEXT.completed}</span>`;
                 break;
               case 3:
-                statusBadge =
-                  '<span style="background:#f8d7da; color:#842029; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">Annulé</span>';
+                statusBadge = `<span style="background:#f8d7da; color:#842029; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${LANG_TEXT.canceled}</span>`;
                 break;
             }
 
@@ -395,19 +494,17 @@ document.addEventListener("DOMContentLoaded", function () {
             appListContainer.appendChild(item);
           });
         } else {
-          appListContainer.innerHTML =
-            '<p style="text-align:center; color:#ea5455;">Impossible de récupérer les statuts.</p>';
+          appListContainer.innerHTML = `<p style="text-align:center; color:#ea5455;">${LANG_TEXT.status_fetch_error}</p>`;
         }
       })
       .catch((err) => {
         console.error(err);
-        appListContainer.innerHTML =
-          '<p style="text-align:center; color:#ea5455;">Erreur de connexion.</p>';
+        appListContainer.innerHTML = `<p style="text-align:center; color:#ea5455;">${LANG_TEXT.connection_error}</p>`;
       });
   }
 
   // ============================================================
-  // 6. RECOMMENDATION LOGIC
+  // 7. RECOMMENDATION LOGIC
   // ============================================================
 
   if (recBtn) {
@@ -443,6 +540,54 @@ document.addEventListener("DOMContentLoaded", function () {
             recBtn.classList.remove("liked");
           });
       });
+    }
+  }
+});
+
+// ============================================================
+// 8. LIGHTBOX LOGIC
+// ============================================================
+
+function openLightbox(src) {
+  const lightbox = document.getElementById("imageLightbox");
+  const img = document.getElementById("lightboxImg");
+
+  if (lightbox && img) {
+    img.src = src;
+    lightbox.style.display = "flex";
+    // Small delay to allow display:flex to apply before adding opacity class for transition
+    setTimeout(() => {
+      lightbox.classList.add("active");
+    }, 10);
+    document.body.style.overflow = "hidden"; // Prevent scrolling
+  }
+}
+
+function closeLightbox(e) {
+  // Close if clicked on overlay or close button, but not the image itself
+  if (
+    e.target.id === "imageLightbox" ||
+    e.target.classList.contains("lightbox-close")
+  ) {
+    const lightbox = document.getElementById("imageLightbox");
+    if (lightbox) {
+      lightbox.classList.remove("active");
+      setTimeout(() => {
+        lightbox.style.display = "none";
+        document.getElementById("lightboxImg").src = "";
+        document.body.style.overflow = "auto"; // Restore scrolling
+      }, 300); // Match CSS transition duration
+    }
+  }
+}
+
+// Close on Escape key
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    const lightbox = document.getElementById("imageLightbox");
+    if (lightbox && lightbox.style.display === "flex") {
+      // Simulate event object for closeLightbox
+      closeLightbox({ target: { id: "imageLightbox" } });
     }
   }
 });
