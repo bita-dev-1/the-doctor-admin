@@ -1,33 +1,30 @@
 <?php
 
 
+
+
 function data_table($DB)
 {
-    // 1. تعريف الأيقونات (تم تحديث الألوان إلى الأزرق والأخضر)
+    // 1. تعريف الأيقونات
     $icons = array(
         "view-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
         "delete-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fd5757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-        "edit-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00D894" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', // Green
+        "edit-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00D894" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
         "message-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-chat-text" viewBox="0 0 16 16"> <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/> <path d="M4 5.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8zm0 2.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/> </svg>',
-        "popup-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>' // Blue
+        "popup-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>'
     );
 
-    // 2. تحديث الشارات (Badges) - استبدال البرتقالي بالأزرق
+    // 2. تعريف الشارات (Badges)
     $badgeStates = array(
         -1 => '<span class="badge rounded-pill badge-light-danger">' . ($GLOBALS["language"]["canceled"] ?? "Annulé") . '</span>',
-        0 => '<span class="badge rounded-pill badge-light-info">' . $GLOBALS["language"]["created"] . '</span>', // Was Warning -> Now Info (Blue)
+        0 => '<span class="badge rounded-pill badge-light-info">' . $GLOBALS["language"]["created"] . '</span>',
         1 => '<span class="badge rounded-pill badge-light-success">' . $GLOBALS["language"]["completed"] . '</span>'
     );
 
-    // 3. تحديث أزرار الحالة (Dropdowns)
-    $rdvStates = array(
-        0 => '<a class="btn btn-outline-info dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["created"] . '</a>', // Was Secondary -> Now Info (Blue)
-        1 => '<a class="btn btn-outline-success dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["accepted"] . '</a>',
-        2 => '<a class="btn btn-outline-success dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["completed"] . '</a>', // Green
-        3 => '<a class="btn btn-outline-danger dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">' . $GLOBALS["language"]["Canceled"] . '</a>',
-    );
-
+    // 3. تحضير الاستعلام الأساسي
     $query = $GLOBALS['queries'][$_POST['query']];
+
+    // استخراج الأعمدة للترتيب والبحث
     $sub = substr($query, stripos($query, 'SELECT'), stripos($query, 'FROM'));
     $sub = substr($sub, stripos($sub, 'SELECT') + 6, strlen($sub));
     $str_arr = preg_split("/,(?![^(]+\))/", $sub);
@@ -62,53 +59,86 @@ function data_table($DB)
         }
     }
 
+    // 4. [SECURITY FIX] التحقق من الشرط الإضافي (Condition)
+    // نسمح فقط بالشروط البسيطة (عمود = رقم) لمنع حقن SQL
     if (isset($_POST['condition']) && !empty($_POST['condition'])) {
-        $query .= " AND " . $_POST['condition'];
+        $cond = $_POST['condition'];
+        // Regex: يسمح فقط بأحرف، أرقام، نقاط، ومساواة مع رقم (مثال: rdv.doctor_id = 509)
+        if (preg_match('/^[a-zA-Z0-9_.]+\s*=\s*[0-9]+$/', $cond)) {
+            $query .= " AND " . $cond;
+        }
     }
 
     $base_query = $query;
+    $params = []; // مصفوفة لتخزين القيم الآمنة
 
+    // 5. [SECURITY FIX] البحث باستخدام Prepared Statements
     if (!empty($_REQUEST['search']['value'])) {
         $search_value = $_REQUEST['search']['value'];
-        $search_value = filter_var($search_value, FILTER_SANITIZE_ADD_SLASHES);
 
         if (!empty($search_cols)) {
-            $base_query .= " AND CONCAT_WS(' ', " . implode(",", $search_cols) . ") LIKE '%" . $search_value . "%'";
+            // استخدام ? بدلاً من وضع القيمة مباشرة
+            $base_query .= " AND CONCAT_WS(' ', " . implode(",", $search_cols) . ") LIKE ? ";
+            $params[] = "%" . $search_value . "%";
         }
     }
 
+    // 6. [SECURITY FIX] فلترة التواريخ (Whitelist Columns)
     if ((isset($_REQUEST['dateStart']) && !empty($_REQUEST['dateStart'])) || (isset($_REQUEST['dateFin']) && !empty($_REQUEST['dateFin']))) {
-        if (isset($_REQUEST['dateStart']) && !empty($_REQUEST['dateStart'])) {
-            $base_query .= " AND " . $_REQUEST['dateFilter'] . " >= '" . $_REQUEST['dateStart'] . "'";
-        }
-        if (isset($_REQUEST['dateFin']) && !empty($_REQUEST['dateFin'])) {
-            $base_query .= " AND " . $_REQUEST['dateFilter'] . " <= '" . $_REQUEST['dateFin'] . "'";
+        // قائمة بيضاء للأعمدة المسموح بها كتواريخ
+        $allowed_date_cols = ['date', 'rdv.date', 'created_at', 'payment_date'];
+        $date_col = $_REQUEST['dateFilter'];
+
+        if (in_array($date_col, $allowed_date_cols)) {
+            if (isset($_REQUEST['dateStart']) && !empty($_REQUEST['dateStart'])) {
+                $base_query .= " AND " . $date_col . " >= ? ";
+                $params[] = $_REQUEST['dateStart'];
+            }
+            if (isset($_REQUEST['dateFin']) && !empty($_REQUEST['dateFin'])) {
+                $base_query .= " AND " . $date_col . " <= ? ";
+                $params[] = $_REQUEST['dateFin'];
+            }
         }
     }
 
-    $totalData = $DB->rowsCount($base_query);
-
-    $order_column_index = $_REQUEST['order'][0]['column'];
-    $order_column = $order_cols[$order_column_index] ?? $order_cols[0];
-
-    if (empty(trim($order_column))) {
-        $order_column = !empty($order_cols[0]) ? $order_cols[0] : 'id';
-    }
-
-    $base_query .= " ORDER BY " . $order_column . "   " . $_REQUEST['order'][0]['dir'] . "  LIMIT " . $_REQUEST['start'] . "  ," . $_REQUEST['length'] . "  ";
     try {
-        $results = $DB->select($base_query);
+        // 7. تنفيذ استعلام العد (Total Count)
+        // نستخدم PDO مباشرة للوصول إلى prepare/execute
+        $stmtCount = $DB->pdo->prepare($base_query);
+        $stmtCount->execute($params);
+        $totalData = $stmtCount->rowCount();
+
+        // 8. الترتيب والحدود (Order & Limit)
+        $order_column_index = $_REQUEST['order'][0]['column'];
+        $order_column = $order_cols[$order_column_index] ?? $order_cols[0];
+
+        // التحقق من أن عمود الترتيب موجود في القائمة المسموحة
+        if (!in_array($order_column, $order_cols)) {
+            $order_column = 'id';
+        }
+
+        $dir = strtoupper($_REQUEST['order'][0]['dir']) === 'ASC' ? 'ASC' : 'DESC';
+        $base_query .= " ORDER BY " . $order_column . " " . $dir . " LIMIT " . intval($_REQUEST['start']) . " ," . intval($_REQUEST['length']);
+
+        // 9. تنفيذ الاستعلام الرئيسي
+        $stmt = $DB->pdo->prepare($base_query);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     } catch (Exception $e) {
         die(json_encode([
             "draw" => 1,
             "recordsTotal" => 0,
             "recordsFiltered" => 0,
             "data" => [],
-            "error" => "SQL ERROR: " . $e->getMessage()
+            "error" => "Database Error"
         ]));
     }
+
     $DB = null;
     $data = array();
+
+    // 10. معالجة البيانات للعرض (Output Loop)
     foreach ($results as $result) {
         $single_data = array();
         $item_id = $result['id'] ?? null;
@@ -116,6 +146,8 @@ function data_table($DB)
             if (stripos($key, '_stateId') !== false) {
                 $item_id = $value;
             }
+
+            // معالجة الأعمدة الخاصة (HTML آمن مولد من النظام)
             if (stripos($key, '__action') !== false || stripos($key, '_state') !== false || stripos($key, '_BadgeState') !== false || stripos($key, '_photo') !== false) {
                 if (stripos($key, '__action') !== false) {
                     if (isset($_POST['actions']) && is_array($_POST['actions'])) {
@@ -138,7 +170,7 @@ function data_table($DB)
                                 "edit-icon" => $icons['edit-icon'],
                                 "delete-icon" => $icons['delete-icon'],
                                 "view-icon" => $icons['view-icon'],
-                                "reset_password-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>' // Blue
+                                "reset_password-icon" => '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'
                             ];
                             $icon_to_use = isset($action['icon']) ? $action['icon'] : ($default_icons[$action['action'] . '-icon'] ?? '');
 
@@ -163,23 +195,19 @@ function data_table($DB)
             } else if (stripos($key, '__rdvstate') !== false) {
                 switch ($value) {
                     case 0:
-                        // Created -> Info (Blue)
                         $single_data[] = '<span class="badge badge-light-info stateOrder px-1 py-75">' . $GLOBALS["language"]["created"] . ': </span>
 							<button type="button" class="btn btn-outline-success buttonstate px-1 py-75" data-value="1" data-id="' . $item_id . '">' . $GLOBALS["language"]["Accept"] . '</button>
 							<button type="button" class="btn btn-outline-danger buttonstate px-1 py-75" data-value="3" data-id="' . $item_id . '">' . $GLOBALS["language"]["Cancel"] . '</button>';
                         break;
                     case 1:
-                        // Accepted -> Success (Green)
                         $single_data[] = '<span class="badge badge-light-success stateOrder px-1 py-75">' . $GLOBALS["language"]["accepted"] . ': </span>
 							<button type="button" class="btn btn-outline-info buttonstate px-1 py-75" data-value="2" data-id="' . $item_id . '">' . $GLOBALS["language"]["Complete"] . '</button>
 							<button type="button" class="btn btn-outline-danger buttonstate px-1 py-75" data-value="3" data-id="' . $item_id . '">' . $GLOBALS["language"]["Cancel"] . '</button>';
                         break;
                     case 2:
-                        // Completed -> Info/Success (Blue/Green)
                         $single_data[] = '<button type="button" class="btn btn-outline-success px-1 py-75" data-value="2" data-id="' . $item_id . '" disabled style="background-color: #e2f7ff; opacity: 1;border: none !important;">' . $GLOBALS["language"]["completed"] . '</button>';
                         break;
                     case 3:
-                        // Canceled -> Danger (Red)
                         $single_data[] = '<button type="button" class="btn btn-outline-danger px-1 py-75" data-value="3" data-id="' . $item_id . '" disabled style="background-color: #ffe2e2; opacity: 1;border: none !important;">' . $GLOBALS["language"]["Canceled"] . '</button>';
                         break;
                 }
@@ -194,11 +222,13 @@ function data_table($DB)
                     $single_data[] = '<span class="badge badge-light-danger">Impayé</span>';
                 }
             } else {
+                // [SECURITY FIX] XSS Protection: تنظيف البيانات النصية العادية
                 $single_data[] = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
             }
         }
         $data[] = $single_data;
     }
+
     $json_data = array(
         "draw" => intval($_REQUEST['draw']),
         "recordsTotal" => intval($totalData),

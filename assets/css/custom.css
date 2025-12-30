@@ -633,3 +633,41 @@ html.dark-layout ::-webkit-scrollbar-track {
 .header-navbar .dropdown:hover .dropdown-menu.show {
   display: block !important;
 }
+
+/* ==========================================================================
+   DATATABLES SCROLL FIX (UPDATED)
+   ========================================================================== */
+
+/* 1. إجبار الحاوية الرئيسية على أخذ العرض الكامل */
+.dataTables_wrapper {
+  width: 100%;
+}
+
+/* 2. إجبار حاوية العناوين (الرأس) على التمدد لتملأ الشاشة */
+.dataTables_scrollHeadInner {
+  width: 100% !important;
+  padding-right: 0 !important; /* إزالة الحشو الزائد */
+}
+
+/* 3. تنسيق الجدول (الرأس والجسم) ليأخذ 100% */
+table.dataTable {
+  width: 100% !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  /* white-space: nowrap;  <-- يمكنك تفعيل هذا السطر إذا أردت منع التفاف النص */
+}
+
+/* 4. تحسين مظهر شريط التمرير */
+.dataTables_scrollBody::-webkit-scrollbar {
+  height: 12px; /* زيادة الارتفاع قليلاً لسهولة الاستخدام */
+}
+.dataTables_scrollBody::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+.dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+.dataTables_scrollBody::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}

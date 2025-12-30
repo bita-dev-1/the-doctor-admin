@@ -27,7 +27,8 @@ if (isset($id) && !empty($id)) {
                 <div class="row breadcrumbs-top">
                     <div class="col-12">
                         <h2 class="content-header-title float-start mb-0">
-                            <?= $breadcrumb . ' ' . $GLOBALS['language']['specialty']; ?></h2>
+                            <?= $breadcrumb . ' ' . $GLOBALS['language']['specialty']; ?>
+                        </h2>
                         <div class="breadcrumb-wrapper">
                             <ol class="breadcrumb">
                                 <li class="breadcrumb-item"><a

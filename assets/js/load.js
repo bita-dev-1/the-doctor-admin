@@ -261,10 +261,15 @@ function call_data_table(data) {
       .ajax.reload();
   });
   let langDataTable = getCookie("lang");
+
   $("#codexTable").DataTable({
     processing: true,
     serverSide: true,
-    responsive: true,
+    // --- التعديلات هنا ---
+    responsive: false, // تعطيل التجاوب الذكي (الذي يخفي الأعمدة)
+    scrollX: true, // تفعيل التمرير الأفقي
+    autoWidth: false, // منع الحساب التلقائي للعرض لضمان الامتلاء
+    // -------------------
     stateSave: true,
     stateDuration: -1,
     ordering: true,

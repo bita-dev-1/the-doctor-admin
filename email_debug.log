@@ -1,0 +1,8 @@
+[2025-12-29 14:36:49] [updateEvent] State changed to 1 for RDV ID: 371. Preparing email...
+[2025-12-29 14:36:49] Attempting to send email to: akremaddar@gmail.com
+[2025-12-29 14:36:59] Email sent successfully to: akremaddar@gmail.com
+[2025-12-29 14:36:59] [updateEvent] Email result: SUCCESS
+[2025-12-29 14:46:18] [updateEvent] State changed to 1 for RDV ID: 372. Preparing email...
+[2025-12-29 14:46:18] Attempting to send email to: akremaddar@gmail.com
+[2025-12-29 14:46:20] Email sent successfully to: akremaddar@gmail.com
+[2025-12-29 14:46:20] [updateEvent] Email result: SUCCESS

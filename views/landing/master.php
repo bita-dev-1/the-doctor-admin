@@ -1,8 +1,28 @@
 <?php
 // views/landing/master.php
 
-// 1. Language Logic (Arabic Default)
-$lang_code = isset($_GET['lang']) && $_GET['lang'] === 'fr' ? 'fr' : 'ar';
+// 1. Language Detection Logic
+$lang_code = 'ar'; // Default fallback
+
+// Priority 1: URL Parameter (Manual Override)
+if (isset($_GET['lang'])) {
+    $lang_code = ($_GET['lang'] === 'fr') ? 'fr' : 'ar';
+}
+// Priority 2: Browser Device Language (Auto-detect)
+else {
+    // Get the first 2 characters of the browser language (e.g., 'fr', 'en', 'ar')
+    $browser_lang = substr($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '', 0, 2);
+    $browser_lang = strtolower($browser_lang);
+
+    if ($browser_lang === 'fr') {
+        $lang_code = 'fr';
+    } else {
+        // If 'ar' or any other language (en, es, etc.) -> Default to 'ar'
+        $lang_code = 'ar';
+    }
+}
+
+// Set Direction & Alignment based on resolved language
 $dir = $lang_code === 'ar' ? 'rtl' : 'ltr';
 $align = $lang_code === 'ar' ? 'right' : 'left';
 

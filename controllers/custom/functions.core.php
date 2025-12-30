@@ -3,7 +3,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Ensure PHPMailer is loaded only if not already done by inc.php
+// Ensure PHPMailer is loaded
 if (!class_exists('PHPMailer\PHPMailer\PHPMailer') && defined('PROJECT_ROOT')) {
     $autoloadPath = PROJECT_ROOT . '/vendor/autoload.php';
     if (file_exists($autoloadPath)) {
@@ -11,14 +11,21 @@ if (!class_exists('PHPMailer\PHPMailer\PHPMailer') && defined('PROJECT_ROOT')) {
     }
 }
 
-
 global $DB;
 $DB = new DB();
 
-
+// --- NEW: Logging Helper Function ---
+function writeToLog($message)
+{
+    $logFile = __DIR__ . '/../../email_debug.log'; // Save in controllers folder for easy access
+    $timestamp = date("Y-m-d H:i:s");
+    $formattedMessage = "[$timestamp] $message" . PHP_EOL;
+    file_put_contents($logFile, $formattedMessage, FILE_APPEND);
+}
 
 function getSelected($request)
 {
+    // ... (باقي الدالة كما هي دون تغيير) ...
     $data = json_decode(customDecrypt($request));
     $table = $data->table;
     $select_val = $data->value;
@@ -37,20 +44,18 @@ function getSelected($request)
     if (isset($data->selected) && !empty($data->selected))
         $selected .= (is_array($data->selected) ? " IN (" . implode(',', $data->selected) . ") " : " = " . $data->selected);
 
-    // التعديل هنا: إضافة "AS select_value" لتوحيد مفتاح المصفوفة
     $sql = "SELECT $select_val AS select_value, CONCAT_WS(' ',$select_txt) AS select_txt FROM $table $join_query WHERE 1 $where $selected LIMIT 10";
 
     $response = $GLOBALS['DB']->select($sql);
 
     foreach ($response as $res) {
-        // استخدام المفتاح الموحد 'select_value' بدلاً من المتغير $select_val
         echo '<option value="' . $res['select_value'] . '" selected="selected">' . $res['select_txt'] . '</option>';
     }
 }
 
 function dataById($data, $table, $join = [])
 {
-
+    // ... (باقي الدالة كما هي دون تغيير) ...
     $join_query = '';
     if (!empty($join)) {
         $join_query = implode(' ', array_map(function ($j) {
@@ -66,21 +71,23 @@ function dataById($data, $table, $join = [])
 }
 
 /**
- * NEW: Generic and secure function to send emails using settings from .env
+ * UPDATED: Send Email with Logging
  */
 function sendEmail($recipientEmail, $recipientName, $subject, $body)
 {
     $mail = new PHPMailer(true);
 
     try {
+        writeToLog("Attempting to send email to: $recipientEmail");
+
         //Server settings
-        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Uncomment for debugging
+        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable for verbose debug output in browser response
         $mail->isSMTP();
         $mail->Host = MAIL_HOST;
         $mail->SMTPAuth = true;
         $mail->Username = MAIL_USERNAME;
         $mail->Password = MAIL_PASSWORD;
-        $mail->SMTPSecure = MAIL_ENCRYPTION; // PHPMailer::ENCRYPTION_SMTPS or 'tls'
+        $mail->SMTPSecure = MAIL_ENCRYPTION;
         $mail->Port = MAIL_PORT;
         $mail->CharSet = 'UTF-8';
 
@@ -94,16 +101,16 @@ function sendEmail($recipientEmail, $recipientName, $subject, $body)
         $mail->Body = $body;
 
         $mail->send();
+        writeToLog("Email sent successfully to: $recipientEmail");
         return true;
     } catch (Exception $e) {
-        // In a real app, you'd log this error instead of echoing it
-        // error_log("Mailer Error: {$mail->ErrorInfo}");
-        return "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        $errorMsg = "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        writeToLog("ERROR: $errorMsg");
+        return $errorMsg;
     }
 }
 
-
-// Function to generate a random password
+// ... (باقي الدوال generateRandomPassword و getDoctorUrl كما هي) ...
 function generateRandomPassword($length = 10)
 {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
@@ -115,16 +122,63 @@ function generateRandomPassword($length = 10)
     return $password;
 }
 
-
-
 function getDoctorUrl($id, $firstName, $lastName)
 {
-    // تنظيف الاسم ليكون URL Friendly
-    $slug = strtolower(trim($lastName . '-' . $firstName)); // Lastname-Firstname
+    $slug = strtolower(trim($lastName . '-' . $firstName));
     $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
     $slug = preg_replace('/-+/', '-', $slug);
     $slug = trim($slug, '-');
-
-    // New Format: /dr/slug-id
     return SITE_URL . "/dr/$slug-$id";
 }
+
+/**
+ * Helper function to sanitize and validate inputs
+ */
+function secure_input($data, $type = 'string')
+{
+    if (is_array($data)) {
+        return array_map(function ($item) use ($type) {
+            return secure_input($item, $type);
+        }, $data);
+    }
+
+    $data = trim($data);
+
+    switch ($type) {
+        case 'email':
+            // Remove illegal characters from email
+            $data = filter_var($data, FILTER_SANITIZE_EMAIL);
+            // Validate email
+            if (!filter_var($data, FILTER_VALIDATE_EMAIL)) {
+                return false; // Invalid email
+            }
+            return $data;
+
+        case 'int':
+            return filter_var($data, FILTER_SANITIZE_NUMBER_INT);
+
+        case 'float':
+            return filter_var($data, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+
+        case 'url':
+            return filter_var($data, FILTER_SANITIZE_URL);
+
+        case 'phone':
+            // Keep only numbers and +
+            return preg_replace('/[^0-9+]/', '', $data);
+
+        case 'date':
+            // Basic YYYY-MM-DD format check
+            if (preg_match("/^\d{4}-\d{2}-\d{2}$/", $data)) {
+                return $data;
+            }
+            return null;
+
+        case 'string':
+        default:
+            // Convert special characters to HTML entities (Prevents XSS)
+            // Strip tags to remove HTML entirely (Stricter)
+            return htmlspecialchars(strip_tags($data), ENT_QUOTES, 'UTF-8');
+    }
+}
+?>

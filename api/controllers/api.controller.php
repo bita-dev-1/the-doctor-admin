@@ -64,14 +64,15 @@ function sanitizeIdentifier($input)
     return preg_replace('/[^a-zA-Z0-9_]/', '', $input);
 }
 
+
 function Read($db, $payload)
 {
-    // Convert object to array if needed, but prefer object access
+    // Convert object to array if needed
     if (is_array($payload))
         $payload = (object) $payload;
 
-    // Validate Table Name
-    $table = isset($payload->table) ? sanitizeIdentifier($payload->table) : null;
+    // Validate Table Name (Allow only alphanumeric and underscores)
+    $table = isset($payload->table) ? preg_replace('/[^a-zA-Z0-9_]/', '', $payload->table) : null;
 
     // Check access
     if (!isset($payload->data) && $table) {
@@ -79,11 +80,11 @@ function Read($db, $payload)
         $query_str = "SELECT * FROM $table";
         $count_query_str = "SELECT COUNT(*) as total FROM $table";
 
-        // 1. Handle Inner Join
+        // 1. Handle Inner Join (Sanitized)
         $innerjoin_str = "";
         if (isset($payload->innerjoin) && isset($payload->innerjoincol)) {
-            $joinTable = sanitizeIdentifier($payload->innerjoin);
-            $joinCol = sanitizeIdentifier($payload->innerjoincol);
+            $joinTable = preg_replace('/[^a-zA-Z0-9_]/', '', $payload->innerjoin);
+            $joinCol = preg_replace('/[^a-zA-Z0-9_]/', '', $payload->innerjoincol);
             $innerjoin_str = ", $joinTable";
             $query_str .= " $innerjoin_str WHERE $table.$joinCol = $joinTable.id ";
             $count_query_str .= " $innerjoin_str WHERE $table.$joinCol = $joinTable.id ";
@@ -95,39 +96,30 @@ function Read($db, $payload)
         // 2. Handle Search (Prepared Statement)
         if (isset($payload->search) && is_object($payload->search)) {
             $keys = [];
-            $values = [];
             foreach ($payload->search as $key => $val) {
-                $safeKey = sanitizeIdentifier($key);
+                // Sanitize column name
+                $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '', $key);
                 if ($safeKey) {
                     $keys[] = $safeKey;
-                    $values[] = $val;
+                    $params[] = "%" . $val . "%"; // Add value to params
                 }
             }
 
             if (!empty($keys)) {
+                // Use placeholders (?)
                 $cols = implode(", ", $keys);
                 $query_str .= " AND CONCAT($cols) LIKE ? ";
                 $count_query_str .= " AND CONCAT($cols) LIKE ? ";
-                $params[] = "%" . implode("%", $values) . "%";
             }
         }
 
         // 3. Handle Exact Match (Prepared Statement)
-        if (isset($payload->exact) && !empty($payload->exact)) {
-            // Warning: 'exact' usually contains raw SQL in legacy code (e.g. "id = 5").
-            // Ideally, this should be refactored to key-value pairs.
-            // For now, we assume the caller sends a safe string or we accept the risk ONLY here if refactoring is impossible.
-            // BETTER APPROACH: Expect 'exact' to be an object {col: val}
-            if (is_object($payload->exact)) {
-                foreach ($payload->exact as $k => $v) {
-                    $safeK = sanitizeIdentifier($k);
-                    $query_str .= " AND $safeK = ? ";
-                    $count_query_str .= " AND $safeK = ? ";
-                    $params[] = $v;
-                }
-            } else {
-                // Fallback for legacy string support (Risky, but kept for compatibility if needed, try to avoid)
-                // $query_str .= " AND " . $payload->exact; 
+        if (isset($payload->exact) && is_object($payload->exact)) {
+            foreach ($payload->exact as $k => $v) {
+                $safeK = preg_replace('/[^a-zA-Z0-9_]/', '', $k);
+                $query_str .= " AND $safeK = ? ";
+                $count_query_str .= " AND $safeK = ? ";
+                $params[] = $v;
             }
         }
 
@@ -138,14 +130,21 @@ function Read($db, $payload)
             $query_str .= " LIMIT $limit OFFSET $offset";
         }
 
-        // Execute Main Query
+        // Execute Main Query using Prepared Statements
         try {
             $stmt = $db->prepare($query_str);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Execute Count Query (Filtered)
+            // Execute Count Query
+            // Note: Count query needs params only if search/exact filters were applied
+            // We need to rebuild params for count query or reuse carefully. 
+            // For simplicity in this legacy structure, we re-execute logic or just run simple count if no filters.
+
+            // Re-running count with filters:
             $stmtCount = $db->prepare($count_query_str);
+            // We need to pass the same params used for WHERE clauses (excluding limit)
+            // Since limit params are not in $params array (they are hardcoded in string), we can reuse $params.
             $stmtCount->execute($params);
             $count_filtred = $stmtCount->fetchColumn();
 
@@ -161,18 +160,12 @@ function Read($db, $payload)
             echo json_encode(["state" => "false", "message" => "Database Error"]);
         }
 
-    } elseif (isset($payload->sql)) {
-        // Legacy raw SQL support - Highly discouraged but kept if 'sql' param exists
-        // This should be removed in future versions
-        $data = $db->select($payload->sql);
-        header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 200 OK ');
-        echo json_encode(["data" => $data]);
     } else {
+        // REMOVED: The block that accepted raw SQL ($payload->sql)
         header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 401 Unauthorized');
         echo json_encode(["state" => "false", "message" => "access denied"]);
     }
 }
-
 function Create($db, $payload)
 {
     if (is_array($payload))

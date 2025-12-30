@@ -117,11 +117,12 @@ function draw_input($data)
 {
     $onchange = isset($data['onchange']) ? "onchange = " . $data['onchange'] : "";
     $attr = isset($data['attr']) && !empty($data['attr']) ? $data['attr'] : "";
-    // --- START: MODIFIED LINES (FIXED) ---
+
     $class = $data['class'] ?? '';
     $placeholder = $data['placeholder'] ?? '';
-    $value = $data['value'] ?? '';
-    // --- END: MODIFIED LINES (FIXED) ---
+
+    // FIX: Sanitize value to prevent XSS and breaking HTML attributes
+    $value = isset($data['value']) ? htmlspecialchars((string) $data['value'], ENT_QUOTES, 'UTF-8') : '';
 
     echo isset($data['label']) && !empty($data['label']) ? '<label class="form-label" for="' . $data['name_id'] . '">' . $data['label'] . '</label>' : "";
     echo '<input type="' . $data['type'] . '" class="form-control ' . $class . '" id="' . $data['name_id'] . '" name="' . $data['name_id'] . '" placeholder="' . $placeholder . '" ' . $onchange . ' value="' . $value . '" ' . $attr . ' />';
@@ -131,16 +132,18 @@ function draw_text_area($data)
 {
     $max_length = isset($data['maxlength']) && !empty($data['maxlength']) ? 'maxlength= "' . $data['maxlength'] . '"' : "";
     $attr = isset($data['attr']) && !empty($data['attr']) ? $data['attr'] : "";
-    // --- START: MODIFIED LINES (FIXED) ---
+
     $class = $data['class'] ?? '';
     $placeholder = $data['placeholder'] ?? '';
-    $value = $data['value'] ?? '';
-    $rows = $data['rows'] ?? '3'; // Default to 3 rows if not provided
-    // --- END: MODIFIED LINES (FIXED) ---
+    $rows = $data['rows'] ?? '3';
+
+    // FIX: Sanitize value for Textarea content
+    $value = isset($data['value']) ? htmlspecialchars((string) $data['value'], ENT_QUOTES, 'UTF-8') : '';
 
     echo isset($data['label']) && !empty($data['label']) ? '<label class="d-block form-label" for="' . $data['name_id'] . '">' . $data['label'] . '</label>' : "";
     echo '<textarea class="form-control ' . $class . '" id="' . $data['name_id'] . '" name="' . $data['name_id'] . '" placeholder="' . $placeholder . '" rows="' . $rows . '" ' . $max_length . ' ' . $attr . '>' . $value . '</textarea>';
 }
+
 
 function draw_inputGroup($data)
 {
@@ -153,11 +156,11 @@ function draw_inputGroup($data)
     if (isset($data['prefix']))
         $prefix = '<span class="input-group-text">' . $data['prefix'] . '</span>';
 
-    // --- START: MODIFIED LINES (FIXED) ---
     $class = $data['class'] ?? '';
     $placeholder = $data['placeholder'] ?? '';
-    $value = $data['value'] ?? '';
-    // --- END: MODIFIED LINES (FIXED) ---
+
+    // FIX: Sanitize value
+    $value = isset($data['value']) ? htmlspecialchars((string) $data['value'], ENT_QUOTES, 'UTF-8') : '';
 
     echo ' 
         <label class="form-label" for="' . $data['name_id'] . '">' . $data['label'] . '</label>
@@ -167,7 +170,6 @@ function draw_inputGroup($data)
             ' . $suffix . '
         </div>';
 }
-
 function draw_checkRadio($data)
 {
 

@@ -73,7 +73,8 @@ if (isset($_SESSION['user'])) {
             LEFT JOIN doctor_motifs ON rdv.motif_id = doctor_motifs.id 
             WHERE rdv.deleted = 0 $rdv_cabinet_condition",
 
-        "qr_waitingList_table" => "SELECT rdv.id, CONCAT_WS(' ', users.first_name, users.last_name) as doctor, CONCAT_WS(' ', rdv.first_name, rdv.last_name) as patient, rdv.phone, rdv.rdv_num, rdv.date, rdv.id as _stateId, rdv.state as __rdvstate FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN users ON users.id = rdv.doctor_id WHERE rdv.deleted = 0 AND rdv.state > 0 AND rdv.date = '" . date("Y-m-d") . "' $rdv_cabinet_condition",
+        // --- التعديل هنا: تغيير الشرط من state > 0 إلى state >= 0 ---
+        "qr_waitingList_table" => "SELECT rdv.id, CONCAT_WS(' ', users.first_name, users.last_name) as doctor, CONCAT_WS(' ', rdv.first_name, rdv.last_name) as patient, rdv.phone, rdv.rdv_num, rdv.date, rdv.id as _stateId, rdv.state as __rdvstate FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN users ON users.id = rdv.doctor_id WHERE rdv.deleted = 0 AND rdv.state >= 0 AND rdv.date = '" . date("Y-m-d") . "' $rdv_cabinet_condition",
 
         "qr_reeducation_dossiers_table" => "SELECT 
             rd.id, 

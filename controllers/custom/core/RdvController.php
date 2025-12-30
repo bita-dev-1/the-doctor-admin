@@ -146,6 +146,7 @@ function get_RDV($id = NULL, $return = false)
     echo json_encode($convertedData);
 }
 
+
 function updateEvent($DB)
 {
     if (isset($_POST['id']) && !empty($_POST['id'])) {
@@ -153,6 +154,7 @@ function updateEvent($DB)
         $table = 'rdv';
         $unique_val = $_POST['id'];
         $csrf = null;
+        $new_state = null; // متغير لتتبع الحالة الجديدة
 
         $array_data = array();
 
@@ -167,6 +169,11 @@ function updateEvent($DB)
                     $column = $parts[1];
 
                     if ($table_key === $table) {
+                        // التقاط الحالة الجديدة للتحقق منها لاحقاً
+                        if ($column === 'state') {
+                            $new_state = $data['value'];
+                        }
+
                         // Handle empty motif as NULL
                         if ($column === 'motif_id' && empty($data['value'])) {
                             $array_data[$column] = null;
@@ -180,7 +187,6 @@ function updateEvent($DB)
             }
         }
 
-        // ... (CSRF Check remains same) ...
         if (isset($csrf)) {
             $decrypted_csrf = customDecrypt($csrf);
             if (!is_csrf_valid($decrypted_csrf)) {
@@ -206,11 +212,65 @@ function updateEvent($DB)
                 if (function_exists('push_notificationRDV')) {
                     push_notificationRDV($unique_val);
                 }
+
+                // --- START: Email Logic for updateEvent ---
+                // التحقق مما إذا كانت الحالة الجديدة هي 1 (مقبول)
+                if ($new_state == 1) {
+                    if (function_exists('writeToLog')) {
+                        writeToLog("[updateEvent] State changed to 1 for RDV ID: $unique_val. Preparing email...");
+                    }
+
+                    $sql = "SELECT r.date, r.rdv_num, r.hours,
+                                   p.email, p.first_name, p.last_name,
+                                   u.first_name as doc_fname, u.last_name as doc_lname
+                            FROM rdv r
+                            JOIN patient p ON r.patient_id = p.id
+                            JOIN users u ON r.doctor_id = u.id
+                            WHERE r.id = $unique_val";
+
+                    $rdvData = $GLOBALS['db']->select($sql);
+
+                    if (!empty($rdvData) && !empty($rdvData[0]['email'])) {
+                        $info = $rdvData[0];
+                        $patientName = $info['first_name'] . ' ' . $info['last_name'];
+                        $doctorName = $info['doc_fname'] . ' ' . $info['doc_lname'];
+                        $rdvDate = date('d/m/Y', strtotime($info['date']));
+
+                        $subject = "Confirmation de votre rendez-vous - The Doctor";
+                        $body = "
+                            <div style='font-family: Arial, sans-serif; color: #333;'>
+                                <h3>Bonjour {$patientName},</h3>
+                                <p>Nous avons le plaisir de vous informer que votre demande de rendez-vous a été <strong style='color: #28c76f;'>acceptée</strong>.</p>
+                                <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #e9ecef;'>
+                                    <p style='margin: 5px 0;'><strong>Médecin :</strong> Dr. {$doctorName}</p>
+                                    <p style='margin: 5px 0;'><strong>Date :</strong> {$rdvDate}</p>
+                                    <p style='margin: 5px 0;'><strong>Numéro de ticket :</strong> <span style='font-size: 1.2em; font-weight: bold; color: #0071bc;'>{$info['rdv_num']}</span></p>
+                                </div>
+                                <p>Merci de votre confiance.</p>
+                                <small style='color: #999;'>Ceci est un message automatique, merci de ne pas répondre.</small>
+                            </div>
+                        ";
+
+                        $result = sendEmail($info['email'], $patientName, $subject, $body);
+
+                        if (function_exists('writeToLog')) {
+                            writeToLog("[updateEvent] Email result: " . ($result === true ? "SUCCESS" : "FAILED - $result"));
+                        }
+                    } else {
+                        if (function_exists('writeToLog')) {
+                            writeToLog("[updateEvent] Skipped email: Patient email not found or empty.");
+                        }
+                    }
+                }
+                // --- END: Email Logic ---
+
                 echo json_encode(["state" => "true", "message" => $GLOBALS['language']['Edited successfully']]);
             } else {
                 echo json_encode(["state" => "false", "message" => "Erreur lors de la mise à jour BDD"]);
             }
         } catch (Exception $e) {
+            if (function_exists('writeToLog'))
+                writeToLog("[updateEvent] Exception: " . $e->getMessage());
             echo json_encode(["state" => "false", "message" => "Exception: " . $e->getMessage()]);
         }
 
@@ -285,25 +345,88 @@ function handleRdv_nbr()
     }
 }
 
+
+
 function updateState()
 {
     if (isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id'])) {
         $id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
         $state = abs(filter_var($_POST['state'], FILTER_SANITIZE_NUMBER_INT));
         $datetime = date('Y-m-d H:i:s');
+
+        // Log Start
+        if (function_exists('writeToLog')) {
+            writeToLog("--- UpdateState Called for RDV ID: $id with State: $state ---");
+        }
+
         $GLOBALS['db']->table = 'rdv';
         $GLOBALS['db']->data = array("state" => "$state", "modified_at" => "$datetime", "modified_by" => $_SESSION['user']['id']);
         $GLOBALS['db']->where = "id = $id";
         $updated = $GLOBALS['db']->update();
+
         if ($updated) {
+            // --- START: Send Email Notification on Acceptance ---
+            if ($state == 1) {
+                writeToLog("State is 1 (Accepted). Fetching RDV details...");
+
+                // Fetch appointment, patient, and doctor details
+                $sql = "SELECT r.date, r.rdv_num, r.hours,
+                               p.email, p.first_name, p.last_name,
+                               u.first_name as doc_fname, u.last_name as doc_lname
+                        FROM rdv r
+                        JOIN patient p ON r.patient_id = p.id
+                        JOIN users u ON r.doctor_id = u.id
+                        WHERE r.id = $id";
+
+                $rdvData = $GLOBALS['db']->select($sql);
+
+                if (!empty($rdvData)) {
+                    $info = $rdvData[0];
+                    $email = $info['email'];
+
+                    writeToLog("Data fetched. Patient Email: " . ($email ? $email : "EMPTY"));
+
+                    if (!empty($email)) {
+                        $patientName = $info['first_name'] . ' ' . $info['last_name'];
+                        $doctorName = $info['doc_fname'] . ' ' . $info['doc_lname'];
+                        $rdvDate = date('d/m/Y', strtotime($info['date']));
+
+                        $subject = "Confirmation de votre rendez-vous - The Doctor";
+                        $body = "
+                            <div style='font-family: Arial, sans-serif; color: #333;'>
+                                <h3>Bonjour {$patientName},</h3>
+                                <p>Nous avons le plaisir de vous informer que votre demande de rendez-vous a été <strong style='color: #28c76f;'>acceptée</strong>.</p>
+                                <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #e9ecef;'>
+                                    <p style='margin: 5px 0;'><strong>Médecin :</strong> Dr. {$doctorName}</p>
+                                    <p style='margin: 5px 0;'><strong>Date :</strong> {$rdvDate}</p>
+                                    <p style='margin: 5px 0;'><strong>Numéro de ticket :</strong> <span style='font-size: 1.2em; font-weight: bold; color: #0071bc;'>{$info['rdv_num']}</span></p>
+                                </div>
+                                <p>Merci de votre confiance.</p>
+                                <small style='color: #999;'>Ceci est un message automatique, merci de ne pas répondre.</small>
+                            </div>
+                        ";
+
+                        $result = sendEmail($email, $patientName, $subject, $body);
+                        writeToLog("SendEmail Result: " . ($result === true ? "SUCCESS" : "FAILED - " . $result));
+                    } else {
+                        writeToLog("Skipping email: Patient email is empty.");
+                    }
+                } else {
+                    writeToLog("Error: Could not fetch RDV data for ID: $id");
+                }
+            }
+            // --- END: Send Email Notification ---
+
             echo json_encode(["state" => $updated, "message" => $GLOBALS['language']['Edited successfully']]);
         } else {
+            if (function_exists('writeToLog'))
+                writeToLog("Database Update Failed for ID: $id");
             echo json_encode(["state" => "false", "message" => $updated]);
         }
-    } else
+    } else {
         echo json_encode(["state" => "false", "message" => "missing id"]);
+    }
 }
-
 function moveEvent($DB)
 {
     if (isset($_POST['id']) && !empty($_POST['id']) && isset($_POST['date']) && !empty($_POST['date'])) {
