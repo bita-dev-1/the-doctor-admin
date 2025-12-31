@@ -1,4 +1,5 @@
-name: Deploy to CloudPanel
+# .github/workflows/deploy.yml
+name: Deploy to CloudPanel via VPN
 
 on:
   push:
@@ -17,6 +18,41 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.1"
+
+      # --- START VPN STEPS ---
+      - name: Install OpenVPN
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+      - name: Setup VPN Configuration
+        run: |
+          # Decode the VPN_CONFIG secret and save it as client.ovpn
+          echo "${{ secrets.VPN_CONFIG }}" | base64 --decode > client.ovpn
+          
+          # Optional: If your VPN requires credentials, uncomment and use VPN_AUTH secret
+          # echo "${{ secrets.VPN_AUTH }}" > auth.txt
+          # chmod 600 auth.txt
+          # sed -i 's/auth-user-pass/auth-user-pass auth.txt/' client.ovpn
+
+      - name: Connect to VPN
+        run: |
+          # Start OpenVPN in background. 
+          # Pull-filter DNS is used to keep GitHub connection alive.
+          sudo openvpn --config client.ovpn --daemon --log vpn.log --pull-filter ignore "dhcp-option DNS"
+          
+          # Wait for the tunnel interface to be ready
+          echo "Connecting to VPN..."
+          sleep 20
+          
+          # Display network info for debugging
+          ifconfig
+
+      - name: Verify Internal Connectivity
+        run: |
+          # Verify that the Runner can now reach the server IP through the VPN
+          ping -c 4 ${{ secrets.HOST }} || (cat vpn.log && exit 1)
+      # --- END VPN STEPS ---
 
       - name: Deploy to Server via Rsync
         uses: easingthemes/ssh-deploy@main
@@ -39,7 +75,15 @@ jobs:
           port: 8022
           script: |
             cd /home/cloud-doctor/htdocs/the-doctor.cloud/
-
+            
+            # Use full path for composer if needed or ensure it's in PATH
             composer install --no-dev --optimize-autoloader
-
+            
+            # Secure permissions
             chmod -R 775 api/uploads
+
+      - name: Terminate VPN
+        if: always()
+        run: |
+          # Clean up VPN connection after success or failure
+          sudo killall openvpn || true
