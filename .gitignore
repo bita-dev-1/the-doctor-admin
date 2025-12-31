@@ -26,3 +26,6 @@
 
 /database_backup
 /tmp
+
+worker_debug.log
+email_debug.log

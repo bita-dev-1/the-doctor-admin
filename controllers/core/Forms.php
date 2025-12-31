@@ -4,7 +4,7 @@ function postForm($DB)
 {
     try {
         $array_data = array();
-        $table = trim(customDecrypt($_POST['class']));
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', trim(customDecrypt($_POST['class'])));
 
         foreach ($_POST['data'] as $data) {
             if (!isset($data['name'])) {
@@ -34,7 +34,7 @@ function postForm($DB)
         $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
         $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
 
-        // List of tables that have tracking columns
+        // Security: Force created_by from session, ignore POST data
         $tables_with_tracking = ['users', 'reeducation_dossiers', 'patient', 'rdv'];
         if (in_array($table, $tables_with_tracking)) {
             $restData['created_by'] = $_SESSION['user']['id'];
@@ -42,11 +42,10 @@ function postForm($DB)
 
         // Special Logic for Creating Users
         if ($table === 'users' && !isset($_POST['update'])) {
-
             $restData['must_change_password'] = 1;
-
             $new_password = generateRandomPassword();
             $restData['password'] = sha1($new_password);
+
             $fullName = $restData['first_name'] . ' ' . $restData['last_name'];
             $subject = 'Bienvenue sur The Doctor App - Vos informations de connexion';
             $body = "<p>Bonjour {$fullName},</p><p>Un compte a été créé pour vous. Votre mot de passe temporaire est : <strong>{$new_password}</strong></p>";
@@ -58,12 +57,12 @@ function postForm($DB)
 
             if (!$is_super_admin && $user_role === 'admin') {
                 $restData['cabinet_id'] = $user_cabinet_id;
-
+                // Prevent creating admins if not super admin
                 if (isset($restData['role']) && $restData['role'] === 'admin') {
                     throw new Exception("Vous n'avez pas la permission de créer des comptes administrateur.");
                 }
-
-                $admin_data = $DB->select("SELECT specialty_id, commune_id, tickets_day, travel_hours, is_opened, image1, image2, image3, facebook, instagram, description FROM users WHERE id = {$_SESSION['user']['id']}")[0];
+                // Copy admin settings
+                $admin_data = $DB->select("SELECT specialty_id, commune_id, tickets_day, travel_hours, is_opened, image1, image2, image3, facebook, instagram, description FROM users WHERE id = ?", [$_SESSION['user']['id']])[0];
                 if ($admin_data) {
                     $restData = array_merge($admin_data, $restData);
                 }
@@ -72,19 +71,18 @@ function postForm($DB)
 
         $DB->table = $table;
         $DB->data = $restData;
-        $last_id = $DB->insert();
+        $last_id = $DB->insert(); // Uses prepared statements from Phase 1
         $inserted = is_numeric($last_id) && $last_id > 0;
 
         if (!$inserted) {
             throw new Exception($DB->error ?? 'Main database insertion failed.');
         }
 
-        // Handle sub-tables if any
+        // Handle sub-tables
         if (is_array($filteredData) && !empty($filteredData) && $inserted) {
             $unique_id = ((substr($table, -1) === 's') ? substr($table, 0, -1) : $table) . '_id';
             foreach ($filteredData as $table_name => $data) {
                 $DB->table = $table_name;
-
                 if (isset($data['multi'])) {
                     unset($data['multi']);
                     $data = array_map(function ($item) use ($unique_id, $last_id) {
@@ -94,7 +92,6 @@ function postForm($DB)
                 } else {
                     $data = array_merge($data, array("$unique_id" => $last_id));
                 }
-
                 $DB->data = $data;
                 $DB->insert();
             }
@@ -116,11 +113,13 @@ function postForm($DB)
 
 function updatForm($DB)
 {
-
     if (isset($_POST['class']) && !empty($_POST['class']) && isset($_POST['object']) && !empty($_POST['object'])) {
-        $table = trim(customDecrypt($_POST['class']));
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', trim(customDecrypt($_POST['class'])));
         $whereCondition = json_decode(customDecrypt($_POST['object']));
-        $unique_val = isset($_POST['codex_id']) ? $_POST['codex_id'] : $whereCondition->val;
+
+        // Secure ID
+        $unique_val = isset($_POST['codex_id']) ? intval($_POST['codex_id']) : intval($whereCondition->val);
+        $col_name = preg_replace('/[^a-zA-Z0-9_]/', '', $whereCondition->column);
 
         $array_data = array();
         foreach ($_POST['data'] as $data) {
@@ -159,7 +158,9 @@ function updatForm($DB)
 
         $DB->table = $table;
         $DB->data = $restData;
-        $DB->where = $whereCondition->column . ' = ' . $unique_val;
+
+        // Secure Where Clause (Note: DB class update() still expects string where, but we ensure ID is int)
+        $DB->where = $col_name . ' = ' . $unique_val;
 
         $updated = true && $DB->update();
 
@@ -176,7 +177,6 @@ function updatForm($DB)
 
         if ($updated) {
             $response = ["state" => "true", "message" => $GLOBALS['language']['Edited successfully']];
-
             if ($table === 'users' && $unique_val == $_SESSION['user']['id'] && isset($restData['image1'])) {
                 $_SESSION['user']['image1'] = $restData['image1'];
                 $response['new_image_url'] = $restData['image1'];
@@ -186,7 +186,6 @@ function updatForm($DB)
             echo json_encode(["state" => "false", "message" => $GLOBALS['language']['something went wrong reload page and try again']]);
         }
 
-
     } else {
         echo json_encode(["state" => "false", "message" => "Class OR Object not exist"]);
     }
@@ -195,13 +194,13 @@ function updatForm($DB)
 
 function checkUnique($DB)
 {
-    if (isset($_POST['class']) && isset($_POST['name']) && isset($_POST['value']) && !empty($_POST['class']) && !empty($_POST['name']) && !empty($_POST['value'])) {
-        $table = trim(customDecrypt($_POST['class']));
+    if (isset($_POST['class']) && isset($_POST['name']) && isset($_POST['value'])) {
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', trim(customDecrypt($_POST['class'])));
         $DB->table = $table;
-        $DB->field = $_POST['name'];
+        $DB->field = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['name']);
         $DB->value = $_POST['value'];
 
-        $unique = $DB->validateField();
+        $unique = $DB->validateField(); // Uses prepared statement
         $DB = null;
         if (!$unique) {
             echo json_encode(true);

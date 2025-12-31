@@ -9,11 +9,9 @@ if (!isset($_SESSION['user']['id'])) {
 include_once 'controllers/custom/core/ChatController.php';
 include_once 'header.php';
 
-// تهيئة المتغير لتجنب الأخطاء
 $conversationId = isset($conversationId) ? $conversationId : null;
 $current = (isset($conversationId) && is_numeric($conversationId)) ? (int) $conversationId : NULL;
 
-// جلب البيانات
 $chat_list = chat_list($current);
 ?>
 
@@ -291,14 +289,27 @@ $chat_list = chat_list($current);
             }
         });
 
-        // Send Message Handler
-        $('.chat-app-form').on('submit', function (e) {
+        // --- FIX: Prevent Double Submission ---
+        var isSending = false; // Flag to lock submission
+
+        // Use .off() to remove any previous handlers before attaching a new one
+        $('.chat-app-form').off('submit').on('submit', function (e) {
             e.preventDefault();
-            var msg = $(this).find('.message').val();
+            e.stopPropagation();
+
+            if (isSending) return; // Stop if already sending
+
+            var $form = $(this);
+            var $btn = $form.find('.send');
+            var msg = $form.find('.message').val();
             var file = $('#file-path-input').val();
             var convId = $('input[name="conversation"]').val();
 
             if (msg.trim() == '' && file == '') return;
+
+            // Lock
+            isSending = true;
+            $btn.prop('disabled', true);
 
             var data = {
                 method: 'send_msg',
@@ -321,13 +332,21 @@ $chat_list = chat_list($current);
                         location.reload();
                     } else {
                         if (res.message) Swal.fire('Erreur', res.message, 'error');
+                        // Unlock only on error (success reloads page)
+                        isSending = false;
+                        $btn.prop('disabled', false);
                     }
+                },
+                error: function () {
+                    // Unlock on network error
+                    isSending = false;
+                    $btn.prop('disabled', false);
                 }
             });
         });
 
         // Create Conversation Handler
-        $('.post-conversation').on('submit', function (e) {
+        $('.post-conversation').off('submit').on('submit', function (e) {
             e.preventDefault();
             var formData = $(this).serializeArray();
             formData.push({ name: 'method', value: 'post_conversation' });

@@ -14,11 +14,12 @@ try {
         exit();
     }
 
-    // Sanitize IDs (Ensure they are integers)
+    // Sanitize IDs
     $ids = array_map('intval', $payload->ids);
-    $ids_string = implode(',', $ids);
 
-    // Fetch current status from DB
+    // Create placeholders (?, ?, ?)
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
     $query = "SELECT 
                 r.id, 
                 r.date, 
@@ -28,9 +29,9 @@ try {
                 u.first_name as doctor_firstname
               FROM rdv r
               JOIN users u ON r.doctor_id = u.id
-              WHERE r.id IN ($ids_string)";
+              WHERE r.id IN ($placeholders)";
 
-    $results = $GLOBALS['db']->select($query);
+    $results = $GLOBALS['db']->select($query, $ids);
 
     echo json_encode([
         "state" => "true",

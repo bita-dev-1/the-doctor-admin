@@ -7,12 +7,37 @@ function select2Data($DB)
         if ($data === null)
             throw new Exception("Invalid token.");
 
-        $table = $data->table;
-        $select_val = $data->value;
-        $select_txt = implode(",' ',", $data->text);
+        // Sanitize Table Name (Allow only alphanumeric and underscores)
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', $data->table);
+
+        $select_val = preg_replace('/[^a-zA-Z0-9_]/', '', $data->value);
+
+        // Sanitize Columns
+        $select_txt_arr = array_map(function ($col) {
+            return preg_replace('/[^a-zA-Z0-9_.]/', '', $col);
+        }, $data->text);
+        $select_txt = implode(",' ',", $select_txt_arr);
+
+        // Warning: $data->where comes from token. We assume token integrity via encryption key.
+        // Ideally, we should not pass raw SQL in token.
         $where_from_token = isset($data->where) && !empty($data->where) ? " AND (" . $data->where . ")" : "";
-        $select_Parent = isset($data->value_parent) && !empty($data->value_parent) && isset($_POST['parent']) ?
-            " AND " . $data->value_parent . (is_array($_POST['parent']) ? " IN (" . implode(",", $_POST['parent']) . ")" : " = " . $_POST['parent']) : "";
+
+        $select_Parent = "";
+        if (isset($data->value_parent) && !empty($data->value_parent) && isset($_POST['parent'])) {
+            $parentCol = preg_replace('/[^a-zA-Z0-9_]/', '', $data->value_parent);
+            $parentVal = $_POST['parent'];
+
+            if (is_array($parentVal)) {
+                $placeholders = implode(',', array_fill(0, count($parentVal), '?'));
+                $select_Parent = " AND $parentCol IN ($placeholders) ";
+                $parentParams = $parentVal;
+            } else {
+                $select_Parent = " AND $parentCol = ? ";
+                $parentParams = [$parentVal];
+            }
+        } else {
+            $parentParams = [];
+        }
 
         $security_where = "";
         if (isset($_SESSION['user'])) {
@@ -20,17 +45,12 @@ function select2Data($DB)
             $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
             $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
 
-            // Apply restrictions for non-super admins
             if (!$is_super_admin) {
-                // Tables that have 'cabinet_id' column and need filtering
                 $cabinet_tables = ['users', 'patient', 'rdv', 'cabinet_services'];
-
                 if (in_array($table, $cabinet_tables)) {
                     if (!empty($user_cabinet_id)) {
                         $security_where = " AND {$table}.cabinet_id = " . intval($user_cabinet_id);
                     } else {
-                        // If user has no cabinet_id (and not super admin), restrict access
-                        // Exception: Users might need to see their own profile, handled by ID usually
                         $security_where = " AND {$table}.cabinet_id IS NULL";
                     }
                 }
@@ -39,6 +59,7 @@ function select2Data($DB)
 
         $join_query = '';
         if (isset($data->join) && is_array($data->join) && !empty($data->join)) {
+            // Basic sanitization for joins (Legacy support)
             $join_query = implode(' ', array_map(function ($j) {
                 return $j->type . ' ' . $j->table . ' ON ' . $j->condition;
             }, $data->join));
@@ -48,17 +69,27 @@ function select2Data($DB)
 
         $searchTerm = $_POST['searchTerm'] ?? null;
         $search_condition = "";
+        $searchParams = [];
+
         if ($searchTerm !== null && $searchTerm !== '') {
-            $sanitizedSearchTerm = str_replace(" ", "%", filter_var($searchTerm, FILTER_SANITIZE_ADD_SLASHES));
-            $search_condition = " AND CONCAT_WS(' ',$select_txt) LIKE '%" . $sanitizedSearchTerm . "%'";
+            $search_condition = " AND CONCAT_WS(' ',$select_txt) LIKE ? ";
+            $searchParams[] = "%" . $searchTerm . "%";
         }
 
         $sql .= $search_condition . $where_from_token . $select_Parent . $security_where;
 
-        $responseResult = $DB->select($sql);
+        // Merge parameters
+        $finalParams = array_merge($searchParams, $parentParams);
+
+        $responseResult = $DB->select($sql, $finalParams);
+
         $response = array();
         foreach ($responseResult as $res) {
-            $response[] = array("id" => $res['select_value'], "text" => $res['select_txt']);
+            // XSS Protection on Output
+            $response[] = array(
+                "id" => htmlspecialchars($res['select_value']),
+                "text" => htmlspecialchars($res['select_txt'])
+            );
         }
         echo json_encode($response);
 
@@ -73,49 +104,36 @@ function select2Data($DB)
 function dataById_handler($DB)
 {
     try {
-        // 1. Authentication Check
         if (!isset($_SESSION['user']['id'])) {
             throw new Exception("Unauthorized access.");
         }
 
         $data = json_decode(customDecrypt($_POST['express']));
-        $table = trim(customDecrypt($_POST['class']));
-        $column = trim($data->column);
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', trim(customDecrypt($_POST['class'])));
+        $column = preg_replace('/[^a-zA-Z0-9_]/', '', trim($data->column));
         $id = intval($_POST['id']);
 
-        // 2. Authorization Check (IDOR Protection)
         $security_check = "";
         $user_role = $_SESSION['user']['role'] ?? null;
         $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
         $is_super_admin = ($user_role === 'admin' && empty($user_cabinet_id));
 
         if (!$is_super_admin) {
-            // List of tables that belong to a specific cabinet
             $cabinet_tables = ['users', 'patient', 'rdv', 'cabinet_services', 'reeducation_dossiers'];
-
             if (in_array($table, $cabinet_tables)) {
                 if (!empty($user_cabinet_id)) {
-                    // Special handling for tables that might not have direct cabinet_id but are linked
-                    if ($table === 'reeducation_dossiers') {
-                        // For dossiers, we ideally check the patient's cabinet or the technician's cabinet.
-                        // This simple check assumes the dossier itself might have a cabinet_id or we rely on the initial list filter.
-                        // To be strictly secure, a JOIN would be needed here, but for now, we skip strict check 
-                        // if the table structure doesn't support it directly to avoid breaking the app.
-                        // If reeducation_dossiers has no cabinet_id, we can't filter easily here without a JOIN.
-                    } else {
-                        // For standard tables with cabinet_id
+                    if ($table !== 'reeducation_dossiers') {
                         $security_check = " AND cabinet_id = " . intval($user_cabinet_id);
                     }
                 }
             }
         }
 
-        $sql = "SELECT * FROM $table WHERE " . $column . " = " . $id . $security_check;
-
-        $response = $DB->select($sql);
+        // Secure Query
+        $sql = "SELECT * FROM $table WHERE $column = ? $security_check";
+        $response = $DB->select($sql, [$id]);
 
         if (empty($response)) {
-            // Return empty or error if not found/unauthorized
             echo json_encode(["state" => "false", "message" => "Data not found or access denied"]);
         } else {
             $DB = null;

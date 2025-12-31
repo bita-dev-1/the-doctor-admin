@@ -12,19 +12,17 @@ function get_doctor_motifs($DB)
     }
 
     // 2. Determine Target Doctor
-    // If doctor_id is sent (e.g. by Admin), use it. Otherwise use Session ID.
     $doctor_id = isset($_POST['doctor_id']) ? intval($_POST['doctor_id']) : $_SESSION['user']['id'];
 
     // 3. Authorization Check
-    // Allow if: User is Admin OR User is the Doctor requesting their own data
     if ($_SESSION['user']['role'] !== 'admin' && $_SESSION['user']['id'] != $doctor_id) {
         echo json_encode(["state" => "false", "message" => "Access denied"]);
         return;
     }
 
     // 4. Fetch Data
-    $sql = "SELECT * FROM doctor_motifs WHERE doctor_id = $doctor_id AND deleted = 0 ORDER BY id DESC";
-    $data = $DB->select($sql);
+    $sql = "SELECT * FROM doctor_motifs WHERE doctor_id = ? AND deleted = 0 ORDER BY id DESC";
+    $data = $DB->select($sql, [$doctor_id]);
 
     echo json_encode(["state" => "true", "data" => $data]);
 }

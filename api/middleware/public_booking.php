@@ -16,29 +16,26 @@ try {
     }
 
     $doctor_id = intval($payload->doctor_id);
-    $date = $payload->date; // YYYY-MM-DD
+    $date = filter_var($payload->date, FILTER_SANITIZE_STRING); // YYYY-MM-DD
     $ticket_num = isset($payload->ticket_number) ? intval($payload->ticket_number) : 0;
 
     // Sanitize Patient Info
     $first_name = filter_var($payload->first_name, FILTER_SANITIZE_STRING);
     $last_name = filter_var($payload->last_name ?? '', FILTER_SANITIZE_STRING);
     $phone = filter_var($payload->phone, FILTER_SANITIZE_STRING);
-
-    // --- NEW FIELDS ---
     $email = filter_var($payload->email ?? '', FILTER_SANITIZE_EMAIL);
     $description = filter_var($payload->description ?? '', FILTER_SANITIZE_STRING);
     $motif_id = isset($payload->motif_id) ? intval($payload->motif_id) : null;
     $commune_id = isset($payload->commune_id) ? intval($payload->commune_id) : null;
-    // ------------------
 
-    // 2. Get Doctor's Cabinet ID
-    $docQuery = "SELECT cabinet_id FROM users WHERE id = $doctor_id";
-    $docData = $GLOBALS['db']->select($docQuery);
-    $cabinet_id = $docData[0]['cabinet_id'] ?? 'NULL';
+    // 2. Get Doctor's Cabinet ID (Secure)
+    $docQuery = "SELECT cabinet_id FROM users WHERE id = ?";
+    $docData = $GLOBALS['db']->select($docQuery, [$doctor_id]);
+    $cabinet_id = $docData[0]['cabinet_id'] ?? null;
 
     // 3. Handle Patient (Find or Create)
-    $checkPatient = "SELECT id FROM patient WHERE phone = '$phone' LIMIT 1";
-    $existingPatient = $GLOBALS['db']->select($checkPatient);
+    $checkPatient = "SELECT id FROM patient WHERE phone = ? LIMIT 1";
+    $existingPatient = $GLOBALS['db']->select($checkPatient, [$phone]);
 
     $patient_id = 0;
 
@@ -49,7 +46,8 @@ try {
         if (!empty($email)) {
             $GLOBALS['db']->table = 'patient';
             $GLOBALS['db']->data = ['email' => $email];
-            $GLOBALS['db']->where = "id = $patient_id AND (email IS NULL OR email = '')";
+            // Secure Where
+            $GLOBALS['db']->where = "id = " . intval($patient_id) . " AND (email IS NULL OR email = '')";
             $GLOBALS['db']->update();
         }
 
@@ -60,9 +58,9 @@ try {
             'first_name' => $first_name,
             'last_name' => $last_name,
             'phone' => $phone,
-            'email' => $email, // Save email here too
-            'commune_id' => $commune_id, // Save commune here too
-            'cabinet_id' => ($cabinet_id === 'NULL' ? null : $cabinet_id),
+            'email' => $email,
+            'commune_id' => $commune_id,
+            'cabinet_id' => $cabinet_id,
             'created_by' => 0
         ];
         $patient_id = $GLOBALS['db']->insert();
@@ -75,35 +73,35 @@ try {
 
     // 4. Assign Ticket Number
     if ($ticket_num <= 0) {
-        $sql_max = "SELECT MAX(rdv_num) as max_num FROM rdv WHERE doctor_id = $doctor_id AND date = '$date' AND state != 3";
-        $res_max = $GLOBALS['db']->select($sql_max);
+        $sql_max = "SELECT MAX(rdv_num) as max_num FROM rdv WHERE doctor_id = ? AND date = ? AND state != 3";
+        $res_max = $GLOBALS['db']->select($sql_max, [$doctor_id, $date]);
         $ticket_num = intval($res_max[0]['max_num'] ?? 0) + 1;
     } else {
-        $check_ticket = "SELECT id FROM rdv WHERE doctor_id = $doctor_id AND date = '$date' AND rdv_num = $ticket_num AND state != 3";
-        if ($GLOBALS['db']->rowsCount($check_ticket) > 0) {
+        // Check if ticket is taken
+        $check_ticket = "SELECT id FROM rdv WHERE doctor_id = ? AND date = ? AND rdv_num = ? AND state != 3";
+        $stmt = $GLOBALS['db']->prepare($check_ticket);
+        $stmt->execute([$doctor_id, $date, $ticket_num]);
+        if ($stmt->rowCount() > 0) {
             echo json_encode(["state" => "false", "message" => "This ticket is already booked"]);
             exit();
         }
     }
 
-    // 5. Create Appointment (RDV) with NEW FIELDS
+    // 5. Create Appointment (RDV)
     $GLOBALS['db']->table = 'rdv';
     $GLOBALS['db']->data = [
         'doctor_id' => $doctor_id,
         'patient_id' => $patient_id,
-        'cabinet_id' => ($cabinet_id === 'NULL' ? null : $cabinet_id),
+        'cabinet_id' => $cabinet_id,
         'date' => $date,
         'rdv_num' => $ticket_num,
         'first_name' => $first_name,
         'last_name' => $last_name,
         'phone' => $phone,
-
-        // New Data
         'email' => $email,
         'commune_id' => $commune_id,
         'motif_id' => ($motif_id > 0 ? $motif_id : null),
         'description' => $description,
-
         'state' => 0,
         'created_by' => 0
     ];

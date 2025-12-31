@@ -1,6 +1,18 @@
 <?php
 
-$secret_Key = $_ENV['API_SECRET_KEY'] ?? 'default_fallback_key_bita_the_doctor_me';
+// Load Secret from Environment
+$secret_Key = $_ENV['API_SECRET_KEY'] ?? 'default_fallback_key_change_me';
+
+// Security: Whitelist tables allowed to be accessed via generic API
+// IMPORTANT: Never include 'users', 'admins', 'payments' here.
+const ALLOWED_API_TABLES = [
+    'doctor',
+    'specialty',
+    'communes',
+    'willaya',
+    'doctor_motifs',
+    'cabinets'
+];
 
 if (!function_exists('getallheaders')) {
     function getallheaders()
@@ -27,13 +39,13 @@ function getBearerToken($headerAuth)
 
 function checkAuth($token, $payload)
 {
-    $result = hash_is_valid($payload, $token);
-    return $result;
+    return hash_is_valid($payload, $token);
 }
 
 function hash_is_valid($payload, $signature)
 {
-    $computed_hash = hash_hmac('sha256', $payload, base64_encode($GLOBALS['secret_Key']));
+    global $secret_Key;
+    $computed_hash = hash_hmac('sha256', $payload, base64_encode($secret_Key));
     $computed_hash = base64_encode($computed_hash);
     return hash_equals($signature, $computed_hash);
 }
@@ -55,36 +67,42 @@ function logger($txt)
     fclose($myfile);
 }
 
-/**
- * Helper function to sanitize table and column names.
- * Allows only alphanumeric characters and underscores.
- */
 function sanitizeIdentifier($input)
 {
     return preg_replace('/[^a-zA-Z0-9_]/', '', $input);
 }
 
-
 function Read($db, $payload)
 {
-    // Convert object to array if needed
     if (is_array($payload))
         $payload = (object) $payload;
 
-    // Validate Table Name (Allow only alphanumeric and underscores)
-    $table = isset($payload->table) ? preg_replace('/[^a-zA-Z0-9_]/', '', $payload->table) : null;
+    $table = isset($payload->table) ? sanitizeIdentifier($payload->table) : null;
 
-    // Check access
+    // Security: Check Whitelist
+    if (!in_array($table, ALLOWED_API_TABLES)) {
+        header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 403 Forbidden');
+        echo json_encode(["state" => "false", "message" => "Access to this table is forbidden via API"]);
+        return;
+    }
+
     if (!isset($payload->data) && $table) {
         $params = [];
         $query_str = "SELECT * FROM $table";
         $count_query_str = "SELECT COUNT(*) as total FROM $table";
 
-        // 1. Handle Inner Join (Sanitized)
+        // 1. Handle Inner Join
         $innerjoin_str = "";
         if (isset($payload->innerjoin) && isset($payload->innerjoincol)) {
-            $joinTable = preg_replace('/[^a-zA-Z0-9_]/', '', $payload->innerjoin);
-            $joinCol = preg_replace('/[^a-zA-Z0-9_]/', '', $payload->innerjoincol);
+            $joinTable = sanitizeIdentifier($payload->innerjoin);
+
+            // Security: Check Join Table Whitelist too
+            if (!in_array($joinTable, ALLOWED_API_TABLES)) {
+                echo json_encode(["state" => "false", "message" => "Join table forbidden"]);
+                return;
+            }
+
+            $joinCol = sanitizeIdentifier($payload->innerjoincol);
             $innerjoin_str = ", $joinTable";
             $query_str .= " $innerjoin_str WHERE $table.$joinCol = $joinTable.id ";
             $count_query_str .= " $innerjoin_str WHERE $table.$joinCol = $joinTable.id ";
@@ -93,64 +111,55 @@ function Read($db, $payload)
             $count_query_str .= " WHERE 1=1 ";
         }
 
-        // 2. Handle Search (Prepared Statement)
+        // 2. Handle Search
         if (isset($payload->search) && is_object($payload->search)) {
             $keys = [];
             foreach ($payload->search as $key => $val) {
-                // Sanitize column name
-                $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '', $key);
+                $safeKey = sanitizeIdentifier($key);
                 if ($safeKey) {
                     $keys[] = $safeKey;
-                    $params[] = "%" . $val . "%"; // Add value to params
+                    $params[] = "%" . $val . "%";
                 }
             }
-
             if (!empty($keys)) {
-                // Use placeholders (?)
                 $cols = implode(", ", $keys);
                 $query_str .= " AND CONCAT($cols) LIKE ? ";
                 $count_query_str .= " AND CONCAT($cols) LIKE ? ";
             }
         }
 
-        // 3. Handle Exact Match (Prepared Statement)
+        // 3. Handle Exact Match
         if (isset($payload->exact) && is_object($payload->exact)) {
             foreach ($payload->exact as $k => $v) {
-                $safeK = preg_replace('/[^a-zA-Z0-9_]/', '', $k);
+                $safeK = sanitizeIdentifier($k);
                 $query_str .= " AND $safeK = ? ";
                 $count_query_str .= " AND $safeK = ? ";
                 $params[] = $v;
             }
         }
 
-        // 4. Handle Limit & Offset (Integers only)
+        // 4. Handle Limit & Offset
         if (isset($payload->limit)) {
             $limit = intval($payload->limit);
             $offset = isset($payload->offset) ? intval($payload->offset) : 0;
             $query_str .= " LIMIT $limit OFFSET $offset";
         }
 
-        // Execute Main Query using Prepared Statements
         try {
-            $stmt = $db->prepare($query_str);
-            $stmt->execute($params);
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Execute Main Query
+            $data = $db->select($query_str, $params);
 
-            // Execute Count Query
-            // Note: Count query needs params only if search/exact filters were applied
-            // We need to rebuild params for count query or reuse carefully. 
-            // For simplicity in this legacy structure, we re-execute logic or just run simple count if no filters.
-
-            // Re-running count with filters:
+            // Execute Count Query (Filtered)
+            // Note: We reuse params because the WHERE clauses are identical
+            // But we need to be careful if LIMIT was added to params (it wasn't, it's concatenated)
             $stmtCount = $db->prepare($count_query_str);
-            // We need to pass the same params used for WHERE clauses (excluding limit)
-            // Since limit params are not in $params array (they are hardcoded in string), we can reuse $params.
             $stmtCount->execute($params);
             $count_filtred = $stmtCount->fetchColumn();
 
             // Total Count (Unfiltered)
-            $total_stmt = $db->query("SELECT COUNT(*) FROM $table");
-            $count = $total_stmt->fetchColumn();
+            $stmtTotal = $db->prepare("SELECT COUNT(*) FROM $table");
+            $stmtTotal->execute();
+            $count = $stmtTotal->fetchColumn();
 
             header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 200 OK ');
             echo json_encode(["filtred" => $count_filtred, "count" => $count, "data" => $data]);
@@ -161,21 +170,27 @@ function Read($db, $payload)
         }
 
     } else {
-        // REMOVED: The block that accepted raw SQL ($payload->sql)
         header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 401 Unauthorized');
         echo json_encode(["state" => "false", "message" => "access denied"]);
     }
 }
+
 function Create($db, $payload)
 {
     if (is_array($payload))
         $payload = (object) $payload;
 
+    $table = isset($payload->table) ? sanitizeIdentifier($payload->table) : null;
+
+    // Security: Check Whitelist
+    if (!in_array($table, ALLOWED_API_TABLES)) {
+        echo json_encode(["state" => "false", "message" => "Forbidden table"]);
+        return;
+    }
+
     if (isset($payload->data) && !isset($payload->id) && !isset($payload->where)) {
-
         $db->data = (array) $payload->data;
-        $db->table = sanitizeIdentifier($payload->table);
-
+        $db->table = $table;
         $result = $db->insert();
 
         if ($result)
@@ -192,18 +207,27 @@ function Update($db, $payload)
     if (is_array($payload))
         $payload = (object) $payload;
 
+    $table = isset($payload->table) ? sanitizeIdentifier($payload->table) : null;
+
+    // Security: Check Whitelist
+    if (!in_array($table, ALLOWED_API_TABLES)) {
+        echo json_encode(["state" => "false", "message" => "Forbidden table"]);
+        return;
+    }
+
     if (isset($payload->data) && (isset($payload->id) || isset($payload->where))) {
         $db->data = (array) $payload->data;
-        $db->table = sanitizeIdentifier($payload->table);
+        $db->table = $table;
 
-        // Secure the WHERE clause
         if (isset($payload->id)) {
             $db->where = "id = " . intval($payload->id);
         } else {
-            // If 'where' is a string like "col = val", it's risky. 
-            // Ideally, the DB class should handle array conditions.
-            // For now, we assume the DB class handles escaping or the input is trusted (Legacy).
-            $db->where = $payload->where;
+            // Warning: 'where' string from API is risky. 
+            // For API updates, we strictly recommend using ID.
+            // If 'where' is absolutely needed, it must be sanitized or parsed.
+            // For now, we block generic 'where' updates via API for security.
+            echo json_encode(["state" => "false", "message" => "Update via generic WHERE is disabled for security. Use ID."]);
+            return;
         }
 
         $result = $db->update();
@@ -222,10 +246,8 @@ function Request($db, $payload)
         $payload = (object) $payload;
 
     if (!isset($payload->data)) {
-        // Redirect to Read logic if no data to write
         Read($db, $payload);
     } else {
-        // Redirect to Update or Create logic
         if (isset($payload->id) || isset($payload->where)) {
             Update($db, $payload);
         } else {
@@ -233,5 +255,4 @@ function Request($db, $payload)
         }
     }
 }
-
 ?>

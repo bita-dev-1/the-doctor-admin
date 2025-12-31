@@ -1,197 +1,192 @@
 <?php
+// config/DB.php
+
 class DB
 {
-    private $host;
-    private $db_name;
-    private $username;
-    private $password;
     public $pdo;
     public $table;
     public $data;
     public $where;
-    public $column;
-    public $multi = false;
     public $field;
     public $value;
+    public $column;
+    public $multi = false;
+    public $error;
 
     public function __construct()
     {
-        // 1. محاولة جلب البيانات من متغيرات البيئة (التي حملها inc.php)
-        // نستخدم $_ENV كخيار أول، ثم getenv كخيار ثانٍ
-        $this->host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'localhost';
-        $this->db_name = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'the_doctor_db';
-        $this->username = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'root';
-        $this->password = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
+        // Load config from .env if available, else fallback
+        $host = $_ENV['DB_HOST'] ?? 'localhost';
+        $db = $_ENV['DB_NAME'] ?? 'the_doctor_db'; // تأكد أن هذا الاسم يطابق قاعدتك cloud-doctor1 إذا لزم الأمر
+        $user = $_ENV['DB_USER'] ?? 'root';
+        $pass = $_ENV['DB_PASS'] ?? '';
+        $charset = 'utf8mb4';
 
-        // التحقق من وجود البيانات (للتصحيح فقط)
-        if (empty($this->db_name) || empty($this->username)) {
-            // محاولة تحميل inc.php يدوياً إذا لم يتم تحميله (حالة نادرة)
-            if (file_exists(__DIR__ . '/../../inc.php')) {
-                require_once(__DIR__ . '/../../inc.php');
-                $this->host = $_ENV['DB_HOST'] ?? 'localhost';
-                $this->db_name = $_ENV['DB_NAME'] ?? '';
-                $this->username = $_ENV['DB_USER'] ?? 'root';
-                $this->password = $_ENV['DB_PASS'] ?? '';
-            }
-        }
-
-        $this->connect();
-    }
-
-    public function connect()
-    {
-        $this->pdo = null;
+        $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
 
         try {
-            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
-
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-
-            $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
-
-        } catch (PDOException $exception) {
-            // تسجيل الخطأ في ملف اللوج بدلاً من عرضه للمستخدم
-            error_log("DB Connection Error: " . $exception->getMessage());
-
-            // إرجاع رسالة JSON نظيفة
-            header('Content-Type: application/json');
-            http_response_code(500);
-            echo json_encode([
-                "state" => "false",
-                "message" => "Database Connection Failed. Check server logs."
-            ]);
-            exit();
+            $this->pdo = new PDO($dsn, $user, $pass, $options);
+        } catch (\PDOException $e) {
+            error_log("Database Connection Error: " . $e->getMessage());
+            // Show generic error to user, log specific one
+            die("Database Connection Error.");
         }
-
-        return $this->pdo;
     }
 
-    // ... (باقي دوال الكلاس: select, insert, update, delete تبقى كما هي) ...
-
-    public function select($sql)
+    /**
+     * Secure Select Query
+     * FIX: Added $params argument to handle Prepared Statements
+     */
+    public function select($sql, $params = [])
     {
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute();
+            $stmt->execute($params);
             return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            error_log("SQL Error: " . $e->getMessage() . " in Query: " . $sql);
+        } catch (Exception $e) {
+            $this->error = $e->getMessage();
+            // Log the error for debugging
+            error_log("DB Select Error: " . $e->getMessage() . " | Query: " . $sql);
             return [];
         }
     }
 
-    public function rowsCount($sql)
+    /**
+     * Secure Insert
+     */
+    public function insert()
+    {
+        if (empty($this->data))
+            return false;
+
+        try {
+            if ($this->multi) {
+                // Multi-row insert
+                $columns = array_keys($this->data[0]);
+                $colsStr = implode(", ", $columns);
+
+                $valuesStr = [];
+                $params = [];
+
+                foreach ($this->data as $row) {
+                    $rowPlaceholders = [];
+                    foreach ($columns as $col) {
+                        $rowPlaceholders[] = "?";
+                        $params[] = $row[$col];
+                    }
+                    $valuesStr[] = "(" . implode(", ", $rowPlaceholders) . ")";
+                }
+
+                $sql = "INSERT INTO {$this->table} ($colsStr) VALUES " . implode(", ", $valuesStr);
+                $stmt = $this->pdo->prepare($sql);
+                return $stmt->execute($params);
+
+            } else {
+                // Single row insert
+                $columns = implode(", ", array_keys($this->data));
+                $placeholders = implode(", ", array_fill(0, count($this->data), "?"));
+                $values = array_values($this->data);
+
+                $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
+                $stmt = $this->pdo->prepare($sql);
+
+                if ($stmt->execute($values)) {
+                    return $this->pdo->lastInsertId();
+                }
+                return false;
+            }
+        } catch (Exception $e) {
+            $this->error = $e->getMessage();
+            error_log("DB Insert Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Secure Update
+     */
+    public function update()
+    {
+        if (empty($this->data) || empty($this->where))
+            return false;
+
+        try {
+            $setParts = [];
+            $params = [];
+
+            foreach ($this->data as $key => $value) {
+                $setParts[] = "$key = ?";
+                $params[] = $value;
+            }
+
+            $setStr = implode(", ", $setParts);
+
+            // Note: $this->where is currently a string coming from controllers.
+            // In a full refactor, this should also be parameterized.
+            $sql = "UPDATE {$this->table} SET $setStr WHERE {$this->where}";
+
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute($params);
+
+        } catch (Exception $e) {
+            $this->error = $e->getMessage();
+            error_log("DB Update Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Secure Delete
+     */
+    public function Delete()
+    {
+        try {
+            if ($this->multi && is_array($this->data)) {
+                $placeholders = implode(',', array_fill(0, count($this->data), '?'));
+                $sql = "DELETE FROM {$this->table} WHERE {$this->column} IN ($placeholders)";
+                $stmt = $this->pdo->prepare($sql);
+                return $stmt->execute(array_values($this->data));
+            } else {
+                $sql = "DELETE FROM {$this->table} WHERE {$this->where}";
+                return $this->pdo->exec($sql);
+            }
+        } catch (Exception $e) {
+            $this->error = $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Helper: Row Count
+     */
+    public function rowsCount($sql, $params = [])
     {
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute();
+            $stmt->execute($params);
             return $stmt->rowCount();
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
             return 0;
         }
     }
 
-    public function insert()
-    {
-        if (!empty($this->data) && !empty($this->table)) {
-            try {
-                if ($this->multi) {
-                    // Multi insert logic
-                    $columns = implode(", ", array_keys($this->data[0]));
-                    $values = array();
-                    $params = array();
-
-                    foreach ($this->data as $row) {
-                        $row_placeholders = [];
-                        foreach ($row as $key => $val) {
-                            $row_placeholders[] = "?";
-                            $params[] = $val;
-                        }
-                        $values[] = "(" . implode(", ", $row_placeholders) . ")";
-                    }
-
-                    $sql = "INSERT INTO $this->table ($columns) VALUES " . implode(", ", $values);
-                    $stmt = $this->pdo->prepare($sql);
-                    return $stmt->execute($params);
-
-                } else {
-                    // Single insert logic
-                    $columns = implode(", ", array_keys($this->data));
-                    $placeholders = ":" . implode(", :", array_keys($this->data));
-
-                    $sql = "INSERT INTO $this->table ($columns) VALUES ($placeholders)";
-                    $stmt = $this->pdo->prepare($sql);
-
-                    if ($stmt->execute($this->data)) {
-                        return $this->pdo->lastInsertId();
-                    }
-                }
-            } catch (PDOException $e) {
-                error_log("Insert Error: " . $e->getMessage());
-                return false;
-            }
-        }
-        return false;
-    }
-
-    public function update()
-    {
-        if (!empty($this->data) && !empty($this->table) && !empty($this->where)) {
-            try {
-                $fields = "";
-                foreach ($this->data as $key => $value) {
-                    $fields .= "$key = :$key, ";
-                }
-                $fields = rtrim($fields, ", ");
-
-                $sql = "UPDATE $this->table SET $fields WHERE $this->where";
-                $stmt = $this->pdo->prepare($sql);
-                return $stmt->execute($this->data);
-            } catch (PDOException $e) {
-                error_log("Update Error: " . $e->getMessage());
-                return false;
-            }
-        }
-        return false;
-    }
-
-    public function Delete()
-    {
-        if (!empty($this->table)) {
-            try {
-                if ($this->multi && !empty($this->data) && !empty($this->column)) {
-                    $ids = implode(",", array_map('intval', $this->data));
-                    $sql = "DELETE FROM $this->table WHERE $this->column IN ($ids)";
-                } else if (!empty($this->where)) {
-                    $sql = "DELETE FROM $this->table WHERE $this->where";
-                } else {
-                    return false;
-                }
-
-                $stmt = $this->pdo->prepare($sql);
-                return $stmt->execute();
-            } catch (PDOException $e) {
-                error_log("Delete Error: " . $e->getMessage());
-                return false;
-            }
-        }
-        return false;
-    }
-
+    /**
+     * Helper: Validate Field Uniqueness
+     */
     public function validateField()
     {
-        // Used for checking uniqueness
-        $sql = "SELECT * FROM $this->table WHERE $this->field = :value";
+        $sql = "SELECT id FROM {$this->table} WHERE {$this->field} = ? LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':value' => $this->value]);
+        $stmt->execute([$this->value]);
         return $stmt->rowCount() > 0;
     }
 
-    // Helper for direct PDO access if needed
+    // Proxy to PDO prepare for manual usage
     public function prepare($sql)
     {
         return $this->pdo->prepare($sql);

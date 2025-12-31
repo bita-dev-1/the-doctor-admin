@@ -3,9 +3,25 @@
 function getPatients($id, $return = false)
 {
     $id = abs(filter_var($id, FILTER_SANITIZE_NUMBER_INT));
-    $sql = "SELECT patient.*, communes.id as communeId, communes.name as communeName, willaya.id as willayaId, willaya.willaya FROM patient LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE patient.deleted = 0 AND patient.id = $id";
-    $response = $GLOBALS['db']->select($sql);
+
+    $where_clause = "patient.deleted = 0 AND patient.id = ?";
+    $params = [$id];
+
+    // Security: Filter by Cabinet
+    if (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND patient.cabinet_id = ?";
+        $params[] = $_SESSION['user']['cabinet_id'];
+    }
+
+    $sql = "SELECT patient.*, communes.id as communeId, communes.name as communeName, willaya.id as willayaId, willaya.willaya 
+            FROM patient 
+            LEFT JOIN communes ON communes.id = patient.commune_id 
+            LEFT JOIN willaya ON willaya.id = communes.id_willaya 
+            WHERE $where_clause";
+
+    $response = $GLOBALS['db']->select($sql, $params);
     $GLOBALS['db'] = null;
+
     if ($return)
         return $response;
     else
@@ -15,8 +31,23 @@ function getPatients($id, $return = false)
 function getRdvPatient()
 {
     $id = abs(filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT));
-    $sql = "SELECT patient.*, communes.name as communeName, willaya.willaya FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN communes ON communes.id = patient.commune_id LEFT JOIN willaya ON willaya.id = communes.id_willaya WHERE rdv.id = $id";
-    $response = $GLOBALS['db']->select($sql);
+
+    $where_clause = "rdv.id = ?";
+    $params = [$id];
+
+    if (!empty($_SESSION['user']['cabinet_id'])) {
+        $where_clause .= " AND rdv.cabinet_id = ?";
+        $params[] = $_SESSION['user']['cabinet_id'];
+    }
+
+    $sql = "SELECT patient.*, communes.name as communeName, willaya.willaya 
+            FROM rdv 
+            LEFT JOIN patient ON patient.id = rdv.patient_id 
+            LEFT JOIN communes ON communes.id = patient.commune_id 
+            LEFT JOIN willaya ON willaya.id = communes.id_willaya 
+            WHERE $where_clause";
+
+    $response = $GLOBALS['db']->select($sql, $params);
     $GLOBALS['db'] = null;
     echo json_encode($response);
 }
@@ -64,4 +95,3 @@ function quick_add_patient($DB)
         echo json_encode(["state" => "false", "message" => $e->getMessage()]);
     }
 }
-?>

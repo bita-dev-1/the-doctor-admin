@@ -15,8 +15,6 @@ try {
     }
 
     $doctor_id = intval($payload->doctor_id);
-
-    // مفتاح الجلسة لمنع التكرار
     $sessionKey = 'has_recommended_' . $doctor_id;
 
     if (isset($_SESSION[$sessionKey])) {
@@ -24,27 +22,22 @@ try {
         exit();
     }
 
-    // --- التصحيح: استخدام دوال الكلاس DB بدلاً من الوصول المباشر لـ PDO ---
-
-    // 1. جلب القيمة الحالية
-    $currentQuery = "SELECT recomondation FROM users WHERE id = $doctor_id";
-    $currentData = $GLOBALS['db']->select($currentQuery);
+    // Secure Query
+    $currentQuery = "SELECT recomondation FROM users WHERE id = ?";
+    $currentData = $GLOBALS['db']->select($currentQuery, [$doctor_id]);
 
     $currentVal = 0;
     if (!empty($currentData) && isset($currentData[0]['recomondation'])) {
         $currentVal = intval($currentData[0]['recomondation']);
     }
 
-    // 2. حساب القيمة الجديدة
     $newCount = $currentVal + 1;
 
-    // 3. تحديث القيمة باستخدام دالة التحديث الخاصة بالكلاس
     $GLOBALS['db']->table = 'users';
     $GLOBALS['db']->data = array('recomondation' => $newCount);
-    $GLOBALS['db']->where = "id = $doctor_id";
+    $GLOBALS['db']->where = "id = " . $doctor_id; // ID is intval safe
     $GLOBALS['db']->update();
 
-    // تسجيل الجلسة
     $_SESSION[$sessionKey] = true;
 
     echo json_encode([

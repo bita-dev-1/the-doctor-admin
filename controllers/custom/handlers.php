@@ -1,5 +1,7 @@
 <?php
-// منع ظهور أخطاء PHP كنص HTML لضمان وصول استجابة JSON نظيفة
+// controllers/custom/handlers.php
+
+// Disable error display in response to prevent JSON breaking
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
@@ -9,25 +11,29 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 if (isset($_POST['method']) && !empty($_POST['method'])) {
-    // --- FIX: Include Encryption Core ---
-    include_once 'config/encryption.core.php';
-    // ------------------------------------
 
-    include_once 'config/DB.php';
-    include_once 'includes/lang.php';
-    include_once 'controllers/custom/functions.core.php';
+    // 1. Load Core Config & Encryption
+    $rootPath = dirname(__DIR__, 2); // Go up to project root
+    if (file_exists($rootPath . '/inc.php')) {
+        require_once($rootPath . '/inc.php');
+    }
 
-    // Include the new split controller files
-    include_once 'controllers/custom/core/RdvController.php';
-    include_once 'controllers/custom/core/ReeducationController.php';
-    include_once 'controllers/custom/core/FinanceController.php';
-    include_once 'controllers/custom/core/UserController.php';
-    include_once 'controllers/custom/core/ChatController.php';
-    include_once 'controllers/custom/core/PatientController.php';
-    include_once 'controllers/custom/core/DoctorController.php';
+    include_once __DIR__ . '/../../config/encryption.core.php';
+    include_once __DIR__ . '/../../config/DB.php';
+    include_once __DIR__ . '/../../includes/lang.php';
 
-    include_once 'controllers/core/Auth.php';
+    // 2. Load Functions & Controllers
+    include_once 'functions.core.php';
+    include_once 'core/RdvController.php';
+    include_once 'core/ReeducationController.php';
+    include_once 'core/FinanceController.php';
+    include_once 'core/UserController.php';
+    include_once 'core/ChatController.php';
+    include_once 'core/PatientController.php';
+    include_once 'core/DoctorController.php';
 
+    // Include Auth for specific checks if needed
+    include_once __DIR__ . '/../core/Auth.php';
 
     global $db;
     $db = new DB();
@@ -106,6 +112,12 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
         case 'get_user':
             get_user();
             break;
+        case 'checkFieldAvailability':
+            checkFieldAvailability($db);
+            break;
+        case 'completeGoogleRegistration':
+            completeGoogleRegistration($db);
+            break;
 
         // Reeducation (Kiné)
         case 'generate_sessions_auto':
@@ -167,12 +179,8 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
         case 'get_product':
             get_product();
             break;
-        case 'checkFieldAvailability':
-            checkFieldAvailability($db);
-            break;
-        case 'completeGoogleRegistration':
-            completeGoogleRegistration($db);
-            break;
+
+        // Doctor Settings
         case 'get_doctor_motifs':
             get_doctor_motifs($db);
             break;
@@ -185,9 +193,5 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
     }
 }
 
-function generate_sessions_auto($DB)
-{
-    echo json_encode(["state" => "false", "message" => "Deprecated function."]);
-}
 
 ?>

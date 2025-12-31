@@ -1,6 +1,5 @@
 <?php
 
-
 /**
  * Function to register a new account (Doctor + Cabinet)
  */
@@ -27,9 +26,9 @@ function signUp($DB)
     unset($array_data['csrf']);
 
     // --- CLEANUP: Remove fields that don't exist in 'users' table ---
-    unset($array_data['method']);       // Hidden input for routing
-    unset($array_data['cpassword']);    // Confirm password
-    unset($array_data['lat']);          // Latitude (Optional/Removed from UI)
+    unset($array_data['method']);
+    unset($array_data['cpassword']);
+    unset($array_data['lat']);
 
     // Extract special fields to handle separately
     $cabinet_name = $array_data['cabinet_name'] ?? null;
@@ -37,7 +36,7 @@ function signUp($DB)
     $email = $array_data['email'] ?? '';
 
     unset($array_data['cabinet_name']);
-    unset($array_data['landing_slug']); // Will be added back after validation
+    unset($array_data['landing_slug']);
     // ----------------------------------------------------------------
 
     if (!is_csrf_valid($csrf_token)) {
@@ -46,8 +45,8 @@ function signUp($DB)
     }
 
     try {
-        // --- Server Side Email Check ---
-        $checkEmail = $DB->select("SELECT id FROM users WHERE email = '$email' AND deleted = 0");
+        // --- Server Side Email Check (Secure) ---
+        $checkEmail = $DB->select("SELECT id FROM users WHERE email = ? AND deleted = 0", [$email]);
         if (!empty($checkEmail)) {
             throw new Exception("Cette adresse email est déjà utilisée.");
         }
@@ -58,8 +57,8 @@ function signUp($DB)
         // 3. Handle Cabinet Creation
         $cabinet_id = null;
         if (!empty($cabinet_name)) {
-            // Check duplicate cabinet name
-            $checkCab = $DB->select("SELECT id FROM cabinets WHERE name = '$cabinet_name' AND deleted = 0");
+            // Check duplicate cabinet name (Secure)
+            $checkCab = $DB->select("SELECT id FROM cabinets WHERE name = ? AND deleted = 0", [$cabinet_name]);
             if (!empty($checkCab)) {
                 throw new Exception("Le nom du cabinet '$cabinet_name' existe déjà.");
             }
@@ -70,7 +69,7 @@ function signUp($DB)
                 'name' => $cabinet_name,
                 'created_at' => date('Y-m-d H:i:s'),
                 'deleted' => 0,
-                'kine_enabled' => 0 // Default
+                'kine_enabled' => 0
             ];
             $cabinet_id = $DB->insert();
 
@@ -81,55 +80,31 @@ function signUp($DB)
 
         // 4. Handle Custom Slug (Subdomain)
         if (!empty($landing_slug)) {
-            // Sanitize Slug (lowercase, alphanumeric, hyphens only)
+            // Sanitize Slug
             $landing_slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $landing_slug)));
 
             // System Reserved Words
-            $reserved = [
-                'www',
-                'mail',
-                'ftp',
-                'cpanel',
-                'webmail',
-                'admin',
-                'api',
-                'web-api',
-                'dashboard',
-                'profile',
-                'assets',
-                'app-assets',
-                'public',
-                'support',
-                'blog',
-                'login',
-                'register',
-                'signin',
-                'signup',
-                'status',
-                'dr',
-                'medecin'
-            ];
+            $reserved = ['www', 'mail', 'ftp', 'cpanel', 'webmail', 'admin', 'api', 'web-api', 'dashboard', 'profile', 'assets', 'app-assets', 'public', 'support', 'blog', 'login', 'register', 'signin', 'signup', 'status', 'dr', 'medecin'];
 
             if (in_array($landing_slug, $reserved)) {
                 throw new Exception("Ce lien personnalisé n'est pas autorisé.");
             }
 
-            // Check uniqueness in DB
-            $checkSlug = $DB->select("SELECT id FROM users WHERE landing_slug = '$landing_slug'");
+            // Check uniqueness in DB (Secure)
+            $checkSlug = $DB->select("SELECT id FROM users WHERE landing_slug = ?", [$landing_slug]);
             if (!empty($checkSlug)) {
                 throw new Exception("Le lien '$landing_slug' est déjà pris. Veuillez en choisir un autre.");
             }
 
-            // Add slug back to array for insertion
             $array_data['landing_slug'] = $landing_slug;
         }
 
         // 5. Prepare User Data
         if ($cabinet_id) {
             $array_data['cabinet_id'] = $cabinet_id;
-            $array_data['role'] = 'admin'; // Doctor creating cabinet becomes Admin
+            $array_data['role'] = 'admin';
         } else {
-            $array_data['role'] = 'doctor'; // Fallback
+            $array_data['role'] = 'doctor';
         }
 
         $array_data['status'] = 'active';
@@ -144,12 +119,12 @@ function signUp($DB)
         if ($inserted) {
             $DB->pdo->commit();
 
-            // Auto Login after success
+            // Auto Login after success (Secure)
             $sql = 'SELECT users.id, users.role, users.cabinet_id, users.first_name, users.last_name, users.image1, cabinets.kine_enabled 
                     FROM `users` 
                     LEFT JOIN cabinets ON users.cabinet_id = cabinets.id 
-                    WHERE users.id = ' . $inserted;
-            $user_data = $DB->select($sql);
+                    WHERE users.id = ?';
+            $user_data = $DB->select($sql, [$inserted]);
 
             if (!empty($user_data)) {
                 $_SESSION['user'] = $user_data[0];
@@ -161,7 +136,6 @@ function signUp($DB)
         }
 
     } catch (Exception $e) {
-        // Rollback on error
         if ($DB->pdo->inTransaction()) {
             $DB->pdo->rollBack();
         }
@@ -187,9 +161,9 @@ function checkFieldAvailability($DB)
 
     try {
         if ($field === 'email') {
-            // Check Email
-            $sql = "SELECT id FROM users WHERE email = '$value' AND deleted = 0 LIMIT 1";
-            $check = $DB->select($sql);
+            // Check Email (Secure)
+            $sql = "SELECT id FROM users WHERE email = ? AND deleted = 0 LIMIT 1";
+            $check = $DB->select($sql, [$value]);
             if (!empty($check)) {
                 $isAvailable = false;
                 $message = "Cette adresse email est déjà utilisée.";
@@ -197,47 +171,24 @@ function checkFieldAvailability($DB)
         } elseif ($field === 'landing_slug') {
             // Check Slug
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $value)));
-
-            $reserved = [
-                'www',
-                'mail',
-                'ftp',
-                'cpanel',
-                'webmail',
-                'admin',
-                'api',
-                'web-api',
-                'dashboard',
-                'profile',
-                'assets',
-                'app-assets',
-                'public',
-                'support',
-                'blog',
-                'login',
-                'register',
-                'signin',
-                'signup',
-                'status',
-                'dr',
-                'medecin'
-            ];
+            $reserved = ['www', 'mail', 'ftp', 'cpanel', 'webmail', 'admin', 'api', 'web-api', 'dashboard', 'profile', 'assets', 'app-assets', 'public', 'support', 'blog', 'login', 'register', 'signin', 'signup', 'status', 'dr', 'medecin'];
 
             if (in_array($slug, $reserved)) {
                 $isAvailable = false;
                 $message = "Ce lien n'est pas autorisé.";
             } else {
-                $sql = "SELECT id FROM users WHERE landing_slug = '$slug' LIMIT 1";
-                $check = $DB->select($sql);
+                // Secure Check
+                $sql = "SELECT id FROM users WHERE landing_slug = ? LIMIT 1";
+                $check = $DB->select($sql, [$slug]);
                 if (!empty($check)) {
                     $isAvailable = false;
                     $message = "Ce lien est déjà pris.";
                 }
             }
         } elseif ($field === 'cabinet_name') {
-            // Check Cabinet Name
-            $sql = "SELECT id FROM cabinets WHERE name = '$value' AND deleted = 0 LIMIT 1";
-            $check = $DB->select($sql);
+            // Check Cabinet Name (Secure)
+            $sql = "SELECT id FROM cabinets WHERE name = ? AND deleted = 0 LIMIT 1";
+            $check = $DB->select($sql, [$value]);
             if (!empty($check)) {
                 $isAvailable = false;
                 $message = "Ce nom de cabinet existe déjà.";
@@ -268,13 +219,13 @@ function login($DB)
     $email = $_POST['email'];
     $password = sha1($_POST['password']);
 
-    // Fetch user data with cabinet status
+    // Secure Login Query using Prepared Statements
     $sql = "SELECT users.id, users.role, users.cabinet_id, users.first_name, users.last_name, users.image1, users.must_change_password, cabinets.kine_enabled 
             FROM `users` 
             LEFT JOIN cabinets ON users.cabinet_id = cabinets.id 
-            WHERE users.deleted = 0 AND users.status = 'active' AND users.email = '" . $email . "' AND users.password = '" . $password . "'";
+            WHERE users.deleted = 0 AND users.status = 'active' AND users.email = ? AND users.password = ?";
 
-    $user_data = $DB->select($sql);
+    $user_data = $DB->select($sql, [$email, $password]);
 
     $DB = null;
     if (count($user_data)) {
@@ -306,8 +257,10 @@ function logout()
 function changePassword($DB)
 {
     $password = sha1($_POST['password']);
-    $sql = 'SELECT id FROM `users` WHERE (`password` ="' . $password . '") AND id = ' . $_SESSION['user']['id'];
-    $user_data = $DB->select($sql);
+
+    // Secure Check Old Password
+    $sql = 'SELECT id FROM `users` WHERE `password` = ? AND id = ?';
+    $user_data = $DB->select($sql, [$password, $_SESSION['user']['id']]);
 
     if (count($user_data)) {
         $newpassword = $_POST['new-password'];
@@ -316,7 +269,10 @@ function changePassword($DB)
         if ($newpassword === $ConNewpassword) {
             $DB->table = 'users';
             $DB->data = array('password' => sha1($newpassword), 'must_change_password' => 0);
-            $DB->where = 'id = ' . $_SESSION['user']['id'];
+
+            // Secure Update Where Clause (Ideally should be parameterized in DB class, but ID is safe from session)
+            $DB->where = 'id = ' . intval($_SESSION['user']['id']);
+
             $updated = $DB->update();
 
             if ($updated) {
@@ -348,7 +304,7 @@ function skipPasswordChange($DB)
     }
     $DB->table = 'users';
     $DB->data = array('must_change_password' => 0);
-    $DB->where = 'id = ' . $_SESSION['user']['id'];
+    $DB->where = 'id = ' . intval($_SESSION['user']['id']);
     $updated = $DB->update();
     if ($updated) {
         $_SESSION['user']['must_change_password'] = 0;
@@ -358,13 +314,11 @@ function skipPasswordChange($DB)
     }
 }
 
-
 /**
  * Complete Google Registration (Create Cabinet)
  */
 function completeGoogleRegistration($DB)
 {
-    // 1. Security Check
     if (!isset($_SESSION['user']['id'])) {
         echo json_encode(["state" => "false", "message" => "Session expirée."]);
         exit();
@@ -382,8 +336,8 @@ function completeGoogleRegistration($DB)
     try {
         $DB->pdo->beginTransaction();
 
-        // 2. Validate & Create Cabinet
-        $checkCab = $DB->select("SELECT id FROM cabinets WHERE name = '$cabinet_name' AND deleted = 0");
+        // 2. Validate & Create Cabinet (Secure)
+        $checkCab = $DB->select("SELECT id FROM cabinets WHERE name = ? AND deleted = 0", [$cabinet_name]);
         if (!empty($checkCab)) {
             throw new Exception("Le nom du cabinet existe déjà.");
         }
@@ -391,7 +345,7 @@ function completeGoogleRegistration($DB)
         $DB->table = 'cabinets';
         $DB->data = [
             'name' => $cabinet_name,
-            'admin_id' => $user_id, // The current user is the admin
+            'admin_id' => $user_id,
             'created_at' => date('Y-m-d H:i:s'),
             'deleted' => 0,
             'kine_enabled' => 0
@@ -407,7 +361,8 @@ function completeGoogleRegistration($DB)
         if (in_array($landing_slug, $reserved))
             throw new Exception("Lien non autorisé.");
 
-        $checkSlug = $DB->select("SELECT id FROM users WHERE landing_slug = '$landing_slug' AND id != $user_id");
+        // Secure Check
+        $checkSlug = $DB->select("SELECT id FROM users WHERE landing_slug = ? AND id != ?", [$landing_slug, $user_id]);
         if (!empty($checkSlug))
             throw new Exception("Ce lien est déjà pris.");
 
@@ -416,16 +371,15 @@ function completeGoogleRegistration($DB)
         $DB->data = [
             'cabinet_id' => $cabinet_id,
             'landing_slug' => $landing_slug,
-            'role' => 'admin' // Ensure role is admin
+            'role' => 'admin'
         ];
-        $DB->where = "id = $user_id";
+        $DB->where = "id = " . intval($user_id);
 
         if (!$DB->update())
             throw new Exception("Erreur mise à jour utilisateur.");
 
         $DB->pdo->commit();
 
-        // Update Session
         $_SESSION['user']['cabinet_id'] = $cabinet_id;
         $_SESSION['user']['role'] = 'admin';
         $_SESSION['user']['landing_slug'] = $landing_slug;
@@ -437,4 +391,5 @@ function completeGoogleRegistration($DB)
             $DB->pdo->rollBack();
         echo json_encode(["state" => "false", "message" => $e->getMessage()]);
     }
-} ?>
+}
+?>

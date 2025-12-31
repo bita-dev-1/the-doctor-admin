@@ -6,3 +6,4 @@
 [2025-12-29 14:46:18] Attempting to send email to: akremaddar@gmail.com
 [2025-12-29 14:46:20] Email sent successfully to: akremaddar@gmail.com
 [2025-12-29 14:46:20] [updateEvent] Email result: SUCCESS
+[2025-12-31 16:28:17] ERROR: Message could not be sent. Mailer Error: SMTP Error: Could not connect to SMTP host. Failed to connect to server SMTP server error: Failed to connect to server Additional SMTP info: php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: No such host is known. 

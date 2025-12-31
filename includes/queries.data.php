@@ -1,31 +1,26 @@
 <?php
 global $queries;
-$queries = array(); // تهيئة المصفوفة لتجنب الأخطاء في حال عدم وجود جلسة
+$queries = array();
 
 if (isset($_SESSION['user'])) {
 
     $user_role = $_SESSION['user']['role'] ?? null;
     $user_cabinet_id = $_SESSION['user']['cabinet_id'] ?? null;
 
-    // --- تهيئة متغيرات الشروط بقيم فارغة لتجنب أخطاء Undefined Variable ---
+    // --- تهيئة الشروط ---
     $users_cabinet_condition = "";
     $rdv_cabinet_condition = "";
-    $service_join_condition = "1=1"; // شرط افتراضي صحيح دائماً
+    $service_join_condition = "1=1";
 
-    // --- بناء الشروط بناءً على الصلاحيات ---
+    // --- منطق الصلاحيات ---
     if ($user_role === 'admin' && !empty($user_cabinet_id)) {
-        // أدمن العيادة: يرى فقط مستخدمي ومواعيد عيادته
+        // أدمن العيادة: يرى فقط بيانات عيادته
         $users_cabinet_condition = " AND users.cabinet_id = " . intval($user_cabinet_id);
         $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
         $service_join_condition = "cs.cabinet_id = " . intval($user_cabinet_id);
-    } elseif ($user_role === 'doctor' || $user_role === 'nurse') {
-        // الطبيب/الممرض: يرون مواعيدهم أو مواعيد عيادتهم
-        if (!empty($user_cabinet_id)) {
-            $rdv_cabinet_condition = " AND rdv.cabinet_id = " . intval($user_cabinet_id);
-        } else {
-            $rdv_cabinet_condition = " AND rdv.cabinet_id IS NULL";
-        }
     }
+    // ملاحظة: بالنسبة للطبيب، لا نفرض شرط العيادة هنا للسماح بظهور المواعيد القديمة
+    // الاعتماد يكون على شرط doctor_id الذي يتم تمريره من ملف العرض
 
     // --- مصفوفة الاستعلامات ---
     $queries = array(
@@ -73,7 +68,6 @@ if (isset($_SESSION['user'])) {
             LEFT JOIN doctor_motifs ON rdv.motif_id = doctor_motifs.id 
             WHERE rdv.deleted = 0 $rdv_cabinet_condition",
 
-        // --- التعديل هنا: تغيير الشرط من state > 0 إلى state >= 0 ---
         "qr_waitingList_table" => "SELECT rdv.id, CONCAT_WS(' ', users.first_name, users.last_name) as doctor, CONCAT_WS(' ', rdv.first_name, rdv.last_name) as patient, rdv.phone, rdv.rdv_num, rdv.date, rdv.id as _stateId, rdv.state as __rdvstate FROM rdv LEFT JOIN patient ON patient.id = rdv.patient_id LEFT JOIN users ON users.id = rdv.doctor_id WHERE rdv.deleted = 0 AND rdv.state >= 0 AND rdv.date = '" . date("Y-m-d") . "' $rdv_cabinet_condition",
 
         "qr_reeducation_dossiers_table" => "SELECT 
@@ -135,7 +129,7 @@ if (isset($_SESSION['user'])) {
         JOIN reeducation_types rt ON cs.reeducation_type_id = rt.id 
         WHERE cs.deleted = 0 AND cs.cabinet_id = " . intval($_SESSION['user']['cabinet_id'] ?? 0),
 
+        "qr_admins_table" => "SELECT users.id, users.image1 as _photo, CONCAT( users.first_name,' ',users.last_name) as full_name, users.phone, users.email, users.status as _state , users.id as __action FROM users WHERE users.deleted = 0 AND users.role = 'admin' $users_cabinet_condition",
     );
-
 }
 ?>

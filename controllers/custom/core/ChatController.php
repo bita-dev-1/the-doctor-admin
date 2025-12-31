@@ -1,45 +1,36 @@
 <?php
 
-// --- دالة مساعدة للتسجيل (Logging Helper) ---
-function chat_debug_log($message, $data = null)
-{
-    // يمكنك تفعيل هذا السطر إذا أردت تتبع الأخطاء في ملف الـ log
-    // error_log("[CHAT_DEBUG] " . $message . ($data ? " | DATA: " . print_r($data, true) : ""));
-}
-
-// --- دالة لجلب قائمة المحادثات ---
 function conversationsRoom($userId)
 {
     global $db;
+    $userId = intval($userId);
 
     $sql = "SELECT c.id, c.created_at 
             FROM conversation c
             INNER JOIN participant p ON c.id = p.id_conversation
-            WHERE p.id_particib = $userId AND c.deleted = 0
+            WHERE p.id_particib = ? AND c.deleted = 0
             ORDER BY c.created_at DESC";
 
-    $conversations = $db->select($sql);
+    $conversations = $db->select($sql, [$userId]);
     $result = [];
 
     if (!empty($conversations)) {
         foreach ($conversations as $conv) {
-            // جلب بيانات الطرف الآخر
             $p_sql = "SELECT u.first_name, u.last_name, u.image1
                       FROM participant p
                       INNER JOIN users u ON p.id_particib = u.id
-                      WHERE p.id_conversation = {$conv['id']} AND p.id_particib != $userId";
-            $partner = $db->select($p_sql)[0] ?? null;
+                      WHERE p.id_conversation = ? AND p.id_particib != ?";
+            $partner = $db->select($p_sql, [$conv['id'], $userId])[0] ?? null;
 
-            // جلب آخر رسالة
-            $m_sql = "SELECT message, type, created_at FROM messages WHERE id_conversation = {$conv['id']} ORDER BY id DESC LIMIT 1";
-            $last_msg = $db->select($m_sql)[0] ?? null;
+            $m_sql = "SELECT message, type, created_at FROM messages WHERE id_conversation = ? ORDER BY id DESC LIMIT 1";
+            $last_msg = $db->select($m_sql, [$conv['id']])[0] ?? null;
 
             $full_name = $partner ? $partner['first_name'] . ' ' . $partner['last_name'] : 'Utilisateur inconnu';
 
             $result[] = [
                 'id' => $conv['id'],
-                'participants' => [['user' => $full_name]],
-                'image' => ($partner['image1'] ?? '/assets/images/default_User.png'), // مسار الصورة الافتراضي كما في الكود الخاص بك
+                'participants' => [['user' => htmlspecialchars($full_name)]],
+                'image' => ($partner['image1'] ?? '/assets/images/default_User.png'),
                 'last_msg' => $last_msg
             ];
         }
@@ -47,27 +38,26 @@ function conversationsRoom($userId)
     return $result;
 }
 
-// --- دالة لجلب الرسائل ---
 function messages($conversationId, $lastMsgId = null)
 {
     global $db;
     $conversationId = intval($conversationId);
+    $params = [$conversationId];
 
-    $where = "m.id_conversation = $conversationId";
+    $where = "m.id_conversation = ?";
     if ($lastMsgId) {
-        $where .= " AND m.id > " . intval($lastMsgId);
+        $where .= " AND m.id > ?";
+        $params[] = intval($lastMsgId);
     }
 
-    // جلب الرسائل مع تحديد المرسل
     $sql = "SELECT m.*, m.id_sender as my_particib, m.id_sender as id_particib 
             FROM messages m 
             WHERE $where 
             ORDER BY m.created_at ASC";
 
-    return $db->select($sql);
+    return $db->select($sql, $params);
 }
 
-// --- دالة لجلب المشاركين ---
 function getConversationParticipants($conversationId)
 {
     global $db;
@@ -77,21 +67,18 @@ function getConversationParticipants($conversationId)
     $sql = "SELECT u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name, u.image1 as image
             FROM participant p
             JOIN users u ON p.id_particib = u.id
-            WHERE p.id_conversation = $conversationId AND u.id != $user_id";
+            WHERE p.id_conversation = ? AND u.id != ?";
 
-    return $db->select($sql);
+    return $db->select($sql, [$conversationId, $user_id]);
 }
 
-// --- الدالة الرئيسية المجمعة للواجهة ---
 function chat_list($current_conversation_id = null)
 {
     $user_id = $_SESSION['user']['id'];
     $response = ['chat_list' => [], 'data' => ['messages' => [], 'users' => []]];
 
-    // 1. جلب قائمة المحادثات
     $response['chat_list'] = conversationsRoom($user_id);
 
-    // 2. جلب الرسائل للمحادثة المحددة (إذا كان المعرف صالحاً)
     if ($current_conversation_id && is_numeric($current_conversation_id)) {
         $conv_id = intval($current_conversation_id);
         $response['data']['messages'] = messages($conv_id);
@@ -101,7 +88,6 @@ function chat_list($current_conversation_id = null)
     return $response;
 }
 
-// --- Legacy Endpoint ---
 function chat()
 {
     $conversationId = null;
@@ -116,30 +102,25 @@ function chat()
     echo json_encode($results);
 }
 
-// --- دالة إرسال الرسالة ---
 function send_msg()
 {
     if (isset($_SESSION['user']) && !empty($_SESSION['user']['id'])) {
         $userId = $_SESSION['user']['id'];
         $conversationId = null;
 
-        // 1. محاولة استخراج معرف المحادثة
         if (isset($_POST['conversation']) && !empty($_POST['conversation'])) {
             $rawId = str_replace('conversationId-', '', $_POST['conversation']);
-
             if (is_numeric($rawId)) {
                 $conversationId = intval($rawId);
             }
         }
 
-        // 2. إنشاء محادثة جديدة إذا لم توجد
         if (empty($conversationId)) {
             $GLOBALS['db']->table = 'conversation';
             $GLOBALS['db']->data = array("id_creator" => $userId);
             $conversationId = $GLOBALS['db']->insert();
         }
 
-        // 3. إدخال الرسالة
         if ($conversationId && is_numeric($conversationId)) {
             $message_content = '';
             $message_type = 0;

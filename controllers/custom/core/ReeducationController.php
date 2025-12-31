@@ -14,10 +14,9 @@ function postReeducationDossier($DB)
 
         foreach ($_POST['data'] as $data) {
             if (strpos($data['name'], '__') !== false) {
-                $table_key = explode('__', $data['name'])[0];
-                $column = explode('__', $data['name'])[1];
-                if ($table_key === $table) {
-                    $array_data[$column] = $data['value'];
+                $parts = explode('__', $data['name']);
+                if ($parts[0] === $table) {
+                    $array_data[$parts[1]] = $data['value'];
                 }
             } else if (stripos($data['name'], 'csrf') !== false) {
                 $csrf = $data['value'];
@@ -33,6 +32,7 @@ function postReeducationDossier($DB)
 
         $array_data['created_by'] = $_SESSION['user']['id'];
         $array_data['status'] = 'active';
+        $array_data['cabinet_id'] = $_SESSION['user']['cabinet_id'] ?? null;
 
         $DB->table = $table;
         $DB->data = $array_data;
@@ -47,7 +47,7 @@ function postReeducationDossier($DB)
 
         if (!empty($dates) && is_array($dates)) {
             $tech_id = $array_data['technician_id'];
-            $tech_data = $DB->select("SELECT cabinet_id FROM users WHERE id = $tech_id")[0] ?? null;
+            $tech_data = $DB->select("SELECT cabinet_id FROM users WHERE id = ?", [$tech_id])[0] ?? null;
             $cabinet_id = $tech_data['cabinet_id'] ?? ($_SESSION['user']['cabinet_id'] ?? null);
 
             foreach ($dates as $date_str) {
@@ -59,7 +59,7 @@ function postReeducationDossier($DB)
                     'doctor_id' => $tech_id,
                     'cabinet_id' => $cabinet_id,
                     'date' => $date_str,
-                    'state' => 1, // MODIFIED: Set to 1 (Accepted) automatically
+                    'state' => 1,
                     'created_by' => $_SESSION['user']['id'],
                 ];
                 $DB->table = 'rdv';
@@ -67,7 +67,7 @@ function postReeducationDossier($DB)
                 $rdv_id = $DB->insert();
 
                 if (!$rdv_id)
-                    throw new Exception("Erreur création RDV pour le $date_str");
+                    throw new Exception("Erreur création RDV");
 
                 $session_data = [
                     'dossier_id' => $dossier_id,
@@ -80,7 +80,7 @@ function postReeducationDossier($DB)
 
                 $DB->table = 'rdv';
                 $DB->data = ['reeducation_session_id' => $session_id];
-                $DB->where = 'id = ' . $rdv_id;
+                $DB->where = 'id = ' . intval($rdv_id);
                 $DB->update();
             }
         }
@@ -109,36 +109,38 @@ function generate_sessions_manual($DB)
     $sql = "SELECT rd.*, u.cabinet_id as technician_cabinet_id
             FROM reeducation_dossiers rd 
             JOIN users u ON rd.technician_id = u.id 
-            WHERE rd.id = :dossier_id";
-    $stmt = $DB->prepare($sql);
-    $stmt->execute([':dossier_id' => $dossier_id]);
-    $dossier = $stmt->fetch(PDO::FETCH_ASSOC);
+            WHERE rd.id = ?";
+
+    $params = [$dossier_id];
+    if (!empty($_SESSION['user']['cabinet_id'])) {
+        $sql .= " AND rd.cabinet_id = ?";
+        $params[] = $_SESSION['user']['cabinet_id'];
+    }
+
+    $dossier = $DB->select($sql, $params)[0] ?? null;
 
     if (!$dossier) {
-        echo json_encode(["state" => "false", "message" => "Dossier non trouvé."]);
+        echo json_encode(["state" => "false", "message" => "Dossier non trouvé ou accès refusé."]);
         return;
     }
 
-    $sql_check_locked = "SELECT COUNT(*) FROM reeducation_sessions 
-                         WHERE dossier_id = :dossier_id 
-                         AND (status = 'completed' OR payment_status = 'paid')";
+    $sql_check_locked = "SELECT COUNT(*) FROM reeducation_sessions WHERE dossier_id = ? AND (status = 'completed' OR payment_status = 'paid')";
     $stmt_locked = $DB->prepare($sql_check_locked);
-    $stmt_locked->execute([':dossier_id' => $dossier_id]);
+    $stmt_locked->execute([$dossier_id]);
 
     if ($stmt_locked->fetchColumn() == 0) {
-        $sql_delete_rdv = "DELETE FROM rdv WHERE reeducation_session_id IN (SELECT id FROM reeducation_sessions WHERE dossier_id = :dossier_id AND status = 'planned')";
+        $sql_delete_rdv = "DELETE FROM rdv WHERE reeducation_session_id IN (SELECT id FROM reeducation_sessions WHERE dossier_id = ? AND status = 'planned')";
         $stmt_del_rdv = $DB->prepare($sql_delete_rdv);
-        $stmt_del_rdv->execute([':dossier_id' => $dossier_id]);
+        $stmt_del_rdv->execute([$dossier_id]);
 
-        $sql_delete_sessions = "DELETE FROM reeducation_sessions WHERE dossier_id = :dossier_id AND status = 'planned'";
+        $sql_delete_sessions = "DELETE FROM reeducation_sessions WHERE dossier_id = ? AND status = 'planned'";
         $stmt_del_sess = $DB->prepare($sql_delete_sessions);
-        $stmt_del_sess->execute([':dossier_id' => $dossier_id]);
+        $stmt_del_sess->execute([$dossier_id]);
     }
 
     try {
-        if (!$DB->pdo->inTransaction()) {
+        if (!$DB->pdo->inTransaction())
             $DB->pdo->beginTransaction();
-        }
 
         $sessions_created_count = 0;
         $cabinet_to_assign = $dossier['technician_cabinet_id'] ?? ($dossier['cabinet_id'] ?? null);
@@ -147,31 +149,27 @@ function generate_sessions_manual($DB)
             if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $date_str))
                 continue;
 
-            $check_sql = "SELECT COUNT(*) FROM rdv r 
-                          JOIN reeducation_sessions rs ON r.reeducation_session_id = rs.id 
-                          WHERE rs.dossier_id = :dossier_id AND r.date = :date";
+            $check_sql = "SELECT COUNT(*) FROM rdv r JOIN reeducation_sessions rs ON r.reeducation_session_id = rs.id WHERE rs.dossier_id = ? AND r.date = ?";
             $stmt_check = $DB->prepare($check_sql);
-            $stmt_check->execute([':dossier_id' => $dossier_id, ':date' => $date_str]);
+            $stmt_check->execute([$dossier_id, $date_str]);
 
-            if ($stmt_check->fetchColumn() > 0) {
+            if ($stmt_check->fetchColumn() > 0)
                 continue;
-            }
 
             $rdv_data = [
                 'patient_id' => $dossier['patient_id'],
                 'doctor_id' => $dossier['technician_id'],
                 'cabinet_id' => $cabinet_to_assign,
                 'date' => $date_str,
-                'state' => 1, // MODIFIED: Set to 1 (Accepted) automatically
+                'state' => 1,
                 'created_by' => $_SESSION['user']['id'],
             ];
             $DB->table = 'rdv';
             $DB->data = $rdv_data;
             $rdv_id = $DB->insert();
 
-            if (!$rdv_id) {
-                throw new Exception("Erreur lors de la création du RDV pour la date $date_str");
-            }
+            if (!$rdv_id)
+                throw new Exception("Erreur RDV");
 
             $session_data = [
                 'dossier_id' => $dossier_id,
@@ -182,31 +180,28 @@ function generate_sessions_manual($DB)
             $DB->data = $session_data;
             $session_id = $DB->insert();
 
-            if (!$session_id) {
-                throw new Exception("Erreur lors de la création de la session pour la date $date_str");
-            }
-
             $DB->table = 'rdv';
             $DB->data = ['reeducation_session_id' => $session_id];
-            $DB->where = 'id = ' . $rdv_id;
+            $DB->where = 'id = ' . intval($rdv_id);
             $DB->update();
 
             $sessions_created_count++;
         }
 
         $DB->pdo->commit();
-        echo json_encode(["state" => "true", "message" => "$sessions_created_count séances ont été planifiées avec succès."]);
+        echo json_encode(["state" => "true", "message" => "$sessions_created_count séances planifiées."]);
 
     } catch (\Throwable $e) {
-        if ($DB->pdo->inTransaction()) {
+        if ($DB->pdo->inTransaction())
             $DB->pdo->rollBack();
-        }
-        echo json_encode(["state" => "false", "message" => "Erreur système: " . $e->getMessage()]);
+        echo json_encode(["state" => "false", "message" => "Erreur: " . $e->getMessage()]);
     }
 }
 
+
 function validate_session($DB)
 {
+    // 1. التحقق من الصلاحيات
     if (!isset($_SESSION['user']['id']) || !in_array($_SESSION['user']['role'], ['doctor', 'nurse', 'admin'])) {
         echo json_encode(["state" => "false", "message" => "Accès non autorisé."]);
         return;
@@ -220,14 +215,30 @@ function validate_session($DB)
     $session_status = $_POST['session_status'] ?? 'completed';
     $completed_at = date('Y-m-d H:i:s');
 
-    $old_session_sql = "SELECT status, dossier_id FROM reeducation_sessions WHERE id = $session_id";
-    $old_session = $DB->select($old_session_sql)[0] ?? null;
+    // 2. التحقق الأمني الموسع (Fix for Admin)
+    $old_session_sql = "SELECT rs.status, rs.dossier_id 
+                        FROM reeducation_sessions rs 
+                        JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id 
+                        LEFT JOIN patient p ON rd.patient_id = p.id
+                        LEFT JOIN users u ON rd.technician_id = u.id
+                        WHERE rs.id = ?";
+    $params = [$session_id];
+
+    if (!empty($_SESSION['user']['cabinet_id'])) {
+        // السماح للأدمن إذا كان المريض يتبع العيادة أو التقني يتبع العيادة
+        $old_session_sql .= " AND (p.cabinet_id = ? OR u.cabinet_id = ?)";
+        $params[] = $_SESSION['user']['cabinet_id'];
+        $params[] = $_SESSION['user']['cabinet_id'];
+    }
+
+    $old_session = $DB->select($old_session_sql, $params)[0] ?? null;
 
     if (!$old_session) {
-        echo json_encode(["state" => "false", "message" => "Session introuvable."]);
+        echo json_encode(["state" => "false", "message" => "Session introuvable ou accès refusé."]);
         return;
     }
 
+    // ... باقي الكود كما هو دون تغيير ...
     $sql_info = "SELECT 
                     rs.dossier_id, 
                     rd.price, 
@@ -241,9 +252,9 @@ function validate_session($DB)
                  LEFT JOIN cabinet_services cs ON rd.reeducation_type_id = cs.reeducation_type_id 
                     AND cs.cabinet_id = u.cabinet_id
                     AND cs.deleted = 0
-                 WHERE rs.id = $session_id";
+                 WHERE rs.id = ?";
 
-    $info = $DB->select($sql_info)[0] ?? null;
+    $info = $DB->select($sql_info, [$session_id])[0] ?? null;
 
     if (!$info) {
         echo json_encode(["state" => "false", "message" => "Dossier introuvable."]);
@@ -277,6 +288,8 @@ function validate_session($DB)
             'commission_amount' => number_format($commission_amount, 2, '.', '')
         ];
 
+        // إذا كان المستخدم أدمن، نسجل أن الجلسة اكتملت بواسطته (أو نتركها فارغة حسب الرغبة)
+        // هنا نسجل الـ ID الخاص بمن قام بالعملية
         if ($old_session['status'] !== 'completed') {
             $session_data['completed_by'] = $_SESSION['user']['id'];
         }
@@ -290,13 +303,16 @@ function validate_session($DB)
         }
 
         if ($old_session['status'] !== 'completed' && $session_status === 'completed') {
-            $DB->update('reeducation_dossiers', [], "id=" . $info['dossier_id'], "sessions_completed = sessions_completed + 1");
+            $stmt_update_count = $DB->prepare("UPDATE reeducation_dossiers SET sessions_completed = sessions_completed + 1 WHERE id = ?");
+            $stmt_update_count->execute([$info['dossier_id']]);
 
+            // تحديث حالة الدفع (منطق الدفع التلقائي)
             $dossier_id = $info['dossier_id'];
-            $total_paid_query = $DB->select("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = $dossier_id")[0];
-            $total_paid = $total_paid_query['total'] ?? 0;
+            $stmt_total = $DB->prepare("SELECT SUM(amount_paid) as total FROM caisse_transactions WHERE dossier_id = ?");
+            $stmt_total->execute([$dossier_id]);
+            $total_paid = $stmt_total->fetchColumn() ?: 0;
 
-            $dossier_data = $DB->select("SELECT price, discount_amount, sessions_prescribed, payment_mode FROM reeducation_dossiers WHERE id = $dossier_id")[0];
+            $dossier_data = $DB->select("SELECT price, discount_amount, sessions_prescribed, payment_mode FROM reeducation_dossiers WHERE id = ?", [$dossier_id])[0];
 
             $net_price = (float) $dossier_data['price'] - (float) $dossier_data['discount_amount'];
             $count = (int) $dossier_data['sessions_prescribed'] > 0 ? (int) $dossier_data['sessions_prescribed'] : 1;
@@ -304,13 +320,14 @@ function validate_session($DB)
 
             $sessions_covered = ($price_per_session > 0) ? floor(($total_paid + 0.1) / $price_per_session) : 999;
 
-            $DB->update('reeducation_sessions', ['payment_status' => 'unpaid'], "dossier_id = $dossier_id");
+            $stmt_reset = $DB->prepare("UPDATE reeducation_sessions SET payment_status = 'unpaid' WHERE dossier_id = ?");
+            $stmt_reset->execute([$dossier_id]);
 
             if ($sessions_covered > 0) {
                 $limit = intval($sessions_covered);
-                $sql_pay = "UPDATE reeducation_sessions SET payment_status = 'paid' WHERE dossier_id = $dossier_id ORDER BY id ASC LIMIT $limit";
+                $sql_pay = "UPDATE reeducation_sessions SET payment_status = 'paid' WHERE dossier_id = ? ORDER BY id ASC LIMIT $limit";
                 $stmt = $DB->prepare($sql_pay);
-                $stmt->execute();
+                $stmt->execute([$dossier_id]);
             }
         }
 
@@ -339,6 +356,26 @@ function reschedule_session($DB)
     $rdv_id = filter_var($_POST['rdv_id'], FILTER_SANITIZE_NUMBER_INT);
     $new_date = filter_var($_POST['new_date'], FILTER_SANITIZE_STRING);
     $new_time = isset($_POST['new_time']) ? filter_var($_POST['new_time'], FILTER_SANITIZE_STRING) : null;
+
+    // --- FIX: Expanded Check for Admin ---
+    $check_sql = "SELECT r.id 
+                  FROM rdv r 
+                  LEFT JOIN users u ON r.doctor_id = u.id 
+                  WHERE r.id = ?";
+    $params = [$rdv_id];
+
+    if (!empty($_SESSION['user']['cabinet_id'])) {
+        // السماح إذا كان الموعد تابع للعيادة أو الطبيب تابع للعيادة
+        $check_sql .= " AND (r.cabinet_id = ? OR u.cabinet_id = ?)";
+        $params[] = $_SESSION['user']['cabinet_id'];
+        $params[] = $_SESSION['user']['cabinet_id'];
+    }
+
+    $exists = $DB->select($check_sql, $params);
+    if (empty($exists)) {
+        echo json_encode(["state" => "false", "message" => "RDV introuvable ou accès refusé."]);
+        return;
+    }
 
     try {
         $data = [
@@ -375,10 +412,27 @@ function get_kine_queue($DB)
         return;
     }
 
-    $tech_id = $_SESSION['user']['id'];
+    $user_id = $_SESSION['user']['id'];
+    $user_role = $_SESSION['user']['role'];
+    $cabinet_id = $_SESSION['user']['cabinet_id'] ?? 0;
     $today = date('Y-m-d');
 
-    // 1. قائمة اليوم (Aujourd'hui) - لم تتغير
+    $where_clause = "";
+    $params = [$today];
+
+    // --- FIX: Improved Filtering Logic ---
+    if ($user_role === 'admin' && !empty($cabinet_id)) {
+        // Admin: Show appointments linked to the cabinet via RDV OR Patient
+        // This covers cases where patient might not have cabinet_id set but the RDV does
+        $where_clause = " AND (r.cabinet_id = ? OR p.cabinet_id = ?) ";
+        $params[] = $cabinet_id;
+        $params[] = $cabinet_id;
+    } else {
+        // Doctor: Show only their assigned patients
+        $where_clause = " AND rd.technician_id = ? ";
+        $params[] = $user_id;
+    }
+
     $sql_today = "SELECT 
                 rs.id as session_id,
                 rs.status,
@@ -400,18 +454,18 @@ function get_kine_queue($DB)
             JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
             JOIN patient p ON rd.patient_id = p.id
             LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
-            WHERE r.date = '$today' 
-            AND rd.technician_id = $tech_id
+            WHERE r.date = ? 
+            $where_clause
             AND r.deleted = 0
             ORDER BY r.hours ASC";
 
-    $data_today = $DB->select($sql_today);
+    $data_today = $DB->select($sql_today, $params);
 
     foreach ($data_today as &$row) {
         $row['initials'] = strtoupper(($row['f_init'] ?? '') . ($row['l_init'] ?? ''));
     }
 
-    // 2. القائمة النشطة (En cours) - تم التعديل
+    // --- Active List Logic (Same Filter) ---
     $sql_active = "SELECT 
                     derived.*,
                     (
@@ -438,7 +492,6 @@ function get_kine_queue($DB)
                     JOIN patient p ON rd.patient_id = p.id
                     LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
                     
-                    -- JOIN لاختيار الجلسة القادمة (اليوم أو المستقبل فقط)
                     JOIN reeducation_sessions target_session ON target_session.id = (
                         SELECT rs.id 
                         FROM reeducation_sessions rs 
@@ -446,22 +499,22 @@ function get_kine_queue($DB)
                         WHERE rs.dossier_id = rd.id 
                         AND rs.status = 'planned' 
                         AND r.deleted = 0 
-                        -- التعديل هنا: شرط التاريخ أكبر من أو يساوي اليوم
-                        AND r.date >= '$today'
+                        AND r.date >= ?
                         ORDER BY r.date ASC, r.hours ASC 
                         LIMIT 1
                     )
                     
                     JOIN rdv target_rdv ON target_session.rdv_id = target_rdv.id
                     
-                    WHERE rd.technician_id = $tech_id
+                    WHERE 1=1
+                    $where_clause
                     AND rd.status = 'active'
                     AND rd.deleted = 0
                 ) as derived
                 ORDER BY derived.ref_date ASC, derived.ref_time ASC
                 LIMIT 50";
 
-    $data_active = $DB->select($sql_active);
+    $data_active = $DB->select($sql_active, $params);
 
     foreach ($data_active as &$row) {
         $row['initials'] = strtoupper(($row['f_init'] ?? '') . ($row['l_init'] ?? ''));
@@ -488,7 +541,6 @@ function get_kine_workspace_data($DB)
         return;
     }
 
-    // المنطق: نفس منطق العد الزمني المستخدم في القوائم أعلاه
     $sql = "SELECT 
                 rs.id as session_id, rs.status, rs.payment_status, rs.observations, rs.pain_scale, 
                 rs.duration, rs.exercises_performed, rs.rdv_id,
@@ -510,17 +562,14 @@ function get_kine_workspace_data($DB)
             JOIN patient p ON rd.patient_id = p.id
             LEFT JOIN rdv r ON rs.rdv_id = r.id
             LEFT JOIN reeducation_types rt ON rd.reeducation_type_id = rt.id
-            WHERE rs.id = $session_id";
+            WHERE rs.id = ?";
 
-    $data = $DB->select($sql)[0] ?? null;
+    $data = $DB->select($sql, [$session_id])[0] ?? null;
 
     if (!$data) {
         echo '<div class="alert alert-danger m-2">Erreur : Session introuvable.</div>';
         return;
     }
-
-    // ... (باقي كود العرض HTML يبقى كما هو تماماً) ...
-    // ... (نسخ نفس كود HTML من الردود السابقة) ...
 
     $total_price = (float) $data['price'];
     $total_paid = (float) ($data['total_paid'] ?? 0);
@@ -548,12 +597,13 @@ function get_kine_workspace_data($DB)
                         <span class="avatar-content fs-4"><?= strtoupper(substr($data['patient_name'], 0, 2)) ?></span>
                     </div>
                     <div>
-                        <h4 class="mb-0 text-primary fw-bolder"><?= $data['patient_name'] ?></h4>
+                        <h4 class="mb-0 text-primary fw-bolder"><?= htmlspecialchars($data['patient_name']) ?></h4>
                         <div class="mt-1">
-                            <span class="badge bg-light-secondary"><?= $data['act_name'] ?></span>
+                            <span class="badge bg-light-secondary"><?= htmlspecialchars($data['act_name']) ?></span>
                             <span class="badge bg-light-info ms-1"><i data-feather="calendar"
                                     style="width: 12px; height: 12px;"></i> <?= $rdv_date_display ?></span>
-                            <small class="text-muted ms-1"><i data-feather="phone"></i> <?= $data['phone'] ?></small>
+                            <small class="text-muted ms-1"><i data-feather="phone"></i>
+                                <?= htmlspecialchars($data['phone']) ?></small>
                         </div>
                     </div>
                 </div>
@@ -618,12 +668,12 @@ function get_kine_workspace_data($DB)
                         <div class="mb-1">
                             <label class="form-label fw-bold">Exercices Effectués</label>
                             <textarea class="form-control" rows="2" id="ws-exercises" name="exercises_performed"
-                                placeholder="Liste des exercices..." <?= $readonly_attr ?>><?= $data['exercises_performed'] ?></textarea>
+                                placeholder="Liste des exercices..." <?= $readonly_attr ?>><?= htmlspecialchars($data['exercises_performed'] ?? '') ?></textarea>
                         </div>
                         <div class="mb-1">
                             <label class="form-label fw-bold">Notes & Observations</label>
                             <textarea class="form-control" rows="3" id="ws-observations" name="observations"
-                                placeholder="Progrès, réactions du patient..." <?= $readonly_attr ?>><?= $data['observations'] ?></textarea>
+                                placeholder="Progrès, réactions du patient..." <?= $readonly_attr ?>><?= htmlspecialchars($data['observations'] ?? '') ?></textarea>
                         </div>
                     </form>
                 </div>
@@ -661,6 +711,7 @@ function get_kine_workspace_data($DB)
                         <h1 class="fw-bolder mb-2 display-6"><?= number_format($remaining, 0) ?> <small class="fs-6">DA</small>
                         </h1>
                         <div class="d-grid gap-1">
+                            <!-- Payment buttons are visible for everyone who can access this workspace (Admins, Doctors, Nurses) -->
                             <button class="btn btn-primary"
                                 onclick="processQuickPay(<?= $data['dossier_id'] ?>, <?= number_format($session_price, 2, '.', '') ?>)"><i
                                     data-feather="dollar-sign"></i> Payer la séance (<?= number_format($session_price, 0) ?>
@@ -711,8 +762,8 @@ function get_technician_report_details($DB)
                 cs.commission_type,
                 CASE 
                     WHEN rs.commission_amount > 0 THEN rs.commission_amount
-                    WHEN cs.commission_type = 'fixed' THEN (rd.technician_percentage / GREATEST(rd.sessions_prescribed, 1))
-                    ELSE ((rd.price / GREATEST(rd.sessions_prescribed, 1)) * (rd.technician_percentage / 100))
+                    WHEN cs.commission_type = 'fixed' THEN (rd.technician_percentage / GREATEST(rd.sessions_prescribed, 1)) 
+                    ELSE ((rd.price / GREATEST(rd.sessions_prescribed, 1)) * (rd.technician_percentage / 100)) 
                 END as commission_amount
             FROM reeducation_sessions rs
             JOIN reeducation_dossiers rd ON rs.dossier_id = rd.id
@@ -745,14 +796,12 @@ function get_technician_planning_data($DB)
 
     $tech_id = intval($_POST['technician_id']);
 
-    // 1. جلب إعدادات الطبيب
-    $user = $DB->select("SELECT travel_hours, tickets_day FROM users WHERE id = $tech_id")[0] ?? null;
+    $user = $DB->select("SELECT travel_hours, tickets_day FROM users WHERE id = ?", [$tech_id])[0] ?? null;
 
     $working_days = [];
     $tickets_day = [];
 
     if ($user) {
-        // تحليل أيام العمل
         $schedule = json_decode($user['travel_hours'] ?? '[]', true);
         $day_map = ["Dimanche" => 0, "Lundi" => 1, "Mardi" => 2, "Mercredi" => 3, "Jeudi" => 4, "Vendredi" => 5, "Samedi" => 6];
 
@@ -766,20 +815,18 @@ function get_technician_planning_data($DB)
             }
         }
 
-        // تحليل عدد التذاكر
         $tickets_day = json_decode($user['tickets_day'] ?? '{}', true);
     }
 
-    // 2. جلب الحجوزات الحالية
     $sql_bookings = "SELECT DATE(date) as rdv_date, COUNT(*) as total 
                      FROM rdv 
-                     WHERE doctor_id = $tech_id 
+                     WHERE doctor_id = ? 
                      AND deleted = 0 
                      AND state != 3 
                      AND date >= CURDATE() 
                      GROUP BY DATE(date)";
 
-    $res_bookings = $DB->select($sql_bookings);
+    $res_bookings = $DB->select($sql_bookings, [$tech_id]);
     $bookings_map = [];
     foreach ($res_bookings as $row) {
         $bookings_map[$row['rdv_date']] = $row['total'];
@@ -793,5 +840,10 @@ function get_technician_planning_data($DB)
             "globalBookings" => $bookings_map
         ]
     ]);
+}
+
+function generate_sessions_auto($DB)
+{
+    echo json_encode(["state" => "false", "message" => "Deprecated function."]);
 }
 ?>

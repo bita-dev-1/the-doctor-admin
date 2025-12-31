@@ -1,4 +1,5 @@
 <?php
+// controllers/landing.controller.php
 
 function getDoctorFullProfile($db, $id)
 {
@@ -14,17 +15,16 @@ function getDoctorFullProfile($db, $id)
 
     if (!isset($_SESSION[$viewKey]) || (time() - $_SESSION[$viewKey] > $cooldown)) {
         try {
-            $db->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
-            $db->pdo->exec("UPDATE users SET views = views + 1 WHERE id = $id");
-            $db->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            // Use prepare/execute for update
+            $stmt = $db->prepare("UPDATE users SET views = views + 1 WHERE id = ?");
+            $stmt->execute([$id]);
             $_SESSION[$viewKey] = time();
         } catch (Exception $e) {
-            // Ignore
+            // Ignore view count errors
         }
     }
 
-    // 2. Fetch Data
-    // ADDED: u.image4, u.image5, u.image6 to the query
+    // 2. Fetch Data (Secure)
     $query = "SELECT 
                 u.id,
                 u.first_name,
@@ -65,9 +65,9 @@ function getDoctorFullProfile($db, $id)
             LEFT JOIN cabinets c ON u.cabinet_id = c.id
             LEFT JOIN communes com ON u.commune_id = com.id
             LEFT JOIN willaya w ON com.id_willaya = w.id
-            WHERE u.id = $id";
+            WHERE u.id = ?";
 
-    $result = $db->select($query);
+    $result = $db->select($query, [$id]);
 
     if (!empty($result)) {
         $doctor = $result[0];
@@ -86,7 +86,7 @@ function getDoctorFullProfile($db, $id)
             return SITE_URI . ltrim($path, '/');
         };
 
-        // Process ALL images (1 to 6)
+        // Process ALL images
         $doctor['image1'] = $fixPath($doctor['image1']) ?? SITE_URI . 'assets/images/default_User.png';
         $doctor['image2'] = $fixPath($doctor['image2']);
         $doctor['image3'] = $fixPath($doctor['image3']);

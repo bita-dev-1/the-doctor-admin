@@ -1,0 +1,24 @@
+[2025-12-31 16:50:22] Worker started...
+[2025-12-31 16:56:24] [PID:812] Worker started...
+[2025-12-31 17:04:19] [PID:12028] Worker started (Standalone Mode)...
+[2025-12-31 17:04:19] [PID:12028] Database connected.
+[2025-12-31 17:04:19] [PID:12028] Found 5 emails.
+[2025-12-31 17:04:19] [PID:12028] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:04:21] [PID:12028] ID 1: SENT.
+[2025-12-31 17:04:21] [PID:12028] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:04:23] [PID:12028] ID 2: SENT.
+[2025-12-31 17:04:23] [PID:12028] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:04:27] [PID:12028] ID 3: SENT.
+[2025-12-31 17:04:27] [PID:12028] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:04:29] [PID:12028] ID 4: SENT.
+[2025-12-31 17:04:29] [PID:12028] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:04:32] [PID:12028] ID 5: SENT.
+[2025-12-31 17:04:32] [PID:12028] Worker finished.
+[2025-12-31 17:05:59] [PID:2224] Worker started (Standalone Mode)...
+[2025-12-31 17:05:59] [PID:2224] Database connected.
+[2025-12-31 17:05:59] [PID:2224] Found 2 emails.
+[2025-12-31 17:05:59] [PID:2224] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:06:01] [PID:2224] ID 6: SENT.
+[2025-12-31 17:06:01] [PID:2224] Sending to: addar.akram@the-doctor.app
+[2025-12-31 17:06:03] [PID:2224] ID 7: SENT.
+[2025-12-31 17:06:03] [PID:2224] Worker finished.

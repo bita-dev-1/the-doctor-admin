@@ -1,84 +1,107 @@
 <?php
-// --- Define Project Root (Safe Check) ---
-// نتحقق أولاً إذا كان الثابت معرفاً لتجنب التحذير
+// inc.php
+
+// 1. Define Project Root
 if (!defined('PROJECT_ROOT')) {
     define('PROJECT_ROOT', __DIR__);
 }
 
-// --- Fix Session Path (لحل مشكلة CSRF) ---
-// نحدد مسار حفظ الجلسات داخل مجلد tmp في المشروع
+// 2. Load Composer Autoloader
+require_once PROJECT_ROOT . '/vendor/autoload.php';
+
+// 3. Load Environment Variables (.env)
+try {
+    $dotenv = Dotenv\Dotenv::createImmutable(PROJECT_ROOT);
+    $dotenv->load();
+} catch (\Dotenv\Exception\InvalidPathException $e) {
+    // Suppress error if .env is missing
+}
+
+// 4. Secure Session Configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.use_strict_mode', 1);
+if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    ini_set('session.cookie_secure', 1);
+}
+
 $session_save_path = PROJECT_ROOT . '/tmp';
 if (!file_exists($session_save_path)) {
     mkdir($session_save_path, 0777, true);
 }
 session_save_path($session_save_path);
 
-// --- Start Session ---
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// --- Autoload Composer dependencies and load environment variables ---
-require_once PROJECT_ROOT . '/vendor/autoload.php';
+// 5. Define Global Constants
 
-try {
-    $dotenv = Dotenv\Dotenv::createImmutable(PROJECT_ROOT);
-    $dotenv->load();
-} catch (\Dotenv\Exception\InvalidPathException $e) {
-    // die("Could not find .env file. Please create one in the root directory.");
-} catch (\Dotenv\Exception\InvalidFileException $e) {
-    error_log("Dotenv Syntax Error: " . $e->getMessage());
-}
-
-// --- Auto-detect Environment and Paths ---
-
-// 1. Determine BASE_PATH
-$base_path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-if ($base_path === '/' || $base_path === '\\') {
-    $base_path = '';
-}
-
-// This constant will be used for routing and form actions
-if (!defined('SITE_URL')) {
-    define('SITE_URL', $base_path);
-}
-
-// 2. Determine BASE_URI
+// Detect Protocol & Domain
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-$host = $_SERVER['HTTP_HOST'];
 
-// This constant will be used for linking assets
-if (!defined('SITE_URI')) {
-    define('SITE_URI', $protocol . $host . $base_path . '/');
+// --- FIX: Use Current Host for Assets to avoid CORS Block ---
+// نستخدم النطاق الحالي كما هو (سواء كان فرعياً أو رئيسياً)
+// هذا يضمن أن المتصفح يرى الملفات قادمة من نفس المصدر (Same Origin)
+$domain_for_assets = $_SERVER['HTTP_HOST'];
+// ----------------------------------------------------------
+
+// --- SITE_URL (Relative Path for Routing) ---
+if (!defined('SITE_URL')) {
+    if (!empty($_ENV['APP_URL'])) {
+        $parsed = parse_url($_ENV['APP_URL']);
+        $path = isset($parsed['path']) ? rtrim($parsed['path'], '/') : '';
+        define('SITE_URL', $path);
+    } else {
+        $script_path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+        if ($script_path === '/' || $script_path === '\\')
+            $script_path = '';
+        define('SITE_URL', $script_path);
+    }
 }
 
-// These can be moved to a .env file later for better security
-if (!defined('API_URL'))
-    define('API_URL', '');
-if (!defined('API_KEY'))
+// --- SITE_URI (Full URL for Assets) ---
+if (!defined('SITE_URI')) {
+    if (!empty($_ENV['APP_URL'])) {
+        // إذا كان هناك متغير بيئة، نستخدمه ولكن نستبدل الهوست بالهوست الحالي
+        // لضمان عمل النطاقات الفرعية
+        $env_url = parse_url($_ENV['APP_URL']);
+        $path = isset($env_url['path']) ? rtrim($env_url['path'], '/') : '';
+        define('SITE_URI', $protocol . $domain_for_assets . $path . '/');
+    } else {
+        $script_path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+        if ($script_path === '/' || $script_path === '\\')
+            $script_path = '';
+        define('SITE_URI', $protocol . $domain_for_assets . $script_path . '/');
+    }
+}
+
+// --- API Constants ---
+if (!defined('API_URL')) {
+    define('API_URL', SITE_URI . 'web-api/v1');
+}
+if (!defined('API_KEY')) {
     define('API_KEY', '');
+}
 
-// --- NEW: Define Mail Constants from .env ---
-if (!defined('MAIL_HOST'))
-    define('MAIL_HOST', $_ENV['MAIL_HOST'] ?? 'smtp.mailtrap.io');
-if (!defined('MAIL_PORT'))
-    define('MAIL_PORT', $_ENV['MAIL_PORT'] ?? 587);
-if (!defined('MAIL_USERNAME'))
-    define('MAIL_USERNAME', $_ENV['MAIL_USERNAME'] ?? '');
-if (!defined('MAIL_PASSWORD'))
-    define('MAIL_PASSWORD', $_ENV['MAIL_PASSWORD'] ?? '');
-if (!defined('MAIL_ENCRYPTION'))
-    define('MAIL_ENCRYPTION', $_ENV['MAIL_ENCRYPTION'] ?? 'tls');
-if (!defined('MAIL_FROM_ADDRESS'))
-    define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? 'from@example.com');
-if (!defined('MAIL_FROM_NAME'))
-    define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'Example');
+// Mail Constants
+define('MAIL_HOST', $_ENV['MAIL_HOST'] ?? '');
+define('MAIL_PORT', $_ENV['MAIL_PORT'] ?? 587);
+define('MAIL_USERNAME', $_ENV['MAIL_USERNAME'] ?? '');
+define('MAIL_PASSWORD', $_ENV['MAIL_PASSWORD'] ?? '');
+define('MAIL_ENCRYPTION', $_ENV['MAIL_ENCRYPTION'] ?? 'tls');
+define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? '');
+define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'The Doctor');
 
-// --- Google Auth Configuration ---
-if (!defined('GOOGLE_CLIENT_ID'))
-    define('GOOGLE_CLIENT_ID', $_ENV['GOOGLE_CLIENT_ID'] ?? 'ضع_Client_ID_الخاص_بك_هنا');
-if (!defined('GOOGLE_CLIENT_SECRET'))
-    define('GOOGLE_CLIENT_SECRET', $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'ضع_Client_Secret_الخاص_بك_هنا');
-if (!defined('GOOGLE_REDIRECT_URI'))
-    define('GOOGLE_REDIRECT_URI', SITE_URI . 'login/google/callback');
+// API Secret
+define('API_SECRET_KEY', $_ENV['API_SECRET_KEY'] ?? 'default_insecure_key');
+
+// Google Auth
+define('GOOGLE_CLIENT_ID', $_ENV['GOOGLE_CLIENT_ID'] ?? '');
+define('GOOGLE_CLIENT_SECRET', $_ENV['GOOGLE_CLIENT_SECRET'] ?? '');
+// ملاحظة: يجب أن يكون رابط إعادة التوجيه ثابتاً في إعدادات جوجل
+// لذا نستخدم النطاق الرئيسي هنا حصراً إذا كنت قد سجلت النطاق الرئيسي فقط في جوجل
+// لكن لغرض العرض، سنتركه ديناميكياً، وقد تحتاج لتعديله في Google Console
+define('GOOGLE_REDIRECT_URI', SITE_URI . 'login/google/callback');
+
 ?>

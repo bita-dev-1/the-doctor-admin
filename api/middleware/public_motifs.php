@@ -7,7 +7,6 @@ header("Access-Control-Allow-Methods: GET");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 try {
-    // 1. Get Doctor ID
     $doctor_id = 0;
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
@@ -18,11 +17,9 @@ try {
         exit();
     }
 
-    // 2. Fetch Motifs
-    // Ensure we only get active motifs (deleted = 0)
-    $query = "SELECT id, title, duration, price FROM doctor_motifs WHERE doctor_id = $doctor_id AND deleted = 0 ORDER BY id DESC";
-
-    $motifs = $GLOBALS['db']->select($query);
+    // Secure Query
+    $query = "SELECT id, title, duration, price FROM doctor_motifs WHERE doctor_id = ? AND deleted = 0 ORDER BY id DESC";
+    $motifs = $GLOBALS['db']->select($query, [$doctor_id]);
 
     echo json_encode([
         "state" => "true",

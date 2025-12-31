@@ -1,29 +1,37 @@
 <?php
+// controllers/data.core.php
 
-include_once 'config/encryption.core.php';
-include_once 'includes/queries.data.php';
-include_once 'config/DB.php';
-include_once 'config/settings.php';
-include_once 'includes/lang.php';
-include_once 'controllers/custom/functions.core.php';
+// 1. Load Core Config
+$rootPath = dirname(__DIR__);
+if (file_exists($rootPath . '/inc.php')) {
+	require_once($rootPath . '/inc.php');
+}
 
-// Include the new split controller files
-include_once 'controllers/core/Auth.php';
-include_once 'controllers/core/Tables.php';
-include_once 'controllers/core/Forms.php';
-include_once 'controllers/core/Files.php';
-include_once 'controllers/core/DataFetcher.php';
-include_once 'controllers/core/Helpers.php';
+include_once __DIR__ . '/../config/encryption.core.php';
+include_once __DIR__ . '/../config/DB.php';
+include_once __DIR__ . '/../includes/queries.data.php';
+include_once __DIR__ . '/../includes/lang.php';
 
+// Include Core Controllers
+include_once 'core/Auth.php';
+include_once 'core/Tables.php';
+include_once 'core/Forms.php';
+include_once 'core/Files.php';
+include_once 'core/DataFetcher.php';
+include_once 'core/Helpers.php';
+
+// Include Custom Functions (needed for some logic)
+include_once 'custom/functions.core.php';
 
 if (isset($_POST['method']) && !empty($_POST['method'])) {
 	$DB = new DB();
+
 	switch ($_POST['method']) {
 		case 'data_table':
 			data_table($DB);
 			break;
 		case 'data_table_Beta':
-			data_table_Beta($DB);
+			// data_table_Beta($DB); // Deprecated/Unsafe if not updated
 			break;
 		case 'deleteItem_table':
 			deleteItem_table($DB);
@@ -38,7 +46,7 @@ if (isset($_POST['method']) && !empty($_POST['method'])) {
 			select2Data($DB);
 			break;
 		case 'moveUploadedFile':
-			$maxFileSize = 100000000;
+			$maxFileSize = 100000000; // 100MB
 			$valid_extensions = array('jpeg', 'jpg', 'png', 'gif', 'jfif', 'bmp', 'pdf', 'doc', 'docx', 'ppt', 'mp4', 'psd', 'ai', 'zip', 'txt', 'flv', 'xls', 'csv', 'webp', 'mpeg', 'mpg', 'mkv', 'mp3', 'm4a', 'svg');
 			moveUploadedFile($maxFileSize, $valid_extensions);
 			break;
